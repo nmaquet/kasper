@@ -9,7 +9,6 @@ type TopicProcessor struct {
 	config              *TopicProcessorConfig
 	client              sarama.Client
 	partitionProcessors []*partitionProcessor
-	serdes              map[string]TopicSerde
 	inputTopics         []string
 	partitions          []int32
 }
@@ -34,7 +33,7 @@ func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
 	return partitions
 }
 
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, serdes map[string]TopicSerde) *TopicProcessor {
+func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
@@ -53,7 +52,6 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		config,
 		client,
 		partitionProcessors,
-		serdes,
 		inputTopics,
 		partitions,
 	}
@@ -85,7 +83,7 @@ func runPartitionProcessor(pp *partitionProcessor) {
 		log.Printf("Partition Processor %d is waiting for a message\n", pp.partition)
 		message := <-multiplexed
 		log.Printf("Got message: %#v\n", message)
-		topicSerde, ok := pp.topicProcessor.serdes[message.Topic]
+		topicSerde, ok := pp.topicProcessor.config.TopicSerdes[message.Topic]
 		if !ok {
 			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
 		}

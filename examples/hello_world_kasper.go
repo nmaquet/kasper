@@ -23,15 +23,15 @@ func main() {
 	config := kasper.TopicProcessorConfig{
 		BrokerList:  []string{"localhost:9092"},
 		InputTopics: []string{"hello"},
-	}
-	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProcessor{} }
-	topicSerdes := map[string]kasper.TopicSerde {
-		"hello": {
-			KeySerde:   kasper.NewStringSerde(),
-			ValueSerde: kasper.NewStringSerde(),
+		TopicSerdes: map[string]kasper.TopicSerde{
+			"hello": {
+				KeySerde:   kasper.NewStringSerde(),
+				ValueSerde: kasper.NewStringSerde(),
+			},
 		},
 	}
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, topicSerdes)
+	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProcessor{} }
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
 	topicProcessor.Run()
 	log.Println("Running!")
 	for {
