@@ -64,15 +64,8 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 }
 
 func (tp *TopicProcessor) Run() {
-	for _, partitionProcessor := range tp.partitionProcessors {
-		go runPartitionProcessor(partitionProcessor)
-	}
-}
-
-// FIXME: make this a private method of partition processor
-func runPartitionProcessor(pp *partitionProcessor) {
 	multiplexed := make(chan *sarama.ConsumerMessage)
-	for _, ch := range pp.messageChannels() {
+	for _, ch := range tp.messageChannels() {
 		go func(c <-chan *sarama.ConsumerMessage) {
 			for msg := range c {
 				multiplexed <- msg
@@ -80,9 +73,10 @@ func runPartitionProcessor(pp *partitionProcessor) {
 		}(ch)
 	}
 	for {
-		log.Printf("Partition Processor %d is waiting for a message\n", pp.partition)
+		log.Println("Topic Processor is waiting for a message\n")
 		message := <-multiplexed
 		log.Printf("Got message: %#v\n", message)
+		pp := tp.partitionProcessors[message.Partition]
 		topicSerde, ok := pp.topicProcessor.config.TopicSerdes[message.Topic]
 		if !ok {
 			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
@@ -97,4 +91,15 @@ func runPartitionProcessor(pp *partitionProcessor) {
 		}
 		pp.messageProcessor.Process(envelope, pp.sender, pp.coordinator)
 	}
+}
+
+func (tp *TopicProcessor) messageChannels() []<-chan *sarama.ConsumerMessage {
+	var chans []<-chan *sarama.ConsumerMessage
+	for _, partitionProcessor := range tp.partitionProcessors {
+		partitionChannels := partitionProcessor.messageChannels()
+		for _, ch := range partitionChannels {
+			chans = append(chans, ch)
+		}
+	}
+	return chans
 }
