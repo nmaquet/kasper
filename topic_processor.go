@@ -9,8 +9,7 @@ type TopicProcessor struct {
 	config              *TopicProcessorConfig
 	client              sarama.Client
 	partitionProcessors []*partitionProcessor
-	keySerde            Serde
-	valueSerde          Serde
+	serdes              map[string]TopicSerde
 	inputTopics         []string
 	partitions          []int32
 }
@@ -35,7 +34,8 @@ func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
 	return partitions
 }
 
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, keySerde Serde, valueSerde Serde) *TopicProcessor {
+func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, serdes map[string]TopicSerde) *TopicProcessor {
+	// TODO: check all input topics are covered by a Serde
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
 	client, err := sarama.NewClient(brokerList, sarama.NewConfig())
@@ -53,8 +53,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		config,
 		client,
 		partitionProcessors,
-		keySerde,
-		valueSerde,
+		serdes,
 		inputTopics,
 		partitions,
 	}
@@ -86,12 +85,16 @@ func runPartitionProcessor(pp *partitionProcessor) {
 		log.Printf("Partition Processor %d is waiting for a message\n", pp.partition)
 		message := <-multiplexed
 		log.Printf("Got message: %#v\n", message)
+		topicSerde, ok := pp.topicProcessor.serdes[message.Topic]
+		if !ok {
+			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
+		}
 		envelope := IncomingMessage{
 			Topic:     message.Topic,
 			Partition: message.Partition,
 			Offset:    message.Offset,
-			Key:       pp.topicProcessor.keySerde.Deserialize(message.Key),
-			Value:     pp.topicProcessor.valueSerde.Deserialize(message.Value),
+			Key:       topicSerde.KeySerde.Deserialize(message.Key),
+			Value:     topicSerde.ValueSerde.Deserialize(message.Value),
 			Timestamp: message.Timestamp,
 		}
 		pp.messageProcessor.Process(envelope, pp.sender, pp.coordinator)

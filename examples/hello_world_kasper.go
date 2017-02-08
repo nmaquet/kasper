@@ -25,7 +25,13 @@ func main() {
 		InputTopics: []string{"hello"},
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProcessor{} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.NewStringSerde(), kasper.NewStringSerde())
+	topicSerdes := map[string]kasper.TopicSerde {
+		"hello": {
+			KeySerde:   kasper.NewStringSerde(),
+			ValueSerde: kasper.NewStringSerde(),
+		},
+	}
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, topicSerdes)
 	topicProcessor.Run()
 	log.Println("Running!")
 	for {
