@@ -29,9 +29,12 @@ func main() {
 				ValueSerde: kasper.NewStringSerde(),
 			},
 		},
+		ContainerCount:      1,
+		PartitionAssignment: map[int32]kasper.Container{0: {ContainerId: 0}},
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProcessor{} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
+	containerId := 0
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, containerId)
 	topicProcessor.Run()
 	log.Println("Running!")
 	for {

@@ -7,6 +7,7 @@ import (
 
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
+	containerId         int
 	client              sarama.Client
 	partitionProcessors []*partitionProcessor
 	inputTopics         []string
@@ -33,7 +34,7 @@ func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
 	return partitions
 }
 
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
+func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerId int) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
@@ -41,7 +42,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	if err != nil {
 		log.Fatal(err)
 	}
-	partitions := partitionsOfTopics(inputTopics, client)
+	partitions := config.partitionsForContainer(containerId)
 	consumer, err := sarama.NewConsumerFromClient(client)
 	if err != nil {
 		log.Fatal(err)
@@ -50,6 +51,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
 	topicProcessor := TopicProcessor{
 		config,
+		containerId,
 		client,
 		partitionProcessors,
 		inputTopics,
