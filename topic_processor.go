@@ -36,6 +36,8 @@ func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
 
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerId int) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
+	// TODO: check all input partitions and make sure PartitionAssignment is valid
+	// TODO: check containerId is within [0, ContainerCount)
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
 	client, err := sarama.NewClient(brokerList, sarama.NewConfig())
