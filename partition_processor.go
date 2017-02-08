@@ -22,6 +22,7 @@ type partitionProcessor struct {
 	coordinator      Coordinator
 	sender           Sender
 	consumers        []sarama.PartitionConsumer
+	offsetManagers   []sarama.PartitionOffsetManager
 	messageProcessor MessageProcessor
 	inputTopics      []string
 	partition        int32
@@ -35,19 +36,33 @@ func (pp *partitionProcessor) messageChannels() []<-chan *sarama.ConsumerMessage
 	return chans
 }
 
-func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int32, offset int64) *partitionProcessor {
+func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int32) *partitionProcessor {
 	// FIXME store the consumer? close it?
 	consumer, err := sarama.NewConsumerFromClient(tp.client)
 	if err != nil {
 		log.Fatal(err)
 	}
 	partitionConsumers := make([]sarama.PartitionConsumer, len(tp.inputTopics))
+	partitionOffsetManagers := make([]sarama.PartitionOffsetManager, len(tp.inputTopics))
 	for i, topic := range tp.inputTopics {
-		c, err := consumer.ConsumePartition(topic, partition, offset)
+		pom, err := tp.offsetManager.ManagePartition(topic, partition)
+		if err != nil {
+			log.Fatal(err)
+		}
+		newestOffset, err := tp.client.GetOffset(topic, partition, sarama.OffsetNewest)
+		if err != nil {
+			log.Fatal(err)
+		}
+		nextOffset, _ := pom.NextOffset()
+		if nextOffset > newestOffset {
+			nextOffset = sarama.OffsetNewest
+		}
+		c, err := consumer.ConsumePartition(topic, partition, nextOffset)
 		if err != nil {
 			log.Fatal(err)
 		}
 		partitionConsumers[i] = c
+		partitionOffsetManagers[i] = pom
 	}
 	var coordinator Coordinator = nil // FIXME
 	var sender Sender = nil           // FIXME
@@ -56,6 +71,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		coordinator,
 		sender,
 		partitionConsumers,
+		partitionOffsetManagers,
 		mp,
 		tp.inputTopics,
 		partition,

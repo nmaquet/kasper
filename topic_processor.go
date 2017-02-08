@@ -9,6 +9,7 @@ type TopicProcessor struct {
 	config              *TopicProcessorConfig
 	containerId         int
 	client              sarama.Client
+	offsetManager       sarama.OffsetManager
 	partitionProcessors []*partitionProcessor
 	inputTopics         []string
 	partitions          []int32
@@ -45,24 +46,23 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		log.Fatal(err)
 	}
 	partitions := config.partitionsForContainer(containerId)
-	consumer, err := sarama.NewConsumerFromClient(client)
+	offsetManager, err := sarama.NewOffsetManagerFromClient("kasper-consumer-group" /* FIXME: use TopicProcessorName + ContainerID*/ , client)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer consumer.Close()
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
 	topicProcessor := TopicProcessor{
 		config,
 		containerId,
 		client,
+		offsetManager,
 		partitionProcessors,
 		inputTopics,
 		partitions,
 	}
 	for i, partition := range partitions {
 		processor := makeProcessor()
-		var offset int64 = 0 // FIXME
-		partitionProcessors[i] = newPartitionProcessor(&topicProcessor, processor, partition, offset)
+		partitionProcessors[i] = newPartitionProcessor(&topicProcessor, processor, partition)
 	}
 	return &topicProcessor
 }
@@ -94,6 +94,7 @@ func (tp *TopicProcessor) Run() {
 			Timestamp: message.Timestamp,
 		}
 		pp.messageProcessor.Process(envelope, pp.sender, pp.coordinator)
+		pp.offsetManagers[message.Partition].MarkOffset(message.Offset + 1, "")
 	}
 }
 

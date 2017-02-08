@@ -15,7 +15,7 @@ func (*HelloWorldProcessor) Process(msg kasper.IncomingMessage, sender kasper.Se
 	offset := msg.Offset
 	topic := msg.Topic
 	partition := msg.Partition
-	format := "Got message: key='%s', value='%s' at offset='%s' (topic='%s', partition='%d')\n"
+	format := "Got message: key='%s', value='%s' at offset='%d' (topic='%s', partition='%d')\n"
 	fmt.Printf(format, key, value, offset, topic, partition)
 }
 
