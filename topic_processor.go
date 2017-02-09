@@ -75,35 +75,11 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 }
 
 func (tp *TopicProcessor) Run() {
-	/* FIXME factor these out to sub-functions */
-	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
-	for _, ch := range tp.consumerMessageChannels() {
-		go func(c <-chan *sarama.ConsumerMessage) {
-			for msg := range c {
-				consumerMessagesChan <- msg
-			}
-		}(ch)
-	}
-	producerSuccessesChan := make(chan *sarama.ProducerMessage)
-	for _, ch := range tp.producerSuccessesChannels() {
-		go func(c <-chan *sarama.ProducerMessage) {
-			for msg := range c {
-				producerSuccessesChan <- msg
-			}
-		}(ch)
-	}
-	producerErrorsChan := make(chan *sarama.ProducerError)
-	for _, ch := range tp.producerErrorsChannels() {
-		go func(c <-chan *sarama.ProducerError) {
-			for msg := range c {
-				producerErrorsChan <- msg
-			}
-		}(ch)
-	}
-
+	consumerMessagesChan := tp.getConsumerMessageChan()
+	producerSuccessesChan := tp.getProducerMessagesChan()
+	producerErrorsChan := tp.getProducerErrorsChan()
 	/* TODO: call Stop() on this ticker when implementing proper shutdown */
 	markOffsetsTicker := time.NewTicker(tp.config.AutoMarkOffsetsInterval) /* TODO: handle AutoMarkOffsetsInterval <= 0 */
-
 	for {
 		select {
 		case consumerMessage := <-consumerMessagesChan:
@@ -138,6 +114,42 @@ func (tp *TopicProcessor) Run() {
 			tp.processMarkOffsetsTick()
 		}
 	}
+}
+
+func (tp *TopicProcessor) getProducerErrorsChan() chan *sarama.ProducerError {
+	producerErrorsChan := make(chan *sarama.ProducerError)
+	for _, ch := range tp.producerErrorsChannels() {
+		go func(c <-chan *sarama.ProducerError) {
+			for msg := range c {
+				producerErrorsChan <- msg
+			}
+		}(ch)
+	}
+	return producerErrorsChan
+}
+
+func (tp *TopicProcessor) getProducerMessagesChan() chan *sarama.ProducerMessage {
+	producerSuccessesChan := make(chan *sarama.ProducerMessage)
+	for _, ch := range tp.producerSuccessesChannels() {
+		go func(c <-chan *sarama.ProducerMessage) {
+			for msg := range c {
+				producerSuccessesChan <- msg
+			}
+		}(ch)
+	}
+	return producerSuccessesChan
+}
+
+func (tp *TopicProcessor) getConsumerMessageChan() chan *sarama.ConsumerMessage {
+	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
+	for _, ch := range tp.consumerMessageChannels() {
+		go func(c <-chan *sarama.ConsumerMessage) {
+			for msg := range c {
+				consumerMessagesChan <- msg
+			}
+		}(ch)
+	}
+	return consumerMessagesChan
 }
 
 func (tp *TopicProcessor) processProducerError(error *sarama.ProducerError) {
