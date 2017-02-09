@@ -75,7 +75,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 }
 
 func (tp *TopicProcessor) Run() {
-	consumerMessagesChan := tp.getConsumerMessageChan()
+	consumerMessagesChan := tp.getConsumerMessagesChan()
 	producerSuccessesChan := tp.getProducerMessagesChan()
 	producerErrorsChan := tp.getProducerErrorsChan()
 	/* TODO: call Stop() on this ticker when implementing proper shutdown */
@@ -140,7 +140,7 @@ func (tp *TopicProcessor) getProducerMessagesChan() chan *sarama.ProducerMessage
 	return producerSuccessesChan
 }
 
-func (tp *TopicProcessor) getConsumerMessageChan() chan *sarama.ConsumerMessage {
+func (tp *TopicProcessor) getConsumerMessagesChan() chan *sarama.ConsumerMessage {
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		go func(c <-chan *sarama.ConsumerMessage) {
