@@ -96,7 +96,7 @@ func (tp *TopicProcessor) Run() {
 	}
 
 	/* TODO: call Stop() on this ticker when implementing proper shutdown */
-	markOffsetTicker := time.NewTicker(5 * time.Second) /* TODO: make this delay configurable */
+	markOffsetTicker := time.NewTicker(tp.config.AutoMarkOffsetsInterval) /* TODO: handle AutoMarkOffsetsInterval <= 0 */
 	for {
 		select {
 		case consumerMessage := <-consumerMessagesChan:

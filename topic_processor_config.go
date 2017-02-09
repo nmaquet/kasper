@@ -1,18 +1,22 @@
 package kasper
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Container struct {
 	ContainerId int
 }
 
 type TopicProcessorConfig struct {
-	TopicProcessorName  string
-	BrokerList          []string
-	InputTopics         []string
-	TopicSerdes         map[string]TopicSerde
-	ContainerCount      int
-	PartitionAssignment map[int32]Container
+	TopicProcessorName      string
+	BrokerList              []string
+	InputTopics             []string
+	TopicSerdes             map[string]TopicSerde
+	ContainerCount          int
+	PartitionAssignment     map[int32]Container
+	AutoMarkOffsetsInterval time.Duration /* a value <= 0 will disable the automatic marking of offsets */
 }
 
 func (config *TopicProcessorConfig) partitionsForContainer(containerId int) []int32 {

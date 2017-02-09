@@ -43,6 +43,7 @@ func main() {
 		},
 		ContainerCount:      1,
 		PartitionAssignment: map[int32]kasper.Container{0: {ContainerId: 0}},
+		AutoMarkOffsetsInterval: 5 * time.Second,
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProducerProcessor{} }
 	containerId := 0
