@@ -21,8 +21,9 @@ func (*HelloWorldProcessor) Process(msg kasper.IncomingMessage, sender kasper.Se
 
 func main() {
 	config := kasper.TopicProcessorConfig{
-		BrokerList:  []string{"localhost:9092"},
-		InputTopics: []string{"hello"},
+		TopicProcessorName: "hello-world-kasper",
+		BrokerList:         []string{"localhost:9092"},
+		InputTopics:        []string{"hello"},
 		TopicSerdes: map[string]kasper.TopicSerde{
 			"hello": {
 				KeySerde:   kasper.NewStringSerde(),
