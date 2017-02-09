@@ -1,5 +1,7 @@
 package kasper
 
+import "fmt"
+
 type Container struct {
 	ContainerId int
 }
@@ -24,5 +26,9 @@ func (config *TopicProcessorConfig) partitionsForContainer(containerId int) []in
 }
 
 func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
-	return "kasper-topic-processor-" + config.TopicProcessorName
+	return fmt.Sprintf("kasper-topic-processor-%s", config.TopicProcessorName)
+}
+
+func (config *TopicProcessorConfig) producerClientId(containerId int) string {
+	return fmt.Sprintf("kasper-topic-processor-%s-%d", config.TopicProcessorName, containerId)
 }

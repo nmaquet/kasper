@@ -3,6 +3,7 @@ package kasper
 import (
 	"log"
 	"github.com/Shopify/sarama"
+	"time"
 )
 
 type TopicProcessor struct {
@@ -68,43 +69,77 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 }
 
 func (tp *TopicProcessor) Run() {
-	multiplexed := make(chan *sarama.ConsumerMessage)
-	for _, ch := range tp.messageChannels() {
+	/* FIXME factor these out to sub-functions */
+	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
+	for _, ch := range tp.consumerMessageChannels() {
 		go func(c <-chan *sarama.ConsumerMessage) {
 			for msg := range c {
-				multiplexed <- msg
+				consumerMessagesChan <- msg
 			}
 		}(ch)
 	}
+	producerSuccessesChan := make(chan *sarama.ProducerMessage)
+	for _, ch := range tp.producerSuccessesChannels() {
+		go func(c <-chan *sarama.ProducerMessage) {
+			for msg := range c {
+				producerSuccessesChan <- msg
+			}
+		}(ch)
+	}
+	producerErrorsChan := make(chan *sarama.ProducerError)
+	for _, ch := range tp.producerErrorsChannels() {
+		go func(c <-chan *sarama.ProducerError) {
+			for msg := range c {
+				producerErrorsChan <- msg
+			}
+		}(ch)
+	}
+
+	/* TODO: call Stop() on this ticker when implementing proper shutdown */
+	markOffsetTicker := time.NewTicker(5 * time.Second) /* TODO: make this delay configurable */
 	for {
-		log.Println("Topic Processor is waiting for a message\n")
-		message := <-multiplexed
-		log.Printf("Got message: %#v\n", message)
-		pp := tp.partitionProcessors[message.Partition]
-		topicSerde, ok := pp.topicProcessor.config.TopicSerdes[message.Topic]
-		if !ok {
-			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
+		select {
+		case consumerMessage := <-consumerMessagesChan:
+			pp := tp.partitionProcessors[consumerMessage.Partition]
+			pp.processConsumerMessage(consumerMessage)
+		case producerMessage := <-producerSuccessesChan:
+			pp := tp.partitionProcessors[producerMessage.Partition]
+			pp.processProducerMessageSuccess(producerMessage)
+		case producerError := <-producerErrorsChan:
+			log.Fatal(producerError) /* FIXME Handle this gracefully with a retry count / backoff period */
+		case <-markOffsetTicker.C:
+			for _, pp := range tp.partitionProcessors {
+				pp.markOffsets()
+			}
 		}
-		envelope := IncomingMessage{
-			Topic:     message.Topic,
-			Partition: message.Partition,
-			Offset:    message.Offset,
-			Key:       topicSerde.KeySerde.Deserialize(message.Key),
-			Value:     topicSerde.ValueSerde.Deserialize(message.Value),
-			Timestamp: message.Timestamp,
-		}
-		pp.messageProcessor.Process(envelope, pp.sender, pp.coordinator)
-		pp.offsetManagers[message.Partition].MarkOffset(message.Offset + 1, "")
 	}
 }
 
-func (tp *TopicProcessor) messageChannels() []<-chan *sarama.ConsumerMessage {
+func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
 	var chans []<-chan *sarama.ConsumerMessage
 	for _, partitionProcessor := range tp.partitionProcessors {
-		partitionChannels := partitionProcessor.messageChannels()
+		partitionChannels := partitionProcessor.consumerMessageChannels()
 		for _, ch := range partitionChannels {
 			chans = append(chans, ch)
 		}
+	}
+	return chans
+}
+
+func (tp *TopicProcessor) producerSuccessesChannels() []<-chan *sarama.ProducerMessage {
+	var chans []<-chan *sarama.ProducerMessage
+	for _, partitionProcessor := range tp.partitionProcessors {
+		ch := partitionProcessor.producer.Successes()
+		chans = append(chans, ch)
+	}
+	return chans
+}
+
+func (tp *TopicProcessor) producerErrorsChannels() []<-chan *sarama.ProducerError {
+	var chans []<-chan *sarama.ProducerError
+	for _, partitionProcessor := range tp.partitionProcessors {
+		ch := partitionProcessor.producer.Errors()
+		chans = append(chans, ch)
 	}
 	return chans
 }

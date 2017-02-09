@@ -12,5 +12,8 @@ type IncomingMessage struct {
 }
 
 type OutgoingMessage struct {
-	// TODO
+	Topic     string
+	Partition int32
+	Key       interface{}
+	Value     interface{}
 }
