@@ -46,7 +46,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		log.Fatal(err)
 	}
 	partitions := config.partitionsForContainer(containerId)
-	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(containerId), client)
+	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
 	if err != nil {
 		log.Fatal(err)
 	}

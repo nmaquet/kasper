@@ -23,6 +23,6 @@ func (config *TopicProcessorConfig) partitionsForContainer(containerId int) []in
 	return partitions
 }
 
-func (config *TopicProcessorConfig) kafkaConsumerGroup(containerId int) string {
-	return "kasper-" + config.TopicProcessorName + "-" + string(containerId)
+func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
+	return "kasper-topic-processor-" + config.TopicProcessorName
 }
