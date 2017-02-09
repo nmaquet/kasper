@@ -84,20 +84,18 @@ func (tp *TopicProcessor) Run() {
 		select {
 		case consumerMessage := <-consumerMessagesChan:
 			pp := tp.partitionProcessors[consumerMessage.Partition]
-			if pp.isReadyForMessage(consumerMessage) {
-				pp.processConsumerMessage(consumerMessage)
-			} else {
-				for {
+			for {
+				if pp.isReadyForMessage(consumerMessage) {
+					pp.processConsumerMessage(consumerMessage)
+					break
+				} else {
 					select {
 					case msg := <-producerSuccessesChan:
 						tp.processProducerMessageSuccess(msg)
 					case err := <-producerErrorsChan:
 						tp.processProducerError(err)
-					}
-					pp := tp.partitionProcessors[consumerMessage.Partition]
-					if pp.isReadyForMessage(consumerMessage) {
-						pp.processConsumerMessage(consumerMessage)
-						break
+					case <-markOffsetsTicker.C:
+						tp.processMarkOffsetsTick()
 					}
 				}
 			}
