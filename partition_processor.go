@@ -181,7 +181,24 @@ func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.Con
 		pp.inFlightMessageGroups[Topic(consumerMessage.Topic)],
 		inFlightMessageGroup,
 	)
-	// TODO: we need to compress inFlightMessageGroups[consumerMessage.Topic] here to avoid using tons of memory
+	pp.pruneInFlightMessageGroups()
+}
+
+func (pp *partitionProcessor) pruneInFlightMessageGroups() {
+	for _, topic := range pp.topicProcessor.inputTopics {
+		pp.pruneInFlightMessageGroupsForTopic(topic)
+	}
+}
+
+func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic Topic) {
+	for len(pp.inFlightMessageGroups[topic]) > 1 {
+		headGroup := pp.inFlightMessageGroups[topic][0]
+		nextGroup := pp.inFlightMessageGroups[topic][1]
+		if !headGroup.allAcksAreTrue() || !nextGroup.allAcksAreTrue() {
+			break
+		}
+		pp.inFlightMessageGroups[topic] = pp.inFlightMessageGroups[topic][1:]
+	}
 }
 
 func (pp *partitionProcessor) markOffsets() {
