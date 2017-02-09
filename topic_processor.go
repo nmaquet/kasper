@@ -1,3 +1,6 @@
+/*
+kasper is a lightweight Kafka stream processing library.
+ */
 package kasper
 
 import (
@@ -36,6 +39,9 @@ func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
 	return partitions
 }
 
+// NewTopicProcessor creates a new TopicProcessor with the given config.
+// It requires a factory function that creates MessageProcessor instances and a container id.
+// The container id must be a number between 0 and config.ContainerCount - 1.
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerId int) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
 	// TODO: check all input partitions and make sure PartitionAssignment is valid
