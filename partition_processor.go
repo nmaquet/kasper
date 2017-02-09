@@ -61,10 +61,10 @@ func (sender *outgoingMessageSender) Send(msg OutgoingMessage) {
 		log.Fatalf("Could not find Serde for topic '%s'", msg.Topic)
 	}
 	producerMessage := &sarama.ProducerMessage{
-		Topic:     msg.Topic,
+		Topic:     string(msg.Topic),
 		Key:       sarama.ByteEncoder(topicSerde.KeySerde.Serialize(msg.Key)),
 		Value:     sarama.ByteEncoder(topicSerde.ValueSerde.Serialize(msg.Value)),
-		Partition: msg.Partition,
+		Partition: int32(msg.Partition),
 		Metadata:  sender.incomingMessage,
 	}
 	sender.pp.producer.Input() <- producerMessage
@@ -87,12 +87,12 @@ type partitionProcessor struct {
 	topicProcessor        *TopicProcessor
 	coordinator           Coordinator
 	consumers             []sarama.PartitionConsumer
-	offsetManagers        map[string]sarama.PartitionOffsetManager
+	offsetManagers        map[Topic]sarama.PartitionOffsetManager
 	producer              sarama.AsyncProducer
 	messageProcessor      MessageProcessor
-	inputTopics           []string
-	partition             int32
-	inFlightMessageGroups map[string][]*inFlightMessageGroup
+	inputTopics           []Topic
+	partition             Partition
+	inFlightMessageGroups map[Topic][]*inFlightMessageGroup
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -118,20 +118,20 @@ func mustSetupProducer(brokers []string, producerClientId string) sarama.AsyncPr
 	return producer
 }
 
-func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int32) *partitionProcessor {
+func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Partition) *partitionProcessor {
 	// FIXME store the consumer? close it?
 	consumer, err := sarama.NewConsumerFromClient(tp.client)
 	if err != nil {
 		log.Fatal(err)
 	}
 	partitionConsumers := make([]sarama.PartitionConsumer, len(tp.inputTopics))
-	partitionOffsetManagers := make(map[string]sarama.PartitionOffsetManager)
+	partitionOffsetManagers := make(map[Topic]sarama.PartitionOffsetManager)
 	for i, topic := range tp.inputTopics {
-		pom, err := tp.offsetManager.ManagePartition(topic, partition)
+		pom, err := tp.offsetManager.ManagePartition(string(topic), int32(partition))
 		if err != nil {
 			log.Fatal(err)
 		}
-		newestOffset, err := tp.client.GetOffset(topic, partition, sarama.OffsetNewest)
+		newestOffset, err := tp.client.GetOffset(string(topic), int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -139,7 +139,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		if nextOffset > newestOffset {
 			nextOffset = sarama.OffsetNewest
 		}
-		c, err := consumer.ConsumePartition(topic, partition, nextOffset)
+		c, err := consumer.ConsumePartition(string(topic), int32(partition), nextOffset)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -157,19 +157,19 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		mp,
 		tp.inputTopics,
 		partition,
-		make(map[string][]*inFlightMessageGroup),
+		make(map[Topic][]*inFlightMessageGroup),
 	}
 }
 
 func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage) {
-	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[consumerMessage.Topic]
+	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[Topic(consumerMessage.Topic)]
 	if !ok {
 		log.Fatalf("Could not find Serde for topic '%s'", consumerMessage.Topic)
 	}
 	incomingMessage := IncomingMessage{
-		Topic:     consumerMessage.Topic,
-		Partition: consumerMessage.Partition,
-		Offset:    consumerMessage.Offset,
+		Topic:     Topic(consumerMessage.Topic),
+		Partition: Partition(consumerMessage.Partition),
+		Offset:    Offset(consumerMessage.Offset),
 		Key:       topicSerde.KeySerde.Deserialize(consumerMessage.Key),
 		Value:     topicSerde.ValueSerde.Deserialize(consumerMessage.Value),
 		Timestamp: consumerMessage.Timestamp,
@@ -177,8 +177,8 @@ func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.Con
 	outgoingMessageSender := newOutgoingMessageSender(pp, &incomingMessage)
 	pp.messageProcessor.Process(incomingMessage, outgoingMessageSender, pp.coordinator)
 	inFlightMessageGroup := outgoingMessageSender.createInFlightMessageGroup()
-	pp.inFlightMessageGroups[consumerMessage.Topic] = append(
-		pp.inFlightMessageGroups[consumerMessage.Topic],
+	pp.inFlightMessageGroups[Topic(consumerMessage.Topic)] = append(
+		pp.inFlightMessageGroups[Topic(consumerMessage.Topic)],
 		inFlightMessageGroup,
 	)
 	// TODO: we need to compress inFlightMessageGroups[consumerMessage.Topic] here to avoid using tons of memory
@@ -190,8 +190,8 @@ func (pp *partitionProcessor) markOffsets() {
 	}
 }
 
-func (pp *partitionProcessor) markOffsetsForTopic(topic string) {
-	var offset int64 = -1
+func (pp *partitionProcessor) markOffsetsForTopic(topic Topic) {
+	var offset Offset = -1
 	for len(pp.inFlightMessageGroups[topic]) > 0 {
 		group := pp.inFlightMessageGroups[topic][0]
 		if group.allAcksAreTrue() {
@@ -203,7 +203,7 @@ func (pp *partitionProcessor) markOffsetsForTopic(topic string) {
 	}
 	if offset != -1 {
 		offsetManager := pp.offsetManagers[topic]
-		offsetManager.MarkOffset(offset + 1, "")
+		offsetManager.MarkOffset(int64(offset + 1), "")
 	}
 }
 

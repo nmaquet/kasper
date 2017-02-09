@@ -11,12 +11,12 @@ import (
 
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
-	containerId         int
+	containerId         ContainerId
 	client              sarama.Client
 	offsetManager       sarama.OffsetManager
 	partitionProcessors []*partitionProcessor
-	inputTopics         []string
-	partitions          []int32
+	inputTopics         []Topic
+	partitions          []Partition
 }
 
 func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
@@ -42,17 +42,17 @@ func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
 // NewTopicProcessor creates a new TopicProcessor with the given config.
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerId int) *TopicProcessor {
+func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, cid ContainerId) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
 	// TODO: check all input partitions and make sure PartitionAssignment is valid
-	// TODO: check containerId is within [0, ContainerCount)
+	// TODO: check cid is within [0, ContainerCount)
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
 	client, err := sarama.NewClient(brokerList, sarama.NewConfig())
 	if err != nil {
 		log.Fatal(err)
 	}
-	partitions := config.partitionsForContainer(containerId)
+	partitions := config.partitionsForContainer(cid)
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
 	if err != nil {
 		log.Fatal(err)
@@ -60,7 +60,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
 	topicProcessor := TopicProcessor{
 		config,
-		containerId,
+		cid,
 		client,
 		offsetManager,
 		partitionProcessors,

@@ -23,20 +23,21 @@ func main() {
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "hello-world-kasper",
 		BrokerList:         []string{"localhost:9092"},
-		InputTopics:        []string{"hello"},
-		TopicSerdes: map[string]kasper.TopicSerde{
+		InputTopics:        []kasper.Topic{"hello"},
+		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
 			"hello": {
 				KeySerde:   kasper.NewStringSerde(),
 				ValueSerde: kasper.NewStringSerde(),
 			},
 		},
 		ContainerCount:      1,
-		PartitionAssignment: map[int32]kasper.Container{0: {ContainerId: 0}},
+		PartitionAssignment: map[kasper.Partition]kasper.ContainerId{
+			kasper.Partition(0): kasper.ContainerId(0),
+		},
 		AutoMarkOffsetsInterval: 5 * time.Second,
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProcessor{} }
-	containerId := 0
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, containerId)
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
 	topicProcessor.Run()
 	log.Println("Running!")
 	for {

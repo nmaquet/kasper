@@ -3,17 +3,17 @@ package kasper
 import "time"
 
 type IncomingMessage struct {
-	Topic     string
-	Partition int32
-	Offset    int64
+	Topic     Topic
+	Partition Partition
+	Offset    Offset
 	Key       interface{}
 	Value     interface{}
 	Timestamp time.Time
 }
 
 type OutgoingMessage struct {
-	Topic     string
-	Partition int32
+	Topic     Topic
+	Partition Partition
 	Key       interface{}
 	Value     interface{}
 }

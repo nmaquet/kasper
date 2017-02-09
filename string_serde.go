@@ -2,12 +2,12 @@ package kasper
 
 type StringSerde struct {}
 
-func (*StringSerde) Serialize(value interface{}) []uint8 {
+func (*StringSerde) Serialize(value interface{}) []byte {
 	s := value.(string)
-	return []uint8(s)
+	return []byte(s)
 }
 
-func (*StringSerde) Deserialize(bytes []uint8) interface{} {
+func (*StringSerde) Deserialize(bytes []byte) interface{} {
 	return string(bytes)
 }
 
