@@ -87,24 +87,19 @@ func (tp *TopicProcessor) Run() {
 			if pp.isReadyForMessage(consumerMessage) {
 				pp.processConsumerMessage(consumerMessage)
 			} else {
-				checkReadinessTicker := time.NewTicker(50 * time.Millisecond) // TODO: make this configurable
 				for {
 					select {
-					case <-checkReadinessTicker.C:
-						pp := tp.partitionProcessors[consumerMessage.Partition]
-						if pp.isReadyForMessage(consumerMessage) {
-							pp.processConsumerMessage(consumerMessage)
-							break
-						}
 					case msg := <-producerSuccessesChan:
 						tp.processProducerMessageSuccess(msg)
 					case err := <-producerErrorsChan:
 						tp.processProducerError(err)
-					case <-markOffsetsTicker.C:
-						tp.processMarkOffsetsTick()
+					}
+					pp := tp.partitionProcessors[consumerMessage.Partition]
+					if pp.isReadyForMessage(consumerMessage) {
+						pp.processConsumerMessage(consumerMessage)
+						break
 					}
 				}
-				checkReadinessTicker.Stop()
 			}
 		case msg := <-producerSuccessesChan:
 			tp.processProducerMessageSuccess(msg)
