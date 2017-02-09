@@ -194,12 +194,11 @@ func (pp *partitionProcessor) markOffsetsForTopic(topic Topic) {
 	var offset Offset = -1
 	for len(pp.inFlightMessageGroups[topic]) > 0 {
 		group := pp.inFlightMessageGroups[topic][0]
-		if group.allAcksAreTrue() {
-			offset = group.incomingMessage.Offset
-			pp.inFlightMessageGroups[topic] = pp.inFlightMessageGroups[topic][1:] /* TODO: check this is efficient and doesn't leak */
-		} else {
+		if !group.allAcksAreTrue() {
 			break
 		}
+		offset = group.incomingMessage.Offset
+		pp.inFlightMessageGroups[topic] = pp.inFlightMessageGroups[topic][1:]
 	}
 	if offset != -1 {
 		offsetManager := pp.offsetManagers[topic]
