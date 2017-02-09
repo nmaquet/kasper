@@ -102,23 +102,57 @@ func (tp *TopicProcessor) Run() {
 	}
 
 	/* TODO: call Stop() on this ticker when implementing proper shutdown */
-	markOffsetTicker := time.NewTicker(tp.config.AutoMarkOffsetsInterval) /* TODO: handle AutoMarkOffsetsInterval <= 0 */
+	markOffsetsTicker := time.NewTicker(tp.config.AutoMarkOffsetsInterval) /* TODO: handle AutoMarkOffsetsInterval <= 0 */
+
 	for {
 		select {
 		case consumerMessage := <-consumerMessagesChan:
 			pp := tp.partitionProcessors[consumerMessage.Partition]
-			pp.processConsumerMessage(consumerMessage)
-		case producerMessage := <-producerSuccessesChan:
-			pp := tp.partitionProcessors[producerMessage.Partition]
-			pp.processProducerMessageSuccess(producerMessage)
-		case producerError := <-producerErrorsChan:
-			log.Fatal(producerError) /* FIXME Handle this gracefully with a retry count / backoff period */
-		case <-markOffsetTicker.C:
-			for _, pp := range tp.partitionProcessors {
-				pp.markOffsets()
+			if pp.isReadyForMessage(consumerMessage) {
+				pp.processConsumerMessage(consumerMessage)
+			} else {
+				checkReadinessTicker := time.NewTicker(50 * time.Millisecond) // TODO: make this configurable
+				for {
+					select {
+					case <-checkReadinessTicker.C:
+						pp := tp.partitionProcessors[consumerMessage.Partition]
+						if pp.isReadyForMessage(consumerMessage) {
+							pp.processConsumerMessage(consumerMessage)
+							break
+						}
+					case msg := <-producerSuccessesChan:
+						tp.processProducerMessageSuccess(msg)
+					case err := <-producerErrorsChan:
+						tp.processProducerError(err)
+					case <-markOffsetsTicker.C:
+						tp.processMarkOffsetsTick()
+					}
+				}
+				checkReadinessTicker.Stop()
 			}
+		case msg := <-producerSuccessesChan:
+			tp.processProducerMessageSuccess(msg)
+		case err := <-producerErrorsChan:
+			tp.processProducerError(err)
+		case <-markOffsetsTicker.C:
+			tp.processMarkOffsetsTick()
 		}
 	}
+}
+
+func (tp *TopicProcessor) processProducerError(error *sarama.ProducerError) {
+	log.Fatal(error) /* FIXME Handle this gracefully with a retry count / backoff period */
+}
+
+func (tp *TopicProcessor) processMarkOffsetsTick() {
+	for _, pp := range tp.partitionProcessors {
+		pp.markOffsets()
+	}
+}
+
+func (tp *TopicProcessor) processProducerMessageSuccess(producerMessage *sarama.ProducerMessage) {
+	pp := tp.partitionProcessors[producerMessage.Partition]
+	pp.processProducerMessageSuccess(producerMessage)
 }
 
 func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {

@@ -201,6 +201,10 @@ func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic Topic) {
 	}
 }
 
+func (pp *partitionProcessor) isReadyForMessage(msg *sarama.ConsumerMessage) bool {
+	return len(pp.inFlightMessageGroups[Topic(msg.Topic)]) <= 1000 // TODO: make this configurable
+}
+
 func (pp *partitionProcessor) markOffsets() {
 	for _, topic := range pp.topicProcessor.inputTopics {
 		pp.markOffsetsForTopic(topic)
