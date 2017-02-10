@@ -19,18 +19,13 @@ func (processor *KeyValueStoreExample) Process(msg kasper.IncomingMessage, sende
 	word := msg.Value.(string)
 	var wordCount WordCount
 	wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
-	found, err := processor.store.Get(wordStoreKey, &wordCount)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to Get(): %s", err))
-	}
+	found := processor.Get(wordStoreKey, &wordCount)
 	if !found {
-		wordCount.Count = 0
+		wordCount.Count = 1
+	} else {
+		wordCount.Count++
 	}
-	wordCount.Count++
-	err = processor.store.Put(wordStoreKey, &wordCount)
-	if err != nil {
-		log.Fatal(err)
-	}
+	processor.store.Put(wordStoreKey, &wordCount)
 	outgoingMessage := kasper.OutgoingMessage{
 		Topic:     "hello-count",
 		Partition: 0,
@@ -38,6 +33,21 @@ func (processor *KeyValueStoreExample) Process(msg kasper.IncomingMessage, sende
 		Value:     fmt.Sprintf("%s has been seen %d times", word, wordCount.Count),
 	}
 	sender.Send(outgoingMessage)
+}
+
+func (processor *KeyValueStoreExample) Get(key string, value *WordCount) bool {
+	found, err := processor.store.Get(key, value)
+	if err != nil {
+		log.Fatalf("Failed to Get(): %s", err)
+	}
+	return found
+}
+
+func (processor *KeyValueStoreExample) Put(key string, value *WordCount) {
+	err := processor.store.Put(key, value)
+	if err != nil {
+		log.Fatalf("Failed to Put(): %s", err)
+	}
 }
 
 func main() {
