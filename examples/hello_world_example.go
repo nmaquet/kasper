@@ -7,9 +7,9 @@ import (
 	"github.com/movio/kasper"
 )
 
-type HelloWorldProcessor struct{}
+type HelloWorldExample struct{}
 
-func (*HelloWorldProcessor) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := msg.Key.(string)
 	value := msg.Value.(string)
 	offset := msg.Offset
@@ -21,7 +21,7 @@ func (*HelloWorldProcessor) Process(msg kasper.IncomingMessage, sender kasper.Se
 
 func main() {
 	config := kasper.TopicProcessorConfig{
-		TopicProcessorName: "hello-world-kasper",
+		TopicProcessorName: "hello-world-examples",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []kasper.Topic{"hello"},
 		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
@@ -30,13 +30,13 @@ func main() {
 				ValueSerde: kasper.NewStringSerde(),
 			},
 		},
-		ContainerCount:      1,
+		ContainerCount: 1,
 		PartitionAssignment: map[kasper.Partition]kasper.ContainerId{
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 5 * time.Second,
 	}
-	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldProcessor{} }
+	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
 	topicProcessor.Run()
 	log.Println("Running!")

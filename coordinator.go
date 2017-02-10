@@ -1,6 +1,6 @@
 package kasper
 
 type Coordinator interface {
-	Commit() error
+	Commit()
 	Shutdown() error
 }

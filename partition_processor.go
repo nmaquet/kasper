@@ -97,7 +97,7 @@ type partitionProcessor struct {
 	commitNextInFlightMessageGroup bool
 }
 
-func (pp *partitionProcessor) Commit() error {
+func (pp *partitionProcessor) Commit() {
 	pp.commitNextInFlightMessageGroup = true
 }
 
