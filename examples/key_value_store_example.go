@@ -61,7 +61,8 @@ func main() {
 		},
 		AutoMarkOffsetsInterval: 100 * time.Millisecond,
 	}
-	store := kasper.NewElasticsearchKeyValueStore("localhost:9200")
+	// store := kasper.NewElasticsearchKeyValueStore("localhost:9200")
+	store := kasper.NewInMemoryKeyValueStore(100)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &KeyValueStoreExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
 	topicProcessor.Run()
