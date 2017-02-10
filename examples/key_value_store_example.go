@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 	"github.com/movio/kasper"
+	"strings"
 )
 
 type KeyValueStoreExample struct {
@@ -16,23 +17,27 @@ type WordCount struct {
 }
 
 func (processor *KeyValueStoreExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
-	word := msg.Value.(string)
-	var wordCount WordCount
-	wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
-	found := processor.Get(wordStoreKey, &wordCount)
-	if !found {
-		wordCount.Count = 1
-	} else {
-		wordCount.Count++
+	log.Println(msg)
+	line := msg.Value.(string)
+	words := strings.Split(line, " ")
+	for _, word := range words {
+		var wordCount WordCount
+		wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
+		found := processor.Get(wordStoreKey, &wordCount)
+		if !found {
+			wordCount.Count = 1
+		} else {
+			wordCount.Count++
+		}
+		processor.store.Put(wordStoreKey, &wordCount)
+		outgoingMessage := kasper.OutgoingMessage{
+			Topic:     "hello-count",
+			Partition: 0,
+			Key:       msg.Key,
+			Value:     fmt.Sprintf("%s has been seen %d times", word, wordCount.Count),
+		}
+		sender.Send(outgoingMessage)
 	}
-	processor.store.Put(wordStoreKey, &wordCount)
-	outgoingMessage := kasper.OutgoingMessage{
-		Topic:     "hello-count",
-		Partition: 0,
-		Key:       msg.Key,
-		Value:     fmt.Sprintf("%s has been seen %d times", word, wordCount.Count),
-	}
-	sender.Send(outgoingMessage)
 }
 
 func (processor *KeyValueStoreExample) Get(key string, value *WordCount) bool {
@@ -69,11 +74,11 @@ func main() {
 		PartitionAssignment: map[kasper.Partition]kasper.ContainerId{
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
-		AutoMarkOffsetsInterval: 100 * time.Millisecond,
-		KasperConfig: kasper.DefaultKasperConfig(),
+		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
+		KasperConfig:            kasper.DefaultKasperConfig(),
 	}
 	// store := kasper.NewElasticsearchKeyValueStore("localhost:9200")
-	store := kasper.NewInMemoryKeyValueStore(100)
+	store := kasper.NewInMemoryKeyValueStore(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &KeyValueStoreExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
 	topicProcessor.Run()
