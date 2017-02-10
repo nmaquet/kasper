@@ -78,8 +78,15 @@ func (tp *TopicProcessor) Run() {
 	consumerMessagesChan := tp.getConsumerMessagesChan()
 	producerSuccessesChan := tp.getProducerMessagesChan()
 	producerErrorsChan := tp.getProducerErrorsChan()
-	/* TODO: call Stop() on this ticker when implementing proper shutdown */
-	markOffsetsTicker := time.NewTicker(tp.config.AutoMarkOffsetsInterval) /* TODO: handle AutoMarkOffsetsInterval <= 0 */
+	var markOffsetTickerChan  <-chan time.Time
+	var markOffsetsTicker *time.Ticker
+	if tp.config.AutoMarkOffsetsInterval > 0 {
+		/* TODO: call Stop() on this ticker when implementing proper shutdown */
+		markOffsetsTicker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
+		markOffsetTickerChan = markOffsetsTicker.C
+	} else {
+		markOffsetTickerChan = make(<-chan time.Time)
+	}
 	for {
 		select {
 		case consumerMessage := <-consumerMessagesChan:
@@ -94,7 +101,7 @@ func (tp *TopicProcessor) Run() {
 						tp.processProducerMessageSuccess(msg)
 					case err := <-producerErrorsChan:
 						tp.processProducerError(err)
-					case <-markOffsetsTicker.C:
+					case <-markOffsetTickerChan:
 						tp.processMarkOffsetsTick()
 					}
 				}
@@ -103,7 +110,7 @@ func (tp *TopicProcessor) Run() {
 			tp.processProducerMessageSuccess(msg)
 		case err := <-producerErrorsChan:
 			tp.processProducerError(err)
-		case <-markOffsetsTicker.C:
+		case <-markOffsetTickerChan:
 			tp.processMarkOffsetsTick()
 		}
 	}

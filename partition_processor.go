@@ -19,10 +19,11 @@ func newOutgoingMessageSender(pp *partitionProcessor, incomingMessage *IncomingM
 	}
 }
 
-func (sender *outgoingMessageSender) createInFlightMessageGroup() *inFlightMessageGroup {
+func (sender *outgoingMessageSender) createInFlightMessageGroup(committed bool) *inFlightMessageGroup {
 	res := inFlightMessageGroup{
 		incomingMessage:  sender.incomingMessage,
 		inFlightMessages: nil,
+		committed:        committed,
 	}
 	for _, msg := range sender.producerMessages {
 		res.inFlightMessages = append(res.inFlightMessages, &inFlightMessage{
@@ -41,6 +42,7 @@ type inFlightMessage struct {
 type inFlightMessageGroup struct {
 	incomingMessage  *IncomingMessage
 	inFlightMessages []*inFlightMessage
+	committed        bool
 }
 
 func (group *inFlightMessageGroup) allAcksAreTrue() bool {
@@ -84,15 +86,23 @@ type Initializer interface {
 }
 
 type partitionProcessor struct {
-	topicProcessor        *TopicProcessor
-	coordinator           Coordinator
-	consumers             []sarama.PartitionConsumer
-	offsetManagers        map[Topic]sarama.PartitionOffsetManager
-	producer              sarama.AsyncProducer
-	messageProcessor      MessageProcessor
-	inputTopics           []Topic
-	partition             Partition
-	inFlightMessageGroups map[Topic][]*inFlightMessageGroup
+	topicProcessor                 *TopicProcessor
+	consumers                      []sarama.PartitionConsumer
+	offsetManagers                 map[Topic]sarama.PartitionOffsetManager
+	producer                       sarama.AsyncProducer
+	messageProcessor               MessageProcessor
+	inputTopics                    []Topic
+	partition                      Partition
+	inFlightMessageGroups          map[Topic][]*inFlightMessageGroup
+	commitNextInFlightMessageGroup bool
+}
+
+func (pp *partitionProcessor) Commit() error {
+	pp.commitNextInFlightMessageGroup = true
+}
+
+func (*partitionProcessor) Shutdown() error {
+	panic("TODO: ")
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -146,11 +156,9 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Pa
 		partitionConsumers[i] = c
 		partitionOffsetManagers[topic] = pom
 	}
-	var coordinator Coordinator = nil // FIXME
 	producer := mustSetupProducer(tp.config.BrokerList, tp.config.producerClientId(tp.containerId))
 	return &partitionProcessor{
 		tp,
-		coordinator,
 		partitionConsumers,
 		partitionOffsetManagers,
 		producer,
@@ -158,6 +166,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Pa
 		tp.inputTopics,
 		partition,
 		make(map[Topic][]*inFlightMessageGroup),
+		false,
 	}
 }
 
@@ -175,8 +184,9 @@ func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.Con
 		Timestamp: consumerMessage.Timestamp,
 	}
 	outgoingMessageSender := newOutgoingMessageSender(pp, &incomingMessage)
-	pp.messageProcessor.Process(incomingMessage, outgoingMessageSender, pp.coordinator)
-	inFlightMessageGroup := outgoingMessageSender.createInFlightMessageGroup()
+	pp.commitNextInFlightMessageGroup = false
+	pp.messageProcessor.Process(incomingMessage, outgoingMessageSender, pp)
+	inFlightMessageGroup := outgoingMessageSender.createInFlightMessageGroup(pp.commitNextInFlightMessageGroup)
 	pp.inFlightMessageGroups[Topic(consumerMessage.Topic)] = append(
 		pp.inFlightMessageGroups[Topic(consumerMessage.Topic)],
 		inFlightMessageGroup,
@@ -219,11 +229,15 @@ func (pp *partitionProcessor) markOffsetsForTopic(topic Topic) {
 			break
 		}
 		offset = group.incomingMessage.Offset
+		if group.committed {
+			offsetManager := pp.offsetManagers[topic]
+			offsetManager.MarkOffset(int64(offset+1), "")
+		}
 		pp.inFlightMessageGroups[topic] = pp.inFlightMessageGroups[topic][1:]
 	}
-	if offset != -1 {
+	if offset != -1 && pp.topicProcessor.config.AutoMarkOffsetsInterval > 0 {
 		offsetManager := pp.offsetManagers[topic]
-		offsetManager.MarkOffset(int64(offset + 1), "")
+		offsetManager.MarkOffset(int64(offset+1), "")
 	}
 }
 
