@@ -17,7 +17,6 @@ type WordCount struct {
 }
 
 func (processor *KeyValueStoreExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
-	log.Println(msg)
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")
 	for _, word := range words {

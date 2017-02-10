@@ -10,13 +10,14 @@ import (
 )
 
 type TopicProcessor struct {
-	config              *TopicProcessorConfig
-	containerId         ContainerId
-	client              sarama.Client
-	offsetManager       sarama.OffsetManager
-	partitionProcessors []*partitionProcessor
-	inputTopics         []Topic
-	partitions          []Partition
+	config               *TopicProcessorConfig
+	containerId          ContainerId
+	client               sarama.Client
+	producer             sarama.AsyncProducer
+	offsetManager        sarama.OffsetManager
+	partitionProcessors  []*partitionProcessor
+	inputTopics          []Topic
+	partitions           []Partition
 }
 
 // NewTopicProcessor creates a new TopicProcessor with the given config.
@@ -38,10 +39,13 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		log.Fatal(err)
 	}
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
+	requiredAcks := config.KasperConfig.RequiredAcks
+	producer := mustSetupProducer(config.BrokerList, config.producerClientId(cid), requiredAcks)
 	topicProcessor := TopicProcessor{
 		config,
 		cid,
 		client,
+		producer,
 		offsetManager,
 		partitionProcessors,
 		inputTopics,
@@ -56,9 +60,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 
 func (tp *TopicProcessor) Run() {
 	consumerMessagesChan := tp.getConsumerMessagesChan()
-	producerSuccessesChan := tp.getProducerMessagesChan()
-	producerErrorsChan := tp.getProducerErrorsChan()
-	var markOffsetTickerChan  <-chan time.Time
+	var markOffsetTickerChan <-chan time.Time
 	var markOffsetsTicker *time.Ticker
 	if tp.config.AutoMarkOffsetsInterval > 0 {
 		/* TODO: call Stop() on this ticker when implementing proper shutdown */
@@ -67,60 +69,47 @@ func (tp *TopicProcessor) Run() {
 	} else {
 		markOffsetTickerChan = make(<-chan time.Time)
 	}
+	go func() {
+		err := <-tp.producer.Errors()
+		tp.processProducerError(err)
+	}()
 	for {
 		select {
 		case consumerMessage := <-consumerMessagesChan:
 			pp := tp.partitionProcessors[consumerMessage.Partition]
 			for {
 				if pp.isReadyForMessage(consumerMessage) {
-					pp.processConsumerMessage(consumerMessage)
+					producerMessages := pp.processConsumerMessage(consumerMessage)
+					for len(producerMessages) > 0 {
+						select {
+						case tp.producer.Input() <- producerMessages[0]:
+							producerMessages = producerMessages[1:]
+						case msg := <-tp.producer.Successes():
+							tp.processProducerMessageSuccess(msg)
+						case <-markOffsetTickerChan:
+							tp.processMarkOffsetsTick()
+						}
+					}
+					pp.pruneInFlightMessageGroups()
 					break
 				} else {
 					select {
-					case msg := <-producerSuccessesChan:
+					case msg := <-tp.producer.Successes():
 						tp.processProducerMessageSuccess(msg)
-					case err := <-producerErrorsChan:
-						tp.processProducerError(err)
 					case <-markOffsetTickerChan:
 						tp.processMarkOffsetsTick()
 					}
 				}
 			}
-		case msg := <-producerSuccessesChan:
+		case msg := <-tp.producer.Successes():
 			tp.processProducerMessageSuccess(msg)
-		case err := <-producerErrorsChan:
-			tp.processProducerError(err)
 		case <-markOffsetTickerChan:
 			tp.processMarkOffsetsTick()
 		}
 	}
 }
 
-func (tp *TopicProcessor) getProducerErrorsChan() chan *sarama.ProducerError {
-	producerErrorsChan := make(chan *sarama.ProducerError)
-	for _, ch := range tp.producerErrorsChannels() {
-		go func(c <-chan *sarama.ProducerError) {
-			for msg := range c {
-				producerErrorsChan <- msg
-			}
-		}(ch)
-	}
-	return producerErrorsChan
-}
-
-func (tp *TopicProcessor) getProducerMessagesChan() chan *sarama.ProducerMessage {
-	producerSuccessesChan := make(chan *sarama.ProducerMessage)
-	for _, ch := range tp.producerSuccessesChannels() {
-		go func(c <-chan *sarama.ProducerMessage) {
-			for msg := range c {
-				producerSuccessesChan <- msg
-			}
-		}(ch)
-	}
-	return producerSuccessesChan
-}
-
-func (tp *TopicProcessor) getConsumerMessagesChan() chan *sarama.ConsumerMessage {
+func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		go func(c <-chan *sarama.ConsumerMessage) {
@@ -158,20 +147,17 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	return chans
 }
 
-func (tp *TopicProcessor) producerSuccessesChannels() []<-chan *sarama.ProducerMessage {
-	var chans []<-chan *sarama.ProducerMessage
-	for _, partitionProcessor := range tp.partitionProcessors {
-		ch := partitionProcessor.producer.Successes()
-		chans = append(chans, ch)
-	}
-	return chans
-}
+func mustSetupProducer(brokers []string, producerClientId string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
+	saramaConfig := sarama.NewConfig()
+	saramaConfig.ClientID = producerClientId
+	saramaConfig.Producer.Return.Successes = true
+	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
+	saramaConfig.Producer.RequiredAcks = requiredAcks
 
-func (tp *TopicProcessor) producerErrorsChannels() []<-chan *sarama.ProducerError {
-	var chans []<-chan *sarama.ProducerError
-	for _, partitionProcessor := range tp.partitionProcessors {
-		ch := partitionProcessor.producer.Errors()
-		chans = append(chans, ch)
+	producer, err := sarama.NewAsyncProducer(brokers, saramaConfig)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return chans
+
+	return producer
 }

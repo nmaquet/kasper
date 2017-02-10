@@ -69,7 +69,6 @@ func (sender *outgoingMessageSender) Send(msg OutgoingMessage) {
 		Partition: int32(msg.Partition),
 		Metadata:  sender.incomingMessage,
 	}
-	sender.pp.producer.Input() <- producerMessage
 	sender.producerMessages = append(sender.producerMessages, producerMessage)
 }
 
@@ -81,7 +80,6 @@ type partitionProcessor struct {
 	topicProcessor                 *TopicProcessor
 	consumers                      []sarama.PartitionConsumer
 	offsetManagers                 map[Topic]sarama.PartitionOffsetManager
-	producer                       sarama.AsyncProducer
 	messageProcessor               MessageProcessor
 	inputTopics                    []Topic
 	partition                      Partition
@@ -103,21 +101,6 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 		chans[i] = consumer.Messages()
 	}
 	return chans
-}
-
-func mustSetupProducer(brokers []string, producerClientId string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
-	saramaConfig := sarama.NewConfig()
-	saramaConfig.ClientID = producerClientId
-	saramaConfig.Producer.Return.Successes = true
-	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
-	saramaConfig.Producer.RequiredAcks = requiredAcks
-
-	producer, err := sarama.NewAsyncProducer(brokers, saramaConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return producer
 }
 
 func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Partition) *partitionProcessor {
@@ -148,13 +131,10 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Pa
 		partitionConsumers[i] = c
 		partitionOffsetManagers[topic] = pom
 	}
-	requiredAcks := tp.config.KasperConfig.RequiredAcks
-	producer := mustSetupProducer(tp.config.BrokerList, tp.config.producerClientId(tp.containerId), requiredAcks)
 	return &partitionProcessor{
 		tp,
 		partitionConsumers,
 		partitionOffsetManagers,
-		producer,
 		mp,
 		tp.inputTopics,
 		partition,
@@ -163,7 +143,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Pa
 	}
 }
 
-func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage) {
+func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
 	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[Topic(consumerMessage.Topic)]
 	if !ok {
 		log.Fatalf("Could not find Serde for topic '%s'", consumerMessage.Topic)
@@ -185,6 +165,7 @@ func (pp *partitionProcessor) processConsumerMessage(consumerMessage *sarama.Con
 		inFlightMessageGroup,
 	)
 	pp.pruneInFlightMessageGroups()
+	return outgoingMessageSender.producerMessages
 }
 
 func (pp *partitionProcessor) pruneInFlightMessageGroups() {
