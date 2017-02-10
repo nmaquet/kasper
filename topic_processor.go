@@ -19,26 +19,6 @@ type TopicProcessor struct {
 	partitions          []Partition
 }
 
-func partitionsOfTopics(topics []string, client sarama.Client) []int32 {
-	partitionsSet := make(map[int32]struct{})
-	for _, topic := range topics {
-		partitions, err := client.Partitions(topic)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for _, partition := range partitions {
-			partitionsSet[partition] = struct{}{}
-		}
-	}
-	i := 0
-	partitions := make([]int32, len(partitionsSet))
-	for partition := range partitionsSet {
-		partitions[i] = partition
-		i++
-	}
-	return partitions
-}
-
 // NewTopicProcessor creates a new TopicProcessor with the given config.
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.

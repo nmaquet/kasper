@@ -73,16 +73,8 @@ func (sender *outgoingMessageSender) Send(msg OutgoingMessage) {
 	sender.producerMessages = append(sender.producerMessages, producerMessage)
 }
 
-type PartitionProcessorContext struct {
-	// TODO
-}
-
 type MessageProcessor interface {
 	Process(IncomingMessage, Sender, Coordinator)
-}
-
-type Initializer interface {
-	Initialize(TopicProcessorConfig, PartitionProcessorContext)
 }
 
 type partitionProcessor struct {
@@ -102,7 +94,7 @@ func (pp *partitionProcessor) Commit() {
 }
 
 func (*partitionProcessor) Shutdown() error {
-	panic("TODO: ")
+	panic("TODO: implement proper shutdown")
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
