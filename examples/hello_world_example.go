@@ -35,6 +35,7 @@ func main() {
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 5 * time.Second,
+		KasperConfig: kasper.DefaultKasperConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))

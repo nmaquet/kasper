@@ -113,12 +113,12 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 	return chans
 }
 
-func mustSetupProducer(brokers []string, producerClientId string) sarama.AsyncProducer {
+func mustSetupProducer(brokers []string, producerClientId string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.ClientID = producerClientId
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
-	saramaConfig.Producer.RequiredAcks = sarama.WaitForAll /* TODO: make this configurable */
+	saramaConfig.Producer.RequiredAcks = requiredAcks
 
 	producer, err := sarama.NewAsyncProducer(brokers, saramaConfig)
 	if err != nil {
@@ -156,7 +156,8 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Pa
 		partitionConsumers[i] = c
 		partitionOffsetManagers[topic] = pom
 	}
-	producer := mustSetupProducer(tp.config.BrokerList, tp.config.producerClientId(tp.containerId))
+	requiredAcks := tp.config.KasperConfig.RequiredAcks
+	producer := mustSetupProducer(tp.config.BrokerList, tp.config.producerClientId(tp.containerId), requiredAcks)
 	return &partitionProcessor{
 		tp,
 		partitionConsumers,
@@ -212,7 +213,8 @@ func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic Topic) {
 }
 
 func (pp *partitionProcessor) isReadyForMessage(msg *sarama.ConsumerMessage) bool {
-	return len(pp.inFlightMessageGroups[Topic(msg.Topic)]) <= 1000 // TODO: make this configurable
+	maxGroups := pp.topicProcessor.config.KasperConfig.MaxInFlightMessageGroups
+	return len(pp.inFlightMessageGroups[Topic(msg.Topic)]) <= maxGroups
 }
 
 func (pp *partitionProcessor) markOffsets() {

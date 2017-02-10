@@ -13,6 +13,7 @@ type TopicProcessorConfig struct {
 	ContainerCount          int
 	PartitionAssignment     map[Partition]ContainerId
 	AutoMarkOffsetsInterval time.Duration /* a value <= 0 will disable the automatic marking of offsets */
+	KasperConfig			*KasperConfig
 }
 
 func (config *TopicProcessorConfig) partitionsForContainer(cid ContainerId) []Partition {
