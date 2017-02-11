@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 	"github.com/movio/kasper"
@@ -15,10 +14,17 @@ type WordCountExample struct {
 	wordCounts map[string]int
 }
 
+type WordCount struct {
+	Word     string
+	Count    int
+	LastSeen time.Time
+}
+
 func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")
 	for _, word := range words {
+		word = strings.ToLower(word)
 		count, found := processor.wordCounts[word]
 		if !found {
 			count = 1
@@ -27,10 +33,10 @@ func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender ka
 		}
 		processor.wordCounts[word] = count
 		outgoingMessage := kasper.OutgoingMessage{
-			Topic:     "hello-count",
+			Topic:     "word-counts",
 			Partition: 0,
-			Key:       msg.Key,
-			Value:     fmt.Sprintf("%s has been seen %d times", word, count),
+			Key:       word,
+			Value:     &WordCount{word, count, time.Now()},
 		}
 		sender.Send(outgoingMessage)
 	}
@@ -40,15 +46,15 @@ func main() {
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "word-count-example",
 		BrokerList:         []string{"localhost:9092"},
-		InputTopics:        []kasper.Topic{"hello"},
+		InputTopics:        []kasper.Topic{"words"},
 		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
-			"hello": {
+			"words": {
 				KeySerde:   kasper.NewStringSerde(),
 				ValueSerde: kasper.NewStringSerde(),
 			},
-			"hello-count": {
+			"word-counts": {
 				KeySerde:   kasper.NewStringSerde(),
-				ValueSerde: kasper.NewStringSerde(),
+				ValueSerde: kasper.NewJsonSerde(&WordCount{}),
 			},
 		},
 		ContainerCount: 1,
