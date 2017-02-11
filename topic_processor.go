@@ -11,6 +11,7 @@ import (
 	"github.com/Shopify/sarama"
 	"time"
 	"sync"
+	"github.com/rcrowley/go-metrics"
 )
 
 type TopicProcessor struct {
@@ -186,6 +187,7 @@ func mustSetupProducer(brokers []string, producerClientId string, requiredAcks s
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
 	saramaConfig.Producer.RequiredAcks = requiredAcks
+	saramaConfig.MetricRegistry = metrics.DefaultRegistry
 
 	producer, err := sarama.NewAsyncProducer(brokers, saramaConfig)
 	if err != nil {
