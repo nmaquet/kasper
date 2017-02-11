@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "ujkdYz/AOSZ4dVskaUGW9g/V/dM=",
+			"path": "golang.org/x/net/context",
+			"revision": "61557ac0112b576429a0df080e1c2cef5dfbb642",
+			"revisionTime": "2017-01-26T11:54:58Z"
+		},
+		{
+			"checksumSHA1": "W6x6nuhnYDSBj+ZxqIn90HRE5Es=",
+			"path": "gopkg.in/couchbaselabs/gocb.v1",
+			"revision": "6fca8af693ca20d33fd8427a09636362061a3b71",
+			"revisionTime": "2016-12-21T09:34:16Z"
+		},
+		{
+			"checksumSHA1": "OkhJgz+yqwRyt6PJKsPlZIqTNCg=",
+			"path": "gopkg.in/olivere/elastic.v5",
+			"revision": "4f7c9774c6041d96b9c522cfcbb657a5a49dbbb2",
+			"revisionTime": "2017-02-10T13:58:12Z"
+		}
+	],
+	"rootPath": "github.com/movio/kasper-kv"
+}
