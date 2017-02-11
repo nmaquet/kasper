@@ -80,7 +80,18 @@ func main() {
 		KasperConfig:            kasper.DefaultKasperConfig(),
 	}
 	// store := kasper.NewElasticsearchKeyValueStore("localhost:9200")
-	store := kasper.NewInMemoryKeyValueStore(10000)
+	// store := kasper.NewInMemoryKeyValueStore(10000)
+	store, err := kasper.NewCouchbaseKeyValueStore(&kasper.CouchbaseConfig{
+		Host:          "localhost",
+		Bucket:        "default",
+		Password:      "",
+		DurableWrites: false,
+		PersistTo:     0,
+		ReplicateTo:   0,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &KeyValueStoreExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
 	topicProcessor.Start()
