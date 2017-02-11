@@ -1,3 +1,9 @@
+/*
+
+Kasper companion library for stateful stream processing.
+
+ */
+
 package kv
 
 // KeyValueStore is universal interface for a key-value store with string keys and JSON serializable struct values
