@@ -5,6 +5,9 @@ import (
 	"log"
 	"time"
 	"github.com/movio/kasper"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type MultipleInputTopicsExample struct{}
@@ -43,10 +46,14 @@ func main() {
 	}
 	makeProcessor := func() kasper.MessageProcessor { return &MultipleInputTopicsExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, makeProcessor, kasper.ContainerId(0))
-	topicProcessor.Run()
-	log.Println("Running!")
-	for {
-		time.Sleep(2 * time.Second)
-		log.Println("...")
+	topicProcessor.Start()
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	log.Println("Topic processor is running...")
+	for range signals {
+		signal.Stop(signals)
+		topicProcessor.Shutdown()
+		break
 	}
+	log.Println("Topic processor shutdown complete.")
 }

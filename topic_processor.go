@@ -1,23 +1,33 @@
 /*
+
 kasper is a lightweight Kafka stream processing library.
+
  */
+
 package kasper
 
 import (
 	"log"
 	"github.com/Shopify/sarama"
 	"time"
+	"sync"
 )
 
 type TopicProcessor struct {
-	config               *TopicProcessorConfig
-	containerId          ContainerId
-	client               sarama.Client
-	producer             sarama.AsyncProducer
-	offsetManager        sarama.OffsetManager
-	partitionProcessors  []*partitionProcessor
-	inputTopics          []Topic
-	partitions           []Partition
+	config              *TopicProcessorConfig
+	containerId         ContainerId
+	client              sarama.Client
+	producer            sarama.AsyncProducer
+	offsetManager       sarama.OffsetManager
+	partitionProcessors []*partitionProcessor
+	inputTopics         []Topic
+	partitions          []Partition
+	shutdown            chan bool
+	waitGroup           sync.WaitGroup
+}
+
+type MessageProcessor interface {
+	Process(IncomingMessage, Sender, Coordinator)
 }
 
 // NewTopicProcessor creates a new TopicProcessor with the given config.
@@ -50,6 +60,8 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitionProcessors,
 		inputTopics,
 		partitions,
+		make(chan bool),
+		sync.WaitGroup{},
 	}
 	for i, partition := range partitions {
 		processor := makeProcessor()
@@ -58,61 +70,87 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	return &topicProcessor
 }
 
-func (tp *TopicProcessor) Run() {
-	consumerMessagesChan := tp.getConsumerMessagesChan()
-	var markOffsetTickerChan <-chan time.Time
-	var markOffsetsTicker *time.Ticker
-	if tp.config.AutoMarkOffsetsInterval > 0 {
-		/* TODO: call Stop() on this ticker when implementing proper shutdown */
-		markOffsetsTicker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
-		markOffsetTickerChan = markOffsetsTicker.C
-	} else {
-		markOffsetTickerChan = make(<-chan time.Time)
-	}
+func (tp *TopicProcessor) Start() {
+	tp.waitGroup.Add(1)
 	go func() {
-		err := <-tp.producer.Errors()
-		tp.processProducerError(err)
+		defer tp.waitGroup.Done()
+		tp.runLoop()
 	}()
+}
+
+func (tp *TopicProcessor) runLoop() {
+	consumerChan := tp.getConsumerMessagesChan()
+	var tickerChan <-chan time.Time
+	var ticker *time.Ticker
+
+	if tp.config.markOffsetsAutomatically() {
+		ticker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
+		tickerChan = ticker.C
+	} else {
+		tickerChan = make(<-chan time.Time)
+	}
+
+	tp.waitGroup.Add(1)
+	go func() {
+		defer tp.waitGroup.Done()
+		for err := range tp.producer.Errors() {
+			tp.onProducerError(err)
+		}
+	}()
+
 	for {
 		select {
-		case consumerMessage := <-consumerMessagesChan:
+		case consumerMessage := <-consumerChan:
 			pp := tp.partitionProcessors[consumerMessage.Partition]
 			for {
 				if pp.isReadyForMessage(consumerMessage) {
-					producerMessages := pp.processConsumerMessage(consumerMessage)
+					producerMessages := pp.process(consumerMessage)
 					for len(producerMessages) > 0 {
 						select {
 						case tp.producer.Input() <- producerMessages[0]:
 							producerMessages = producerMessages[1:]
-						case msg := <-tp.producer.Successes():
-							tp.processProducerMessageSuccess(msg)
-						case <-markOffsetTickerChan:
-							tp.processMarkOffsetsTick()
+						case msg, more := <-tp.producer.Successes():
+							tp.onProducerAck(msg, more)
+						case <-tickerChan:
+							tp.onTick()
 						}
 					}
-					pp.pruneInFlightMessageGroups()
+					pp.onProcessCompleted()
 					break
 				} else {
 					select {
-					case msg := <-tp.producer.Successes():
-						tp.processProducerMessageSuccess(msg)
-					case <-markOffsetTickerChan:
-						tp.processMarkOffsetsTick()
+					case msg, more := <-tp.producer.Successes():
+						tp.onProducerAck(msg, more)
+					case <-tickerChan:
+						tp.onTick()
 					}
 				}
 			}
-		case msg := <-tp.producer.Successes():
-			tp.processProducerMessageSuccess(msg)
-		case <-markOffsetTickerChan:
-			tp.processMarkOffsetsTick()
+		case msg, more := <-tp.producer.Successes():
+			tp.onProducerAck(msg, more)
+		case <-tickerChan:
+			tp.onTick()
+		case <-tp.shutdown:
+			tp.onShutdown()
+			return
 		}
 	}
+}
+
+func (tp *TopicProcessor) onShutdown() {
+	for _, pp := range tp.partitionProcessors {
+		pp.onShutdown()
+	}
+	tp.producer.Close()
+	tp.client.Close()
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
+		tp.waitGroup.Add(1)
 		go func(c <-chan *sarama.ConsumerMessage) {
+			defer tp.waitGroup.Done()
 			for msg := range c {
 				consumerMessagesChan <- msg
 			}
@@ -121,19 +159,14 @@ func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessa
 	return consumerMessagesChan
 }
 
-func (tp *TopicProcessor) processProducerError(error *sarama.ProducerError) {
+func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {
 	log.Fatal(error) /* FIXME Handle this gracefully with a retry count / backoff period */
 }
 
-func (tp *TopicProcessor) processMarkOffsetsTick() {
+func (tp *TopicProcessor) onTick() {
 	for _, pp := range tp.partitionProcessors {
-		pp.markOffsets()
+		pp.markOffsetsIfPossible()
 	}
-}
-
-func (tp *TopicProcessor) processProducerMessageSuccess(producerMessage *sarama.ProducerMessage) {
-	pp := tp.partitionProcessors[producerMessage.Partition]
-	pp.processProducerMessageSuccess(producerMessage)
 }
 
 func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -160,4 +193,17 @@ func mustSetupProducer(brokers []string, producerClientId string, requiredAcks s
 	}
 
 	return producer
+}
+
+func (tp *TopicProcessor) Shutdown() {
+	tp.shutdown <- true
+	tp.waitGroup.Wait()
+}
+
+func (tp *TopicProcessor) onProducerAck(producerMessage *sarama.ProducerMessage, more bool) {
+	if !more {
+		return
+	}
+	pp := tp.partitionProcessors[producerMessage.Partition]
+	pp.onProducerAck(producerMessage)
 }

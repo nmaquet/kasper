@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 	"github.com/movio/kasper"
+	"os"
+	"os/signal"
+	"log"
+	"syscall"
 )
 
 type HelloWorldExample struct{}
@@ -21,7 +24,7 @@ func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Send
 
 func main() {
 	config := kasper.TopicProcessorConfig{
-		TopicProcessorName: "hello-world-examples",
+		TopicProcessorName: "hello-world-example",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []kasper.Topic{"hello"},
 		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
@@ -39,10 +42,14 @@ func main() {
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
-	topicProcessor.Run()
-	log.Println("Running!")
-	for {
-		time.Sleep(2 * time.Second)
-		log.Println("...")
+	topicProcessor.Start()
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	log.Println("Topic processor is running...")
+	for range signals {
+		signal.Stop(signals)
+		topicProcessor.Shutdown()
+		break
 	}
+	log.Println("Topic processor shutdown complete.")
 }

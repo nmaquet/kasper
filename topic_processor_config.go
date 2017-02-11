@@ -33,3 +33,11 @@ func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
 func (config *TopicProcessorConfig) producerClientId(cid ContainerId) string {
 	return fmt.Sprintf("kasper-topic-processor-%s-%d", config.TopicProcessorName, cid)
 }
+
+func (config *TopicProcessorConfig) markOffsetsAutomatically() bool {
+	return config.AutoMarkOffsetsInterval > 0
+}
+
+func (config *TopicProcessorConfig) markOffsetsManually() bool {
+	return config.AutoMarkOffsetsInterval <= 0
+}

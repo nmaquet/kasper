@@ -6,6 +6,9 @@ import (
 	"time"
 	"github.com/movio/kasper"
 	"strings"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type KeyValueStoreExample struct {
@@ -80,10 +83,14 @@ func main() {
 	store := kasper.NewInMemoryKeyValueStore(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &KeyValueStoreExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
-	topicProcessor.Run()
-	log.Println("Running!")
-	for {
-		time.Sleep(2 * time.Second)
-		log.Println("...")
+	topicProcessor.Start()
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	log.Println("Topic processor is running...")
+	for range signals {
+		signal.Stop(signals)
+		topicProcessor.Shutdown()
+		break
 	}
+	log.Println("Topic processor shutdown complete.")
 }
