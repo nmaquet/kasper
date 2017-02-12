@@ -22,7 +22,7 @@ type TopicProcessor struct {
 	producer            sarama.AsyncProducer
 	offsetManager       sarama.OffsetManager
 	partitionProcessors []*partitionProcessor
-	inputTopics         []Topic
+	inputTopics         []string
 	partitions          []int
 	shutdown            chan bool
 	waitGroup           sync.WaitGroup

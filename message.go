@@ -3,7 +3,7 @@ package kasper
 import "time"
 
 type IncomingMessage struct {
-	Topic     Topic
+	Topic     string
 	Partition int
 	Offset    int64
 	Key       interface{}
@@ -12,7 +12,7 @@ type IncomingMessage struct {
 }
 
 type OutgoingMessage struct {
-	Topic     Topic
+	Topic     string
 	Partition int
 	Key       interface{}
 	Value     interface{}

@@ -27,8 +27,8 @@ func main() {
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "multiple-input-topics-example",
 		BrokerList:         []string{"localhost:9092"},
-		InputTopics:        []kasper.Topic{"hello", "world"},
-		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
+		InputTopics:        []string{"hello", "world"},
+		TopicSerdes: map[string]kasper.TopicSerde{
 			"hello": {
 				KeySerde:   kasper.NewStringSerde(),
 				ValueSerde: kasper.NewStringSerde(),

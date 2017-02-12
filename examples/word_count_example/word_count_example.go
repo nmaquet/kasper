@@ -47,8 +47,8 @@ func main() {
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "word-count-example",
 		BrokerList:         []string{"localhost:9092"},
-		InputTopics:        []kasper.Topic{"words"},
-		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
+		InputTopics:        []string{"words"},
+		TopicSerdes: map[string]kasper.TopicSerde{
 			"words": {
 				KeySerde:   kasper.NewStringSerde(),
 				ValueSerde: kasper.NewStringSerde(),

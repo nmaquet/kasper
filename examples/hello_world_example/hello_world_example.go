@@ -27,8 +27,8 @@ func main() {
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "hello-world-example",
 		BrokerList:         []string{"localhost:9092"},
-		InputTopics:        []kasper.Topic{"hello"},
-		TopicSerdes: map[kasper.Topic]kasper.TopicSerde{
+		InputTopics:        []string{"hello"},
+		TopicSerdes: map[string]kasper.TopicSerde{
 			"hello": {
 				KeySerde:   kasper.NewStringSerde(),
 				ValueSerde: kasper.NewStringSerde(),

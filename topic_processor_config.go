@@ -8,8 +8,8 @@ import (
 type TopicProcessorConfig struct {
 	TopicProcessorName      string
 	BrokerList              []string
-	InputTopics             []Topic
-	TopicSerdes             map[Topic]TopicSerde
+	InputTopics             []string
+	TopicSerdes             map[string]TopicSerde
 	ContainerCount          int
 	PartitionToContainerID  map[int]int
 	AutoMarkOffsetsInterval time.Duration /* a value <= 0 will disable the automatic marking of offsets */
