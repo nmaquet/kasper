@@ -1,4 +1,8 @@
-# kasper
+kasper
+======
+
+[![Build Status](https://travis-ci.org/movio/kasper.svg?branch=master)](https://travis-ci.org/movio/kasper)
+
 Kafka stream processing library written in Go.
 
 *This project is in non-working / prototyping stages.*
