@@ -43,7 +43,7 @@ func main() {
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 5 * time.Second,
-		KasperConfig:            kasper.DefaultKasperConfig(),
+		Config:                  kasper.DefaultConfig(),
 	}
 	makeProcessor := func() kasper.MessageProcessor { return &MultipleInputTopicsExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, makeProcessor, kasper.ContainerId(0))

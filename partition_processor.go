@@ -1,8 +1,9 @@
 package kasper
 
 import (
-	"github.com/Shopify/sarama"
 	"log"
+
+	"github.com/Shopify/sarama"
 )
 
 type partitionProcessor struct {
@@ -115,7 +116,7 @@ func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic Topic) {
 }
 
 func (pp *partitionProcessor) isReadyForMessage(msg *sarama.ConsumerMessage) bool {
-	maxGroups := pp.topicProcessor.config.KasperConfig.MaxInFlightMessageGroups
+	maxGroups := pp.topicProcessor.config.Config.MaxInFlightMessageGroups
 	return len(pp.inFlightMessageGroups[Topic(msg.Topic)]) <= maxGroups
 }
 

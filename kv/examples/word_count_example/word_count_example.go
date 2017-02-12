@@ -79,7 +79,7 @@ func main() {
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
-		KasperConfig:            kasper.DefaultKasperConfig(),
+		Config:                  kasper.DefaultConfig(),
 	}
 	// store := kasper.NewElasticsearchKeyValueStore("localhost:9200")
 	// store := kasper.NewInMemoryKeyValueStore(10000)

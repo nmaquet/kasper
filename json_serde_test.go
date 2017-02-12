@@ -2,16 +2,17 @@ package kasper
 
 import (
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
 type Smurf struct {
-	Age  int `json:"smurf_age"`
+	Age  int    `json:"smurf_age"`
 	Name string `json:"smurf_name"`
 }
 
 type Wizard struct {
-	Level int
+	Level   int
 	Nemesis *Wizard
 }
 
@@ -50,7 +51,7 @@ func TestNewJsonSerde_NonPointerWitness(t *testing.T) {
 }
 
 func TestNewJsonSerde_NonStructWitness(t *testing.T) {
-	assert.Panics(t, func(){
+	assert.Panics(t, func() {
 		x := 42
 		NewJsonSerde(&x)
 	})

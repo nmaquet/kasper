@@ -2,15 +2,16 @@
 
 kasper is a lightweight Kafka stream processing library.
 
- */
+*/
 
 package kasper
 
 import (
 	"log"
-	"github.com/Shopify/sarama"
-	"time"
 	"sync"
+	"time"
+
+	"github.com/Shopify/sarama"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -50,7 +51,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		log.Fatal(err)
 	}
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
-	requiredAcks := config.KasperConfig.RequiredAcks
+	requiredAcks := config.Config.RequiredAcks
 	producer := mustSetupProducer(config.BrokerList, config.producerClientId(cid), requiredAcks)
 	topicProcessor := TopicProcessor{
 		config,

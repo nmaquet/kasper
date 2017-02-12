@@ -63,7 +63,7 @@ func main() {
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
-		KasperConfig:            kasper.DefaultKasperConfig(),
+		Config:                  kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{make(map[string]int)} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
