@@ -9,6 +9,7 @@ type RiakKeyValueStore struct {
 	cluster *riak.Cluster
 }
 
+// TODO: add constructor arguments
 func NewRiakKeyValueStore() *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{
 		RemoteAddress: "127.0.0.1:8087",
