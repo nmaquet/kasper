@@ -9,6 +9,12 @@
 			"revisionTime": "2017-02-09T16:01:41Z"
 		},
 		{
+			"checksumSHA1": "Br0/RHBQPDq1MNy47uPhpRcqmrQ=",
+			"path": "github.com/basho/riak-go-client",
+			"revision": "17d13652af3a876f011a6cfc0ff63696f298f53d",
+			"revisionTime": "2017-02-10T16:18:35Z"
+		},
+		{
 			"checksumSHA1": "TJ1UtXLL59LZBuC0IbNq5DYykrQ=",
 			"path": "github.com/rcrowley/go-metrics",
 			"revision": "1f30fe9094a513ce4c700b9a54458bbb0c96996c",
