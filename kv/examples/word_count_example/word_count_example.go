@@ -94,7 +94,7 @@ func main() {
 	// if err != nil {
 	//	log.Fatal(err)
 	// }
-	store := kv.NewRiakKeyValueStore()
+	store := kv.NewRiakKeyValueStore("127.0.0.1:8087")
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()

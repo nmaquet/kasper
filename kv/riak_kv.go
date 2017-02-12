@@ -6,14 +6,16 @@ import (
 	riak "github.com/basho/riak-go-client"
 )
 
+// RiakKeyValueStore is a key-value storage that uses Riak.
+// See: http://basho.com/products/riak-kv/
 type RiakKeyValueStore struct {
 	cluster *riak.Cluster
 }
 
-// TODO: add constructor arguments
-func NewRiakKeyValueStore() *RiakKeyValueStore {
+// NewRiakKeyValueStore creates new Riak connection
+func NewRiakKeyValueStore(ipAddress string) *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{
-		RemoteAddress: "127.0.0.1:8087",
+		RemoteAddress: ipAddress,
 	}
 	var node *riak.Node
 	var err error
@@ -33,6 +35,7 @@ func NewRiakKeyValueStore() *RiakKeyValueStore {
 	}
 }
 
+// Get gets data by key from store and populates value
 func (kv *RiakKeyValueStore) Get(key string, value StoreValue) (bool, error) {
 	cmd, err := riak.NewFetchValueCommandBuilder().
 		WithBucket("default").
@@ -62,6 +65,7 @@ func (kv *RiakKeyValueStore) Get(key string, value StoreValue) (bool, error) {
 	return true, nil
 }
 
+// Put updates key in store with serialized value
 func (kv *RiakKeyValueStore) Put(key string, value StoreValue) error {
 	bytes, err := json.Marshal(value)
 	if err != nil {
@@ -87,6 +91,7 @@ func (kv *RiakKeyValueStore) Put(key string, value StoreValue) error {
 	return nil
 }
 
+// Delete removes key from store
 func (kv *RiakKeyValueStore) Delete(key string) error {
 	panic("implement me")
 }
