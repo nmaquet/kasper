@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"testing"
+
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,7 +17,7 @@ func newFixture() *fixture {
 		&partitionProcessor{
 			topicProcessor: &TopicProcessor{
 				config: &TopicProcessorConfig{
-					TopicSerdes: map[Topic]TopicSerde{
+					TopicSerdes: map[string]TopicSerde{
 						"hello": {
 							KeySerde:   NewStringSerde(),
 							ValueSerde: NewStringSerde(),
@@ -71,7 +72,7 @@ func TestSender_Send_TwoMessages(t *testing.T) {
 	if len(sender.producerMessages) != 2 {
 		t.Fail()
 	}
-	expected := []*sarama.ProducerMessage {
+	expected := []*sarama.ProducerMessage{
 		{
 			Topic:     "hello",
 			Key:       sarama.ByteEncoder([]byte{65, 65, 65}),
@@ -123,7 +124,7 @@ func TestSender_createInFlightMessageGroup(t *testing.T) {
 	actual := sender.createInFlightMessageGroup(true)
 	expected := &inFlightMessageGroup{
 		incomingMessage: f.in,
-		committed: true,
+		committed:       true,
 		inFlightMessages: []*inFlightMessage{
 			{
 				msg: &sarama.ProducerMessage{

@@ -1,8 +1,9 @@
 package kasper
 
 import (
-	"github.com/Shopify/sarama"
 	"fmt"
+
+	"github.com/Shopify/sarama"
 )
 
 type Sender interface {
@@ -44,7 +45,7 @@ func (sender *sender) Send(msg OutgoingMessage) {
 		panic(fmt.Sprintf("Could not find Serde for topic '%s'", msg.Topic))
 	}
 	producerMessage := &sarama.ProducerMessage{
-		Topic:     string(msg.Topic),
+		Topic:     msg.Topic,
 		Key:       sarama.ByteEncoder(topicSerde.KeySerde.Serialize(msg.Key)),
 		Value:     sarama.ByteEncoder(topicSerde.ValueSerde.Serialize(msg.Value)),
 		Partition: int32(msg.Partition),
