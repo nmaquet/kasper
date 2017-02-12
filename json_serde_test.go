@@ -1,10 +1,17 @@
 package kasper
 
-import "testing"
+import (
+	"testing"
+)
 
 type Smurf struct {
 	Age  int `json:"smurf_age"`
 	Name string `json:"smurf_name"`
+}
+
+type Wizard struct {
+	Level int
+	Nemesis *Wizard
 }
 
 func TestJsonSerde_Serialize_Smurf(t *testing.T) {
@@ -15,6 +22,26 @@ func TestJsonSerde_Serialize_Smurf(t *testing.T) {
 	}
 }
 
+func TestJsonSerde_Serialize_NonPointerValue(t *testing.T) {
+	defer func() {
+		if r := recover(); r != "Value must be a pointer type" {
+			t.Fail()
+		}
+	}()
+	serde := NewJsonSerde(&Smurf{})
+	serde.Serialize(Smurf{Age: 245, Name: "Smurfette"})
+}
+
+func TestJsonSerde_Serialize_StructMismatch(t *testing.T) {
+	defer func() {
+		if r := recover(); r != "Value struct type doesn't match witness" {
+			t.Fail()
+		}
+	}()
+	serde := NewJsonSerde(&Smurf{})
+	serde.Serialize(&Wizard{Level: 17})
+}
+
 func TestJsonSerde_Deserialize_Smurf(t *testing.T) {
 	serde := NewJsonSerde(&Smurf{})
 	expected := Smurf{Age: 245, Name: "Smurfette"}
@@ -22,6 +49,25 @@ func TestJsonSerde_Deserialize_Smurf(t *testing.T) {
 	if *actual != expected {
 		t.Fatal(actual)
 	}
+}
+
+func TestNewJsonSerde_NonPointerWitness(t *testing.T) {
+	defer func() {
+		if r := recover(); r != "Value must be a pointer type" {
+			t.Fail()
+		}
+	}()
+	NewJsonSerde(Smurf{})
+}
+
+func TestNewJsonSerde_NonStructWitness(t *testing.T) {
+	defer func() {
+		if r := recover(); r != "Witness must be a struct" {
+			t.Fail()
+		}
+	}()
+	x := 42
+	NewJsonSerde(&x)
 }
 
 func BenchmarkJsonSerde_Serialize(b *testing.B) {
