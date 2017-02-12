@@ -15,7 +15,7 @@ type WordCountExample struct {
 }
 
 type WordCount struct {
-	Word     string
+	Word     string	
 	Count    int
 	LastSeen time.Time
 }
