@@ -2,8 +2,8 @@ package kasper
 
 import (
 	"testing"
-	"reflect"
 	"github.com/Shopify/sarama"
+	"github.com/stretchr/testify/assert"
 )
 
 type fixture struct {
@@ -50,9 +50,7 @@ func TestSender_Send_OneMessage(t *testing.T) {
 		Metadata:  f.in,
 	}
 	actual := sender.producerMessages[0]
-	if ! reflect.DeepEqual(actual, expected) {
-		t.Errorf("Mismatch: %v != %v", actual, expected)
-	}
+	assert.Equal(t, expected, actual)
 }
 
 func TestSender_Send_TwoMessages(t *testing.T) {
@@ -90,7 +88,5 @@ func TestSender_Send_TwoMessages(t *testing.T) {
 		},
 	}
 	actual := sender.producerMessages
-	if ! reflect.DeepEqual(actual, expected) {
-		t.Errorf("Mismatch: %#v != %#v", actual, expected)
-	}
+	assert.Equal(t, expected, actual)
 }
