@@ -1,7 +1,7 @@
 package kasper
 
 type TopicSerde struct {
-	KeySerde Serde
+	KeySerde   Serde
 	ValueSerde Serde
 }
 

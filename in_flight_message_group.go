@@ -18,7 +18,7 @@ func (group *inFlightMessageGroup) allAcksAreTrue() bool {
 		return true
 	}
 	for _, msg := range group.inFlightMessages {
-		if msg.ack == false {
+		if !msg.ack {
 			return false
 		}
 	}

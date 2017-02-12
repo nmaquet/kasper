@@ -1,6 +1,6 @@
 package kasper
 
-type StringSerde struct {}
+type StringSerde struct{}
 
 func (*StringSerde) Serialize(value interface{}) []byte {
 	s := value.(string)
