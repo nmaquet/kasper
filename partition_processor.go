@@ -35,11 +35,11 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 	partitionConsumers := make([]sarama.PartitionConsumer, len(tp.inputTopics))
 	partitionOffsetManagers := make(map[string]sarama.PartitionOffsetManager)
 	for i, topic := range tp.inputTopics {
-		pom, err := tp.offsetManager.ManagePartition(string(topic), int32(partition))
+		pom, err := tp.offsetManager.ManagePartition(topic, int32(partition))
 		if err != nil {
 			log.Fatal(err)
 		}
-		newestOffset, err := tp.client.GetOffset(string(topic), int32(partition), sarama.OffsetNewest)
+		newestOffset, err := tp.client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -47,7 +47,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		if nextOffset > newestOffset {
 			nextOffset = sarama.OffsetNewest
 		}
-		c, err := consumer.ConsumePartition(string(topic), int32(partition), nextOffset)
+		c, err := consumer.ConsumePartition(topic, int32(partition), nextOffset)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -71,7 +71,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 }
 
 func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
-	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[string(consumerMessage.Topic)]
+	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[consumerMessage.Topic]
 	if !ok {
 		log.Fatalf("Could not find Serde for topic '%s'", consumerMessage.Topic)
 	}
@@ -172,11 +172,22 @@ func (pp *partitionProcessor) onProducerAck(sentMessage *sarama.ProducerMessage)
 }
 
 func (pp *partitionProcessor) onShutdown() {
+	var err error
 	for _, pom := range pp.offsetManagers {
-		pom.Close()
+		err = pom.Close()
+		if err != nil {
+			log.Printf("Cannot close offset manager: %s", err)
+		}
+
 	}
 	for _, pc := range pp.partitionConsumers {
-		pc.Close()
+		err = pc.Close()
+		if err != nil {
+			log.Printf("Cannot close partition consumer: %s", err)
+		}
 	}
-	pp.consumer.Close()
+	err = pp.consumer.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
