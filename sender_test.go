@@ -91,6 +91,20 @@ func TestSender_Send_TwoMessages(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestSender_Send_MissingSerde(t *testing.T) {
+	f := newFixture()
+	sender := newSender(f.pp, f.in)
+	out := OutgoingMessage{
+		Topic:     "unknown",
+		Partition: 6,
+		Key:       "AAA",
+		Value:     "BBB",
+	}
+	assert.Panics(t, func() {
+		sender.Send(out)
+	})
+}
+
 func TestSender_createInFlightMessageGroup(t *testing.T) {
 	f := newFixture()
 	sender := newSender(f.pp, f.in)

@@ -2,7 +2,7 @@ package kasper
 
 import (
 	"github.com/Shopify/sarama"
-	"log"
+	"fmt"
 )
 
 type Sender interface {
@@ -41,7 +41,7 @@ func (sender *sender) createInFlightMessageGroup(committed bool) *inFlightMessag
 func (sender *sender) Send(msg OutgoingMessage) {
 	topicSerde, ok := sender.pp.topicProcessor.config.TopicSerdes[msg.Topic]
 	if !ok {
-		log.Fatalf("Could not find Serde for topic '%s'", msg.Topic)
+		panic(fmt.Sprintf("Could not find Serde for topic '%s'", msg.Topic))
 	}
 	producerMessage := &sarama.ProducerMessage{
 		Topic:     string(msg.Topic),
