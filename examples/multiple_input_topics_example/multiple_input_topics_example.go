@@ -11,7 +11,7 @@ import (
 	"github.com/movio/kasper"
 )
 
-// MultipleInputTopicsExample is Kafka message processor that show how to read messages from several Kafka topics
+// MultipleInputTopicsExample is Kafka message processor that shows how to read messages from muptiple Kafka topics
 type MultipleInputTopicsExample struct{}
 
 // Process processes Kafka messages from topics "hello" and "world" and prints info to console

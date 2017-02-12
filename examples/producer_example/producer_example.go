@@ -1,4 +1,4 @@
-gpackage main
+package main
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/movio/kasper"
 )
 
-// MultipleInputTopicsExample is Kafka message processor that sahows how to write messages to Kafka topics
+// ProducerExample is Kafka message processor that shows how to write messages to Kafka topics
 type ProducerExample struct{}
 
 // Process processes Kafka messages from topics "hello" and "world" and publish outgoing messages to "world" topi
