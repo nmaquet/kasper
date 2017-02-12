@@ -11,14 +11,14 @@ type TopicProcessorConfig struct {
 	InputTopics             []Topic
 	TopicSerdes             map[Topic]TopicSerde
 	ContainerCount          int
-	PartitionAssignment     map[int]int
+	PartitionToContainerID  map[int]int
 	AutoMarkOffsetsInterval time.Duration /* a value <= 0 will disable the automatic marking of offsets */
 	Config                  *Config
 }
 
 func (config *TopicProcessorConfig) partitionsForContainer(containerID int) []int {
 	var partitions []int
-	for partition, partitionContainerID := range config.PartitionAssignment {
+	for partition, partitionContainerID := range config.PartitionToContainerID {
 		if containerID == partitionContainerID {
 			partitions = append(partitions, partition)
 		}

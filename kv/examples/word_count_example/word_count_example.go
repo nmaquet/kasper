@@ -75,7 +75,7 @@ func main() {
 			},
 		},
 		ContainerCount: 1,
-		PartitionAssignment: map[int]int{
+		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,

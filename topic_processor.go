@@ -37,7 +37,7 @@ type MessageProcessor interface {
 // The container id must be a number between 0 and config.ContainerCount - 1.
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerID int) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
-	// TODO: check all input partitions and make sure PartitionAssignment is valid
+	// TODO: check all input partitions and make sure PartitionToContainerID is valid
 	// TODO: check cid is within [0, ContainerCount)
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
