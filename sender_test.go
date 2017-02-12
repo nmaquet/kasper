@@ -149,3 +149,17 @@ func TestSender_createInFlightMessageGroup(t *testing.T) {
 	}
 	assert.Equal(t, expected, actual)
 }
+
+func BenchmarkSender_Send(b *testing.B) {
+	f := newFixture()
+	sender := newSender(f.pp, f.in)
+	for i := 0; i < b.N; i++ {
+		out := OutgoingMessage{
+			Topic:     "hello",
+			Partition: 6,
+			Key:       "AAA",
+			Value:     "BBB",
+		}
+		sender.Send(out)
+	}
+}
