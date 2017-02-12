@@ -12,10 +12,11 @@ type RiakKeyValueStore struct {
 	cluster *riak.Cluster
 }
 
-// NewRiakKeyValueStore creates new Riak connection
-func NewRiakKeyValueStore(ipAddress string) *RiakKeyValueStore {
+// NewRiakKeyValueStore creates new Riak connection.
+// Host must of the format hostname:port.
+func NewRiakKeyValueStore(host string) *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{
-		RemoteAddress: ipAddress,
+		RemoteAddress: host,
 	}
 	var node *riak.Node
 	var err error

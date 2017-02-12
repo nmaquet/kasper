@@ -9,8 +9,17 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-// NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance
-// host must of the format hostname:port
+// ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
+// In this key-value store, all keys must have the format "<index>/<type>/<_id>".
+// See: https://www.elastic.co/products/elasticsearch
+type ElasticsearchKeyValueStore struct {
+	client             *elastic.Client
+	context            context.Context
+	existingIndexNames []string
+}
+
+// NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
+// Host must of the format hostname:port.
 func NewElasticsearchKeyValueStore(host string) *ElasticsearchKeyValueStore {
 	url := fmt.Sprintf("http://%s", host)
 	client, err := elastic.NewClient(
@@ -23,14 +32,6 @@ func NewElasticsearchKeyValueStore(host string) *ElasticsearchKeyValueStore {
 		client:  client,
 		context: context.Background(),
 	}
-}
-
-// ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch
-// In this key-value store, all keys must have the format "<index>/<type>/<_id>"
-type ElasticsearchKeyValueStore struct {
-	client             *elastic.Client
-	context            context.Context
-	existingIndexNames []string
 }
 
 func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string) {
@@ -52,7 +53,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string) {
 	s.existingIndexNames = append(s.existingIndexNames, indexName)
 }
 
-// Get gets a value from Elasticsearch by key
+// Get gets data by key from store and populates value
 func (s *ElasticsearchKeyValueStore) Get(key string, value StoreValue) (bool, error) {
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
@@ -89,7 +90,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string, value StoreValue) (bool, er
 	return true, nil
 }
 
-// Put puts value to Elasticsearch for key
+// Put updates key in store with serialized value
 func (s *ElasticsearchKeyValueStore) Put(key string, value StoreValue) error {
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
@@ -111,7 +112,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, value StoreValue) error {
 	return err
 }
 
-// Delete deletes key from Elasticsearch index
+// Delete removes key from store
 func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
