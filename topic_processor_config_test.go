@@ -1,10 +1,11 @@
 package kasper
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"sort"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func sortedPartitionsForContainer(c *TopicProcessorConfig, containerID int) []int {
@@ -57,7 +58,6 @@ func TestTopicProcessorConfig_markOffsetsAutomatically_false(t *testing.T) {
 	}
 	assert.Equal(t, false, c.markOffsetsAutomatically())
 }
-
 
 func TestTopicProcessorConfig_markOffsetsManually_false(t *testing.T) {
 	c := &TopicProcessorConfig{

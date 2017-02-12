@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"testing"
+
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 )

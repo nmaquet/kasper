@@ -1,8 +1,9 @@
 package kv
 
 import (
-	riak "github.com/basho/riak-go-client"
 	"encoding/json"
+
+	riak "github.com/basho/riak-go-client"
 )
 
 type RiakKeyValueStore struct {
@@ -40,7 +41,8 @@ func (kv *RiakKeyValueStore) Get(key string, value StoreValue) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err := kv.cluster.Execute(cmd); err != nil {
+	err = kv.cluster.Execute(cmd)
+	if err != nil {
 		return false, err
 	}
 	svc := cmd.(*riak.FetchValueCommand)
