@@ -74,6 +74,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	return &topicProcessor
 }
 
+// Start launches a deferred routine for topic processing.
 func (tp *TopicProcessor) Start() {
 	tp.waitGroup.Add(1)
 	go func() {
@@ -208,6 +209,7 @@ func mustSetupProducer(brokers []string, producerClientID string, requiredAcks s
 	return producer
 }
 
+// Shutdown safely shuts down topic processing, waiting for unfinished jobs
 func (tp *TopicProcessor) Shutdown() {
 	tp.shutdown <- true
 	tp.waitGroup.Wait()

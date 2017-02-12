@@ -1,5 +1,6 @@
 package kasper
 
+// Coordinator helps to batch process Kafka messages
 type Coordinator interface {
 	Commit()
 	ShutdownTopicProcessor()
