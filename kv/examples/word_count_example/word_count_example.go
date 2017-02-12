@@ -13,27 +13,31 @@ import (
 	"github.com/movio/kasper/kv"
 )
 
+// WordCountExample is message processor that counts words in topic "words"
+// and outputs results to topic "word-counts"
 type WordCountExample struct {
 	store kv.KeyValueStore
 }
 
+// WordCount desribes Kafka outgoing message
 type WordCount struct {
 	Count int `json:"count"`
 }
 
+// Process processes Kafka messages from topic "words"
 func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")
 	for _, word := range words {
 		var wordCount WordCount
 		wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
-		found := processor.Get(wordStoreKey, &wordCount)
+		found := processor.get(wordStoreKey, &wordCount)
 		if !found {
 			wordCount.Count = 1
 		} else {
 			wordCount.Count++
 		}
-		processor.store.Put(wordStoreKey, &wordCount)
+		processor.put(wordStoreKey, &wordCount)
 		outgoingMessage := kasper.OutgoingMessage{
 			Topic:     "words-counts",
 			Partition: 0,
@@ -44,7 +48,7 @@ func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender ka
 	}
 }
 
-func (processor *WordCountExample) Get(key string, value *WordCount) bool {
+func (processor *WordCountExample) get(key string, value *WordCount) bool {
 	found, err := processor.store.Get(key, value)
 	if err != nil {
 		log.Fatalf("Failed to Get(): %s", err)
@@ -52,7 +56,7 @@ func (processor *WordCountExample) Get(key string, value *WordCount) bool {
 	return found
 }
 
-func (processor *WordCountExample) Put(key string, value *WordCount) {
+func (processor *WordCountExample) put(key string, value *WordCount) {
 	err := processor.store.Put(key, value)
 	if err != nil {
 		log.Fatalf("Failed to Put(): %s", err)
