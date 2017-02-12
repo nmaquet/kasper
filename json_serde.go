@@ -5,11 +5,11 @@ import (
 	"reflect"
 )
 
-type JsonSerde struct {
+type JSONSerde struct {
 	value reflect.Value
 }
 
-func NewJsonSerde(witness interface{}) *JsonSerde {
+func NewJSONSerde(witness interface{}) *JSONSerde {
 	value := reflect.ValueOf(witness)
 	if value.Kind() != reflect.Ptr {
 		panic("Value must be a pointer type")
@@ -17,10 +17,10 @@ func NewJsonSerde(witness interface{}) *JsonSerde {
 	if value.Elem().Kind() != reflect.Struct {
 		panic("Witness must be a struct")
 	}
-	return &JsonSerde{value.Elem()}
+	return &JSONSerde{value.Elem()}
 }
 
-func (serde *JsonSerde) Serialize(value interface{}) []byte {
+func (serde *JSONSerde) Serialize(value interface{}) []byte {
 	v := reflect.ValueOf(value)
 	if v.Kind() != reflect.Ptr {
 		panic("Value must be a pointer type")
@@ -35,7 +35,7 @@ func (serde *JsonSerde) Serialize(value interface{}) []byte {
 	return bytes
 }
 
-func (serde *JsonSerde) Deserialize(bytes []byte) interface{}  {
+func (serde *JSONSerde) Deserialize(bytes []byte) interface{} {
 	value := reflect.New(serde.value.Type()).Interface()
 	err := json.Unmarshal(bytes, &value)
 	if err != nil {

@@ -55,7 +55,7 @@ func main() {
 			},
 			"word-counts": {
 				KeySerde:   kasper.NewStringSerde(),
-				ValueSerde: kasper.NewJsonSerde(&WordCount{}),
+				ValueSerde: kasper.NewJSONSerde(&WordCount{}),
 			},
 		},
 		ContainerCount: 1,
