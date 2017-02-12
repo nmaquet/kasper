@@ -30,7 +30,7 @@ func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
 	return fmt.Sprintf("kasper-topic-processor-%s", config.TopicProcessorName)
 }
 
-func (config *TopicProcessorConfig) producerClientId(containerID int) string {
+func (config *TopicProcessorConfig) producerClientID(containerID int) string {
 	return fmt.Sprintf("kasper-topic-processor-%s-%d", config.TopicProcessorName, containerID)
 }
 

@@ -52,7 +52,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	}
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
 	requiredAcks := config.Config.RequiredAcks
-	producer := mustSetupProducer(config.BrokerList, config.producerClientId(containerID), requiredAcks)
+	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks)
 	topicProcessor := TopicProcessor{
 		config,
 		containerID,
@@ -182,9 +182,9 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	return chans
 }
 
-func mustSetupProducer(brokers []string, producerClientId string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
+func mustSetupProducer(brokers []string, producerClientID string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
 	saramaConfig := sarama.NewConfig()
-	saramaConfig.ClientID = producerClientId
+	saramaConfig.ClientID = producerClientID
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
 	saramaConfig.Producer.RequiredAcks = requiredAcks
