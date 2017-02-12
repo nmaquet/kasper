@@ -2,7 +2,7 @@
 
 Kasper companion library for stateful stream processing.
 
- */
+*/
 
 package kv
 
@@ -16,4 +16,3 @@ type KeyValueStore interface {
 // StoreValue is deserialized entry from store
 // StoreValue must be a JSON serializable struct
 type StoreValue interface{}
-

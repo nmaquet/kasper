@@ -1,6 +1,6 @@
 # Kasper examples
 
-This folder contains example applications to demonstrate the use of Kasper. For code snippet examples on how to use the different types in Sarama, see [Kasper documentation on godoc.org](https://godoc.org/github.com/movio/kasper)
+This folder contains example applications to demonstrate the use of Kasper. For more info, see [Kasper documentation on godoc.org](https://godoc.org/github.com/movio/kasper)
 
 #### Hello World example
 

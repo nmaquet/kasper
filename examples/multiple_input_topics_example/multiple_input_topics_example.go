@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
-	"github.com/movio/kasper"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/movio/kasper"
 )
 
 type MultipleInputTopicsExample struct{}
@@ -42,7 +43,7 @@ func main() {
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 5 * time.Second,
-		KasperConfig: kasper.DefaultKasperConfig(),
+		KasperConfig:            kasper.DefaultKasperConfig(),
 	}
 	makeProcessor := func() kasper.MessageProcessor { return &MultipleInputTopicsExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, makeProcessor, kasper.ContainerId(0))

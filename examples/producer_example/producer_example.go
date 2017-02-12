@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
-	"github.com/movio/kasper"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/movio/kasper"
 )
 
 type ProducerExample struct{}
@@ -49,7 +50,7 @@ func main() {
 			kasper.Partition(0): kasper.ContainerId(0),
 		},
 		AutoMarkOffsetsInterval: 100 * time.Millisecond,
-		KasperConfig: kasper.DefaultKasperConfig(),
+		KasperConfig:            kasper.DefaultKasperConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &ProducerExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))

@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
-	"strings"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
+
 	"github.com/movio/kasper"
 	"github.com/movio/kasper/kv"
 )

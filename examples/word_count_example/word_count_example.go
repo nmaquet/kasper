@@ -2,12 +2,13 @@ package main
 
 import (
 	"log"
-	"time"
-	"github.com/movio/kasper"
-	"strings"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
+
+	"github.com/movio/kasper"
 )
 
 type WordCountExample struct {
@@ -15,7 +16,7 @@ type WordCountExample struct {
 }
 
 type WordCount struct {
-	Word     string	
+	Word     string
 	Count    int
 	LastSeen time.Time
 }

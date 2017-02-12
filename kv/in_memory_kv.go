@@ -1,8 +1,8 @@
 package kv
 
 import (
-	"reflect"
 	"log"
+	"reflect"
 )
 
 type InMemoryKeyValueStore struct {
@@ -15,7 +15,7 @@ func NewInMemoryKeyValueStore(size int) *InMemoryKeyValueStore {
 	}
 }
 
-func (s*InMemoryKeyValueStore) Get(key string, dst StoreValue) (bool, error) {
+func (s *InMemoryKeyValueStore) Get(key string, dst StoreValue) (bool, error) {
 	src, found := s.m[key]
 	if !found {
 		return false, nil
@@ -32,12 +32,12 @@ func (s*InMemoryKeyValueStore) Get(key string, dst StoreValue) (bool, error) {
 	return true, nil
 }
 
-func (s*InMemoryKeyValueStore) Put(key string, value StoreValue) error {
+func (s *InMemoryKeyValueStore) Put(key string, value StoreValue) error {
 	s.m[key] = value
 	return nil
 }
 
-func (s*InMemoryKeyValueStore) Delete(key string) error {
+func (s *InMemoryKeyValueStore) Delete(key string) error {
 	delete(s.m, key)
 	return nil
 }
