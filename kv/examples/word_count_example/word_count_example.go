@@ -13,7 +13,7 @@ import (
 	"github.com/movio/kasper/kv"
 )
 
-// WordCountExample is message processor that counts words in topic "words"
+// WordCountExample is message processor that shows how to use key-value store in processing Kafka messages
 // and outputs results to topic "word-counts"
 type WordCountExample struct {
 	store kv.KeyValueStore
@@ -24,7 +24,7 @@ type WordCount struct {
 	Count int `json:"count"`
 }
 
-// Process processes Kafka messages from topic "words"
+// Process processes Kafka messages from topic "words" and outputs each word with counter to "word-counts" topic
 func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")

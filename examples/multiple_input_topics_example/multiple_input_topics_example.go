@@ -11,8 +11,10 @@ import (
 	"github.com/movio/kasper"
 )
 
+// MultipleInputTopicsExample is Kafka message processor that show how to read messages from several Kafka topics
 type MultipleInputTopicsExample struct{}
 
+// Process processes Kafka messages from topics "hello" and "world" and prints info to console
 func (*MultipleInputTopicsExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := msg.Key.(string)
 	value := msg.Value.(string)

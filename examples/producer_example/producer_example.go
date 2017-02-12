@@ -1,4 +1,4 @@
-package main
+gpackage main
 
 import (
 	"fmt"
@@ -11,8 +11,10 @@ import (
 	"github.com/movio/kasper"
 )
 
+// MultipleInputTopicsExample is Kafka message processor that sahows how to write messages to Kafka topics
 type ProducerExample struct{}
 
+// Process processes Kafka messages from topics "hello" and "world" and publish outgoing messages to "world" topi
 func (*ProducerExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := msg.Key.(string)
 	value := msg.Value.(string)

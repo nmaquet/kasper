@@ -11,8 +11,10 @@ import (
 	"github.com/movio/kasper"
 )
 
+// HelloWorldExample is Kafka message processor that shows how to read messages from Kafka topic
 type HelloWorldExample struct{}
 
+// Process processes Kafka messages from topic "hello" and prints info to console
 func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := msg.Key.(string)
 	value := msg.Value.(string)

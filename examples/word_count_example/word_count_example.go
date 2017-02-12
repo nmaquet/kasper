@@ -11,16 +11,19 @@ import (
 	"github.com/movio/kasper"
 )
 
+// WordCountExample is message processor that shows how to use processor state
 type WordCountExample struct {
-	wordCounts map[string]int
+	wordCounts map[string]int // stores a counter of words from input topic
 }
 
+// WordCount desribes Kafka outgoing message.
 type WordCount struct {
 	Word     string
 	Count    int
 	LastSeen time.Time
 }
 
+// Process processes Kafka messages from topic "words" and outputs each word with counter to "word-counts" topic
 func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")
