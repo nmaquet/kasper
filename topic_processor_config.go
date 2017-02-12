@@ -17,7 +17,7 @@ type TopicProcessorConfig struct {
 }
 
 func (config *TopicProcessorConfig) partitionsForContainer(containerID int) []int {
-	var partitions []int
+	partitions := []int{}
 	for partition, partitionContainerID := range config.PartitionToContainerID {
 		if containerID == partitionContainerID {
 			partitions = append(partitions, partition)
