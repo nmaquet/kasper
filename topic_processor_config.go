@@ -16,10 +16,10 @@ type TopicProcessorConfig struct {
 	KasperConfig            *KasperConfig
 }
 
-func (config *TopicProcessorConfig) partitionsForContainer(cid ContainerId) []Partition {
+func (config *TopicProcessorConfig) partitionsForContainer(containerID ContainerId) []Partition {
 	var partitions []Partition
-	for partition, containerId := range config.PartitionAssignment {
-		if containerId == containerId {
+	for partition, partitionContainerID := range config.PartitionAssignment {
+		if containerID == partitionContainerID {
 			partitions = append(partitions, partition)
 		}
 	}
