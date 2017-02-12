@@ -103,31 +103,7 @@ func (tp *TopicProcessor) runLoop() {
 	for {
 		select {
 		case consumerMessage := <-consumerChan:
-			pp := tp.partitionProcessors[consumerMessage.Partition]
-			for {
-				if pp.isReadyForMessage(consumerMessage) {
-					producerMessages := pp.process(consumerMessage)
-					for len(producerMessages) > 0 {
-						select {
-						case tp.producer.Input() <- producerMessages[0]:
-							producerMessages = producerMessages[1:]
-						case msg, more := <-tp.producer.Successes():
-							tp.onProducerAck(msg, more)
-						case <-tickerChan:
-							tp.onTick()
-						}
-					}
-					pp.onProcessCompleted()
-					break
-				} else {
-					select {
-					case msg, more := <-tp.producer.Successes():
-						tp.onProducerAck(msg, more)
-					case <-tickerChan:
-						tp.onTick()
-					}
-				}
-			}
+			tp.processConsumerMessage(consumerMessage, tickerChan)
 		case msg, more := <-tp.producer.Successes():
 			tp.onProducerAck(msg, more)
 		case <-tickerChan:
@@ -139,12 +115,46 @@ func (tp *TopicProcessor) runLoop() {
 	}
 }
 
+func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage, tickerChan <-chan time.Time) {
+	pp := tp.partitionProcessors[consumerMessage.Partition]
+	for {
+		if pp.isReadyForMessage(consumerMessage) {
+			producerMessages := pp.process(consumerMessage)
+			for len(producerMessages) > 0 {
+				select {
+				case tp.producer.Input() <- producerMessages[0]:
+					producerMessages = producerMessages[1:]
+				case msg, more := <-tp.producer.Successes():
+					tp.onProducerAck(msg, more)
+				case <-tickerChan:
+					tp.onTick()
+				}
+			}
+			pp.onProcessCompleted()
+			break
+		} else {
+			select {
+			case msg, more := <-tp.producer.Successes():
+				tp.onProducerAck(msg, more)
+			case <-tickerChan:
+				tp.onTick()
+			}
+		}
+	}
+}
+
 func (tp *TopicProcessor) onShutdown() {
 	for _, pp := range tp.partitionProcessors {
 		pp.onShutdown()
 	}
-	tp.producer.Close()
-	tp.client.Close()
+	err := tp.producer.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tp.client.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
@@ -175,9 +185,7 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	var chans []<-chan *sarama.ConsumerMessage
 	for _, partitionProcessor := range tp.partitionProcessors {
 		partitionChannels := partitionProcessor.consumerMessageChannels()
-		for _, ch := range partitionChannels {
-			chans = append(chans, ch)
-		}
+		chans = append(chans, partitionChannels...)
 	}
 	return chans
 }
