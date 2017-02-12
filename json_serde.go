@@ -5,10 +5,12 @@ import (
 	"reflect"
 )
 
+// JSONSerde serializes and deserializes structs using JSON type descriptions
 type JSONSerde struct {
 	value reflect.Value
 }
 
+// NewJSONSerde creates a serde for given witness.
 func NewJSONSerde(witness interface{}) *JSONSerde {
 	value := reflect.ValueOf(witness)
 	if value.Kind() != reflect.Ptr {
@@ -20,6 +22,7 @@ func NewJSONSerde(witness interface{}) *JSONSerde {
 	return &JSONSerde{value.Elem()}
 }
 
+// Serialize returns serialized value as a byte array
 func (serde *JSONSerde) Serialize(value interface{}) []byte {
 	v := reflect.ValueOf(value)
 	if v.Kind() != reflect.Ptr {
@@ -35,6 +38,7 @@ func (serde *JSONSerde) Serialize(value interface{}) []byte {
 	return bytes
 }
 
+// Deserialize returns a struct deserialized from byte array
 func (serde *JSONSerde) Deserialize(bytes []byte) interface{} {
 	value := reflect.New(serde.value.Type()).Interface()
 	err := json.Unmarshal(bytes, &value)

@@ -15,6 +15,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+// TopicProcessor desribes kafka topic processor
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
 	containerID         int
@@ -28,6 +29,7 @@ type TopicProcessor struct {
 	waitGroup           sync.WaitGroup
 }
 
+// MessageProcessor desribes kafka message processor
 type MessageProcessor interface {
 	Process(IncomingMessage, Sender, Coordinator)
 }

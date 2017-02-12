@@ -6,6 +6,7 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+// Sender describes an interface for sending messages to Kafka topics
 type Sender interface {
 	Send(OutgoingMessage)
 }

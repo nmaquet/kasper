@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// TopicProcessorConfig desribes a config for Kafka topic processor
 type TopicProcessorConfig struct {
 	TopicProcessorName      string
 	BrokerList              []string
