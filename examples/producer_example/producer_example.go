@@ -46,14 +46,14 @@ func main() {
 			},
 		},
 		ContainerCount: 1,
-		PartitionAssignment: map[kasper.Partition]kasper.ContainerId{
-			kasper.Partition(0): kasper.ContainerId(0),
+		PartitionAssignment: map[int]int{
+			0: 0,
 		},
 		AutoMarkOffsetsInterval: 100 * time.Millisecond,
 		Config:                  kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &ProducerExample{} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

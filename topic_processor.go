@@ -17,13 +17,13 @@ import (
 
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
-	containerId         ContainerId
+	containerID         int
 	client              sarama.Client
 	producer            sarama.AsyncProducer
 	offsetManager       sarama.OffsetManager
 	partitionProcessors []*partitionProcessor
 	inputTopics         []Topic
-	partitions          []Partition
+	partitions          []int
 	shutdown            chan bool
 	waitGroup           sync.WaitGroup
 }
@@ -35,7 +35,7 @@ type MessageProcessor interface {
 // NewTopicProcessor creates a new TopicProcessor with the given config.
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, cid ContainerId) *TopicProcessor {
+func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerID int) *TopicProcessor {
 	// TODO: check all input topics are covered by a Serde
 	// TODO: check all input partitions and make sure PartitionAssignment is valid
 	// TODO: check cid is within [0, ContainerCount)
@@ -45,17 +45,17 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	if err != nil {
 		log.Fatal(err)
 	}
-	partitions := config.partitionsForContainer(cid)
+	partitions := config.partitionsForContainer(containerID)
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
 	if err != nil {
 		log.Fatal(err)
 	}
 	partitionProcessors := make([]*partitionProcessor, len(partitions))
 	requiredAcks := config.Config.RequiredAcks
-	producer := mustSetupProducer(config.BrokerList, config.producerClientId(cid), requiredAcks)
+	producer := mustSetupProducer(config.BrokerList, config.producerClientId(containerID), requiredAcks)
 	topicProcessor := TopicProcessor{
 		config,
-		cid,
+		containerID,
 		client,
 		producer,
 		offsetManager,

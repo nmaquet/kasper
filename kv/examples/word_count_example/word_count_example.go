@@ -75,8 +75,8 @@ func main() {
 			},
 		},
 		ContainerCount: 1,
-		PartitionAssignment: map[kasper.Partition]kasper.ContainerId{
-			kasper.Partition(0): kasper.ContainerId(0),
+		PartitionAssignment: map[int]int{
+			0: 0,
 		},
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
 		Config:                  kasper.DefaultConfig(),
@@ -96,7 +96,7 @@ func main() {
 	// }
 	store := kv.NewRiakKeyValueStore()
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, kasper.ContainerId(0))
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

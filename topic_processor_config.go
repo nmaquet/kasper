@@ -11,13 +11,13 @@ type TopicProcessorConfig struct {
 	InputTopics             []Topic
 	TopicSerdes             map[Topic]TopicSerde
 	ContainerCount          int
-	PartitionAssignment     map[Partition]ContainerId
+	PartitionAssignment     map[int]int
 	AutoMarkOffsetsInterval time.Duration /* a value <= 0 will disable the automatic marking of offsets */
 	Config                  *Config
 }
 
-func (config *TopicProcessorConfig) partitionsForContainer(containerID ContainerId) []Partition {
-	var partitions []Partition
+func (config *TopicProcessorConfig) partitionsForContainer(containerID int) []int {
+	var partitions []int
 	for partition, partitionContainerID := range config.PartitionAssignment {
 		if containerID == partitionContainerID {
 			partitions = append(partitions, partition)
@@ -30,8 +30,8 @@ func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
 	return fmt.Sprintf("kasper-topic-processor-%s", config.TopicProcessorName)
 }
 
-func (config *TopicProcessorConfig) producerClientId(cid ContainerId) string {
-	return fmt.Sprintf("kasper-topic-processor-%s-%d", config.TopicProcessorName, cid)
+func (config *TopicProcessorConfig) producerClientId(containerID int) string {
+	return fmt.Sprintf("kasper-topic-processor-%s-%d", config.TopicProcessorName, containerID)
 }
 
 func (config *TopicProcessorConfig) markOffsetsAutomatically() bool {

@@ -4,8 +4,8 @@ import "time"
 
 type IncomingMessage struct {
 	Topic     Topic
-	Partition Partition
-	Offset    Offset
+	Partition int
+	Offset    int64
 	Key       interface{}
 	Value     interface{}
 	Timestamp time.Time
@@ -13,7 +13,7 @@ type IncomingMessage struct {
 
 type OutgoingMessage struct {
 	Topic     Topic
-	Partition Partition
+	Partition int
 	Key       interface{}
 	Value     interface{}
 }

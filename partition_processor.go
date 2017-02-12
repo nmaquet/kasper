@@ -14,7 +14,7 @@ type partitionProcessor struct {
 	offsetManagers                 map[Topic]sarama.PartitionOffsetManager
 	messageProcessor               MessageProcessor
 	inputTopics                    []Topic
-	partition                      Partition
+	partition                      int
 	inFlightMessageGroups          map[Topic][]*inFlightMessageGroup
 	commitNextInFlightMessageGroup bool
 }
@@ -27,7 +27,7 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 	return chans
 }
 
-func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition Partition) *partitionProcessor {
+func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int) *partitionProcessor {
 	consumer, err := sarama.NewConsumerFromClient(tp.client)
 	if err != nil {
 		log.Fatal(err)
@@ -77,8 +77,8 @@ func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) [
 	}
 	incomingMessage := IncomingMessage{
 		Topic:     Topic(consumerMessage.Topic),
-		Partition: Partition(consumerMessage.Partition),
-		Offset:    Offset(consumerMessage.Offset),
+		Partition: int(consumerMessage.Partition),
+		Offset:    consumerMessage.Offset,
 		Key:       topicSerde.KeySerde.Deserialize(consumerMessage.Key),
 		Value:     topicSerde.ValueSerde.Deserialize(consumerMessage.Value),
 		Timestamp: consumerMessage.Timestamp,
@@ -127,7 +127,7 @@ func (pp *partitionProcessor) markOffsetsIfPossible() {
 }
 
 func (pp *partitionProcessor) markOffsetsForTopicIfPossible(topic Topic) {
-	var offset Offset = -1
+	var offset int64 = -1
 	for len(pp.inFlightMessageGroups[topic]) > 0 {
 		group := pp.inFlightMessageGroups[topic][0]
 		if !group.allAcksAreTrue() {
@@ -136,13 +136,13 @@ func (pp *partitionProcessor) markOffsetsForTopicIfPossible(topic Topic) {
 		offset = group.incomingMessage.Offset
 		if group.committed && pp.topicProcessor.config.markOffsetsManually() {
 			offsetManager := pp.offsetManagers[topic]
-			offsetManager.MarkOffset(int64(offset+1), "")
+			offsetManager.MarkOffset(offset+1, "")
 		}
 		pp.inFlightMessageGroups[topic] = pp.inFlightMessageGroups[topic][1:]
 	}
 	if offset != -1 && pp.topicProcessor.config.markOffsetsAutomatically() {
 		offsetManager := pp.offsetManagers[topic]
-		offsetManager.MarkOffset(int64(offset+1), "")
+		offsetManager.MarkOffset(offset+1, "")
 	}
 }
 
