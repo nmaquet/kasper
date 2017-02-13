@@ -85,7 +85,7 @@ func main() {
 		Config:                  kasper.DefaultConfig(),
 	}
 	// store := kv.NewElasticsearchKeyValueStore("localhost:9200", &WordCount{})
-	store := kv.NewInMemoryKeyValueStore(10000, &WordCount{})
+	// store := kv.NewInMemoryKeyValueStore(10000, &WordCount{})
 	// store, err := kv.NewCouchbaseKeyValueStore(&kv.CouchbaseConfig{
 	//	Host:          "localhost",
 	//	Bucket:        "default",
@@ -98,6 +98,10 @@ func main() {
 	//	log.Fatal(err)
 	// }
 	// store := kv.NewRiakKeyValueStore("127.0.0.1:8087", &WordCount{})
+	store, err := kv.NewBoltKeyValueStore("/tmp/db.bolt", &WordCount{})
+	if err != nil {
+		log.Fatalf("Could not create bolt DB: %s", err)
+	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()
