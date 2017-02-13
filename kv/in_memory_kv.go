@@ -12,7 +12,6 @@ type InMemoryKeyValueStore struct {
 
 // NewInMemoryKeyValueStore creates new store
 func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValueStore {
-
 	return &InMemoryKeyValueStore{
 		witness: kasper.NewStructPtrWitness(structPtr),
 		m: make(map[string]interface{}, size),
@@ -23,7 +22,7 @@ func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValue
 func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 	src, found := s.m[key]
 	if !found {
-		return false, nil
+		return s.witness.Nil(), nil
 	}
 	return src, nil
 }

@@ -38,7 +38,7 @@ func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender ka
 		}
 		processor.put(wordStoreKey, wordCount)
 		outgoingMessage := kasper.OutgoingMessage{
-			Topic:     "words-counts",
+			Topic:     "word-counts",
 			Partition: 0,
 			Key:       msg.Key,
 			Value:     fmt.Sprintf("%s has been seen %d times", word, wordCount.Count),

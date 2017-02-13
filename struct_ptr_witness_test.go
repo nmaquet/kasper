@@ -40,6 +40,13 @@ func TestStructPtrWitness_Allocate(t *testing.T) {
 	assert.Equal(t, &Jedi{"Yoda", false}, jedi)
 }
 
+func TestStructPtrWitness_Nil(t *testing.T) {
+	jediWitness := NewStructPtrWitness(&Jedi{})
+	actual := jediWitness.Nil().(*Jedi)
+	var expected *Jedi = nil
+	assert.Equal(t, expected, actual)
+}
+
 func TestStructPtrWitness_AssertOk(t *testing.T) {
 	jediWitness := NewStructPtrWitness(&Jedi{})
 	jedi := &Jedi{"Anakin", true}

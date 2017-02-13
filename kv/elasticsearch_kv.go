@@ -75,21 +75,21 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 		Do(s.context)
 
 	if fmt.Sprintf("%s", err) == "elastic: Error 404 (Not Found)" {
-		return nil, nil
+		return s.witness.Nil(), nil
 	}
 
 	if err != nil {
-		return nil, err
+		return s.witness.Nil(), err
 	}
 
 	if !rawValue.Found {
-		return nil, nil
+		return s.witness.Nil(), nil
 	}
 
 	structPtr := s.witness.Allocate()
 	err = json.Unmarshal(*rawValue.Source, structPtr)
 	if err != nil {
-		return nil, err
+		return s.witness.Nil(), err
 	}
 	return structPtr, nil
 }

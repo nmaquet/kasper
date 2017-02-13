@@ -40,39 +40,39 @@ func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore
 }
 
 // Get gets data by key from store and populates value
-func (kv *RiakKeyValueStore) Get(key string) (interface{}, error) {
+func (s *RiakKeyValueStore) Get(key string) (interface{}, error) {
 	cmd, err := riak.NewFetchValueCommandBuilder().
 		WithBucket("default").
 		WithKey(key).
 		Build()
 	if err != nil {
-		return nil, err
+		return s.witness.Nil(), err
 	}
-	err = kv.cluster.Execute(cmd)
+	err = s.cluster.Execute(cmd)
 	if err != nil {
-		return nil, err
+		return s.witness.Nil(), err
 	}
 	svc := cmd.(*riak.FetchValueCommand)
 	rsp := svc.Response
 	if rsp.IsNotFound {
-		return nil, nil
+		return s.witness.Nil(), nil
 	}
 	if len(rsp.Values) != 1 {
 		panic("should have gotten only one value")
 	}
 	object := rsp.Values[0]
 	bytes := object.Value
-	structPtr := kv.witness.Allocate()
+	structPtr := s.witness.Allocate()
 	err = json.Unmarshal(bytes, structPtr)
 	if err != nil {
-		return nil, err
+		return s.witness.Nil(), err
 	}
 	return structPtr, nil
 }
 
 // Put updates key in store with serialized value
-func (kv *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
-	kv.witness.Assert(structPtr)
+func (s *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
+	s.witness.Assert(structPtr)
 	bytes, err := json.Marshal(structPtr)
 	if err != nil {
 		return err
@@ -91,13 +91,13 @@ func (kv *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := kv.cluster.Execute(cmd); err != nil {
+	if err := s.cluster.Execute(cmd); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Delete removes key from store
-func (kv *RiakKeyValueStore) Delete(key string) error {
+func (s *RiakKeyValueStore) Delete(key string) error {
 	panic("implement me")
 }

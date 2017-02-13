@@ -36,3 +36,10 @@ func (w *StructPtrWitness) Allocate() interface{} {
 	value := reflect.New(w.structValue.Type()).Interface()
 	return value
 }
+
+
+// Nil will return a nil pointer of the witnessed type
+func (w *StructPtrWitness) Nil() interface{} {
+	value := reflect.Zero(reflect.PtrTo(w.structValue.Type())).Interface()
+	return value
+}

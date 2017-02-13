@@ -49,10 +49,10 @@ func (s *CouchbaseKeyValueStore) Get(key string) (interface{}, error) {
 	structPtr := s.witness.Allocate()
 	_, err := s.bucket.Get(key, structPtr)
 	if err == couch.ErrKeyNotFound {
-		return nil, nil
+		return s.witness.Nil(), nil
 	}
 	if err != nil {
-		return nil, err
+		return s.witness.Nil(), err
 	}
 	return structPtr, nil
 }
