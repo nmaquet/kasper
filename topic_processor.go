@@ -38,16 +38,28 @@ type MessageProcessor interface {
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerID int) *TopicProcessor {
-	// TODO: check all input topics are covered by a Serde
-	// TODO: check all input partitions and make sure PartitionToContainerID is valid
-	// TODO: check cid is within [0, ContainerCount)
+	if containerID < 0 || containerID >= config.ContainerCount {
+		log.Fatalf("ContainerID expected to be between 0 and %d, got: %d", config.ContainerCount-1, containerID)
+	}
 	inputTopics := config.InputTopics
 	brokerList := config.BrokerList
+	for _, topic := range inputTopics {
+		_, ok := config.TopicSerdes[topic]
+		if !ok {
+			log.Fatalf("Could not find Serde for topic '%s'", topic)
+		}
+	}
 	client, err := sarama.NewClient(brokerList, sarama.NewConfig())
 	if err != nil {
 		log.Fatal(err)
 	}
 	partitions := config.partitionsForContainer(containerID)
+	for _, partition := range partitions {
+		_, ok := config.PartitionToContainerID[partition]
+		if !ok {
+			log.Fatalf("Could not find PartitionToContainerID mapping for partition %d", partition)
+		}
+	}
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
 	if err != nil {
 		log.Fatal(err)

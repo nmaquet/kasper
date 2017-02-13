@@ -10,7 +10,7 @@ type JSONSerde struct {
 	value reflect.Value
 }
 
-// NewJSONSerde creates a serde for given witness.
+// NewJSONSerde creates a serde for given witness
 func NewJSONSerde(witness interface{}) *JSONSerde {
 	value := reflect.ValueOf(witness)
 	if value.Kind() != reflect.Ptr {

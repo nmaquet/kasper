@@ -7,14 +7,23 @@ import (
 
 // TopicProcessorConfig desribes a config for Kafka topic processor
 type TopicProcessorConfig struct {
-	TopicProcessorName      string
-	BrokerList              []string
-	InputTopics             []string
-	TopicSerdes             map[string]TopicSerde
-	ContainerCount          int
-	PartitionToContainerID  map[int]int
-	AutoMarkOffsetsInterval time.Duration /* a value <= 0 will disable the automatic marking of offsets */
-	Config                  *Config
+	// Used for logging
+	TopicProcessorName string
+	// Kafka Brokers list
+	BrokerList []string
+	// List of Kafka topics to process messages from
+	InputTopics []string
+	// Mapping of topic name to key/value serdes for that topic
+	TopicSerdes map[string]TopicSerde
+	// Number of containers to create
+	ContainerCount int
+	// Mapping of partition to container to use
+	PartitionToContainerID map[int]int
+	// Interval used for marking offsets automatically.
+	// Value <= 0 will disable the automatic marking of offsets.
+	AutoMarkOffsetsInterval time.Duration
+	// Kasper config
+	Config *Config
 }
 
 func (config *TopicProcessorConfig) partitionsForContainer(containerID int) []int {
