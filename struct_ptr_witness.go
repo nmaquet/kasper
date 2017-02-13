@@ -27,7 +27,7 @@ func (w *StructPtrWitness) Assert(structPtr interface{}) {
 		panic("Value must be a pointer type")
 	}
 	if structPtrValue.Elem().Type() != w.structValue.Type() {
-		panic("Value struct type doesn't match witness")
+		panic("Value struct type doesn't match witnessed type")
 	}
 }
 
