@@ -1,24 +1,27 @@
 package main
 
 import (
-	"github.com/Shopify/sarama"
 	"encoding/json"
+
+	"github.com/Shopify/sarama"
 )
 
+// Character describes an item for "character" topic
 type Character struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
 	WikipediaURL string `json:"wikipediaUrl"`
 }
 
+// Fiction describes an item for "fiction" topic
 type Fiction struct {
-	ID           string `json:"id"`
-	FictionType  string `json:"fictionType"`
-	Title        string `json:"title"`
+	ID           string   `json:"id"`
+	FictionType  string   `json:"fictionType"`
+	Title        string   `json:"title"`
 	CharacterIDs []string `json:"characterIds"`
 }
 
-var characters []Character = []Character{
+var characters = []Character{
 	{ID: "CHARACTER_001", Name: "Hellboy", WikipediaURL: "https://en.wikipedia.org/wiki/Hellboy"},
 	{ID: "CHARACTER_002", Name: "Darth Vader", WikipediaURL: "https://en.wikipedia.org/wiki/Darth_Vader"},
 	{ID: "CHARACTER_003", Name: "Boba Fet", WikipediaURL: "https://en.wikipedia.org/wiki/Boba_Fett"},
@@ -41,7 +44,7 @@ var characters []Character = []Character{
 	{ID: "CHARACTER_020", Name: "Yoda", WikipediaURL: "https://en.wikipedia.org/wiki/Yoda"},
 }
 
-var fictions []Fiction = []Fiction{
+var fictions = []Fiction{
 	{ID: "FICTION_001", FictionType: "Comic Book", Title: "Hellboy", CharacterIDs: []string{
 		"CHARACTER_001",
 	}},
