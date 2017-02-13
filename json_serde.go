@@ -2,16 +2,17 @@ package kasper
 
 import (
 	"encoding/json"
+	"github.com/movio/kasper/util"
 )
 
 // JSONSerde serializes and deserializes structs using JSON type descriptions
 type JSONSerde struct {
-	witness *StructPtrWitness
+	witness *util.StructPtrWitness
 }
 
 // NewJSONSerde creates a serde for given witness
 func NewJSONSerde(structPtr interface{}) *JSONSerde {
-	witness := NewStructPtrWitness(structPtr)
+	witness := util.NewStructPtrWitness(structPtr)
 	return &JSONSerde{witness}
 }
 

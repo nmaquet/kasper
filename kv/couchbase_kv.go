@@ -3,14 +3,14 @@ package kv
 import (
 	"fmt"
 
+	"github.com/movio/kasper/util"
 	couch "gopkg.in/couchbaselabs/gocb.v1"
-	"github.com/movio/kasper"
 )
 
 // CouchbaseKeyValueStore is a key-value storage that uses Couchbase Data Storage.
 // See: http://docs.couchbase.com/admin/admin/Concepts/concept-dataStorage.html
 type CouchbaseKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	cluster *couch.Cluster
 	bucket  *couch.Bucket
 	config  *CouchbaseConfig
@@ -26,7 +26,9 @@ type CouchbaseConfig struct {
 	ReplicateTo   uint
 }
 
-// NewCouchbaseKeyValueStore creates new store connection
+// NewCouchbaseKeyValueStore creates new store connection.
+// StructPtr should be a pointer to struct type that is used
+// for serialization and deserialization of store values.
 func NewCouchbaseKeyValueStore(config *CouchbaseConfig, structPtr interface{}) (*CouchbaseKeyValueStore, error) {
 	cluster, err := couch.Connect(fmt.Sprintf("couchbase://%s", config.Host))
 	if err != nil {
@@ -37,14 +39,14 @@ func NewCouchbaseKeyValueStore(config *CouchbaseConfig, structPtr interface{}) (
 		return nil, err
 	}
 	return &CouchbaseKeyValueStore{
-		kasper.NewStructPtrWitness(structPtr),
+		util.NewStructPtrWitness(structPtr),
 		cluster,
 		bucket,
 		config,
 	}, nil
 }
 
-// Get gets data by key from store and populates value
+// Get gets struct by key from store
 func (s *CouchbaseKeyValueStore) Get(key string) (interface{}, error) {
 	structPtr := s.witness.Allocate()
 	_, err := s.bucket.Get(key, structPtr)

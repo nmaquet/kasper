@@ -1,4 +1,4 @@
-package kasper
+package util
 
 import "reflect"
 
@@ -36,7 +36,6 @@ func (w *StructPtrWitness) Allocate() interface{} {
 	value := reflect.New(w.structValue.Type()).Interface()
 	return value
 }
-
 
 // Nil will return a nil pointer of the witnessed type
 func (w *StructPtrWitness) Nil() interface{} {

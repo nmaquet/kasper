@@ -52,7 +52,9 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 			log.Fatalf("Could not find Serde for topic '%s'", topic)
 		}
 	}
-	client, err := sarama.NewClient(brokerList, sarama.NewConfig())
+	saramaConfig := sarama.NewConfig()
+	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // TODO: make this configurable
+	client, err := sarama.NewClient(brokerList, saramaConfig)
 	if err != nil {
 		log.Fatal(err)
 	}

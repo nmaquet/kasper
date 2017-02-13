@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/movio/kasper/util"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"github.com/movio/kasper"
 )
 
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 // See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
-	witness            *kasper.StructPtrWitness
+	witness            *util.StructPtrWitness
 	client             *elastic.Client
 	context            context.Context
 	existingIndexNames []string
@@ -22,6 +22,8 @@ type ElasticsearchKeyValueStore struct {
 
 // NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
+// StructPtr should be a pointer to struct type that is used
+// for serialization and deserialization of store values.
 func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *ElasticsearchKeyValueStore {
 	url := fmt.Sprintf("http://%s", host)
 	client, err := elastic.NewClient(
@@ -31,7 +33,7 @@ func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *Elastics
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	return &ElasticsearchKeyValueStore{
-		witness: kasper.NewStructPtrWitness(structPtr),
+		witness: util.NewStructPtrWitness(structPtr),
 		client:  client,
 		context: context.Background(),
 	}
@@ -56,7 +58,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string) {
 	s.existingIndexNames = append(s.existingIndexNames, indexName)
 }
 
-// Get gets data by key from store and populates value
+// Get gets value by key from store
 func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {

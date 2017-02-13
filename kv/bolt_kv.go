@@ -5,14 +5,21 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
+// BoltKeyValueStore is a key-value storage that uses Bolt.
+// See: https://github.com/boltdb/bolt
 type BoltKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	serde   kasper.Serde
 	db      *bolt.DB
 }
 
+// NewBoltKeyValueStore creates new store connection.
+// Path is op path to store, for example: /tmp/db.bolt.
+// StructPtr should be a pointer to struct type that is used
+// for serialization and deserialization of store values.
 func NewBoltKeyValueStore(path string, structPtr interface{}) (*BoltKeyValueStore, error) {
 	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
@@ -23,22 +30,23 @@ func NewBoltKeyValueStore(path string, structPtr interface{}) (*BoltKeyValueStor
 		if bucket != nil {
 			return nil
 		}
-		_, err := tx.CreateBucket([]byte("default"))
+		_, err = tx.CreateBucket([]byte("default"))
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &BoltKeyValueStore{
-		kasper.NewStructPtrWitness(structPtr),
+		util.NewStructPtrWitness(structPtr),
 		kasper.NewJSONSerde(structPtr),
 		db,
 	}, nil
 }
 
-func (s*BoltKeyValueStore) Get(key string) (interface{}, error) {
+// Get gets struct by key from store
+func (s *BoltKeyValueStore) Get(key string) (interface{}, error) {
 	var value interface{} = s.witness.Nil()
-	s.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("default"))
 		bytes := bucket.Get([]byte(key))
 		if bytes == nil {
@@ -47,17 +55,22 @@ func (s*BoltKeyValueStore) Get(key string) (interface{}, error) {
 		value = s.serde.Deserialize(bytes)
 		return nil
 	})
+	if err != nil {
+		panic(err)
+	}
 	return value, nil
 }
 
-func (s*BoltKeyValueStore) Put(key string, value interface{}) error {
+// Put updates key in store with serialized value
+func (s *BoltKeyValueStore) Put(key string, value interface{}) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("default"))
 		return bucket.Put([]byte(key), s.serde.Serialize(value))
 	})
 }
 
-func (s*BoltKeyValueStore) Delete(key string) error {
+// Delete removes key from store
+func (s *BoltKeyValueStore) Delete(key string) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("default"))
 		return bucket.Delete([]byte(key))

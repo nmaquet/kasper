@@ -1,3 +1,6 @@
+sudo: required
+dist: precise
+
 language: go
 go:
  - 1.7.5
@@ -10,7 +13,27 @@ install:
  - go get github.com/mattn/goveralls
  - go get -u github.com/kardianos/govendor
  - govendor sync
+ - curl -sSL "https://get.docker.com/gpg" | sudo -E apt-key add -
+ - echo "deb https://apt.dockerproject.org/repo ubuntu-precise main" | sudo tee -a /etc/apt/sources.list
+ - sudo apt-get update
+ - sudo apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --assume-yes --force-yes install docker-engine
+ - sudo docker version
+ - sudo pip install docker-compose
+ - docker-compose version
+
+before_script:
+ - cd integration_tests/kafka
+ - sudo docker-compose up --build -d
+ - echo "Waiting 10 seconds for Kafka / Zookeeper to start up..."
+ - sleep 10
+ - sudo ./create_topics.sh
+ - go run populate_topics.go
+ - cd ../../
 
 script:
  - go test -v -covermode=count -coverprofile=coverage.out
  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+
+after_script:
+ - cd integration_tests/kafka
+ - sudo docker-compose down

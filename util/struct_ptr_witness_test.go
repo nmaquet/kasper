@@ -1,7 +1,8 @@
-package kasper
+package util
 
 import (
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -10,7 +11,7 @@ type Jedi struct {
 	Darksider bool
 }
 
-type Stormtrooper struct{
+type Stormtrooper struct {
 	ID string
 }
 
@@ -18,16 +19,15 @@ func TestStructPtrWitness_NewOK(t *testing.T) {
 	NewStructPtrWitness(&Jedi{})
 }
 
-
 func TestStructPtrWitness_NewNotPtr(t *testing.T) {
-	assert.Panics(t, func(){
+	assert.Panics(t, func() {
 		NewStructPtrWitness(Jedi{})
 	})
 }
 
 func TestStructPtrWitness_NewNotStruct(t *testing.T) {
 	x := 42
-	assert.Panics(t, func(){
+	assert.Panics(t, func() {
 		NewStructPtrWitness(&x)
 	})
 }
@@ -43,7 +43,7 @@ func TestStructPtrWitness_Allocate(t *testing.T) {
 func TestStructPtrWitness_Nil(t *testing.T) {
 	jediWitness := NewStructPtrWitness(&Jedi{})
 	actual := jediWitness.Nil().(*Jedi)
-	var expected *Jedi = nil
+	var expected *Jedi
 	assert.Equal(t, expected, actual)
 }
 

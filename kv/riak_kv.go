@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 
 	riak "github.com/basho/riak-go-client"
-	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
 // RiakKeyValueStore is a key-value storage that uses Riak.
 // See: http://basho.com/products/riak-kv/
 type RiakKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	cluster *riak.Cluster
 }
 
 // NewRiakKeyValueStore creates new Riak connection.
 // Host must of the format hostname:port.
+// StructPtr should be a pointer to struct type that is used
+// for serialization and deserialization of store values.
 func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{
 		RemoteAddress: host,
@@ -34,12 +36,12 @@ func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore
 		panic(err)
 	}
 	return &RiakKeyValueStore{
-		kasper.NewStructPtrWitness(structPtr),
+		util.NewStructPtrWitness(structPtr),
 		cluster,
 	}
 }
 
-// Get gets data by key from store and populates value
+// Get gets value by key from store
 func (s *RiakKeyValueStore) Get(key string) (interface{}, error) {
 	cmd, err := riak.NewFetchValueCommandBuilder().
 		WithBucket("default").
