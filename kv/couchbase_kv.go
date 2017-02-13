@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	couch "gopkg.in/couchbaselabs/gocb.v1"
+	"github.com/movio/kasper"
 )
 
 // CouchbaseKeyValueStore is a key-value storage that uses Couchbase Data Storage.
 // See: http://docs.couchbase.com/admin/admin/Concepts/concept-dataStorage.html
 type CouchbaseKeyValueStore struct {
+	witness *kasper.StructPtrWitness
 	cluster *couch.Cluster
 	bucket  *couch.Bucket
 	config  *CouchbaseConfig
@@ -25,7 +27,7 @@ type CouchbaseConfig struct {
 }
 
 // NewCouchbaseKeyValueStore creates new store connection
-func NewCouchbaseKeyValueStore(config *CouchbaseConfig) (*CouchbaseKeyValueStore, error) {
+func NewCouchbaseKeyValueStore(config *CouchbaseConfig, structPtr interface{}) (*CouchbaseKeyValueStore, error) {
 	cluster, err := couch.Connect(fmt.Sprintf("couchbase://%s", config.Host))
 	if err != nil {
 		return nil, err
@@ -35,6 +37,7 @@ func NewCouchbaseKeyValueStore(config *CouchbaseConfig) (*CouchbaseKeyValueStore
 		return nil, err
 	}
 	return &CouchbaseKeyValueStore{
+		kasper.NewStructPtrWitness(structPtr),
 		cluster,
 		bucket,
 		config,
@@ -42,25 +45,26 @@ func NewCouchbaseKeyValueStore(config *CouchbaseConfig) (*CouchbaseKeyValueStore
 }
 
 // Get gets data by key from store and populates value
-func (s *CouchbaseKeyValueStore) Get(key string, value StoreValue) (bool, error) {
-	_, err := s.bucket.Get(key, value)
+func (s *CouchbaseKeyValueStore) Get(key string) (interface{}, error) {
+	structPtr := s.witness.Allocate()
+	_, err := s.bucket.Get(key, structPtr)
 	if err == couch.ErrKeyNotFound {
-		return false, nil
+		return nil, nil
 	}
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return true, nil
+	return structPtr, nil
 }
 
 // Put updates key in store with serialized value
-func (s *CouchbaseKeyValueStore) Put(key string, value StoreValue) error {
+func (s *CouchbaseKeyValueStore) Put(key string, structPtr interface{}) error {
 	if s.config.DurableWrites {
-		_, err := s.bucket.UpsertDura(key, value, 0, s.config.ReplicateTo, s.config.PersistTo)
+		_, err := s.bucket.UpsertDura(key, structPtr, 0, s.config.ReplicateTo, s.config.PersistTo)
 		return err
 	}
 
-	_, err := s.bucket.Upsert(key, value, 0)
+	_, err := s.bucket.Upsert(key, structPtr, 0)
 	return err
 }
 

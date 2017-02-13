@@ -7,12 +7,14 @@ import (
 
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/movio/kasper"
 )
 
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 // See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
+	witness            *kasper.StructPtrWitness
 	client             *elastic.Client
 	context            context.Context
 	existingIndexNames []string
@@ -20,7 +22,7 @@ type ElasticsearchKeyValueStore struct {
 
 // NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
-func NewElasticsearchKeyValueStore(host string) *ElasticsearchKeyValueStore {
+func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *ElasticsearchKeyValueStore {
 	url := fmt.Sprintf("http://%s", host)
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
@@ -29,6 +31,7 @@ func NewElasticsearchKeyValueStore(host string) *ElasticsearchKeyValueStore {
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	return &ElasticsearchKeyValueStore{
+		witness: kasper.NewStructPtrWitness(structPtr),
 		client:  client,
 		context: context.Background(),
 	}
@@ -54,10 +57,10 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string) {
 }
 
 // Get gets data by key from store and populates value
-func (s *ElasticsearchKeyValueStore) Get(key string, value StoreValue) (bool, error) {
+func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
-		return false, fmt.Errorf("invalid key: '%s'", key)
+		return nil, fmt.Errorf("invalid key: '%s'", key)
 	}
 	indexName := keyParts[0]
 	indexType := keyParts[1]
@@ -72,26 +75,28 @@ func (s *ElasticsearchKeyValueStore) Get(key string, value StoreValue) (bool, er
 		Do(s.context)
 
 	if fmt.Sprintf("%s", err) == "elastic: Error 404 (Not Found)" {
-		return false, nil
+		return nil, nil
 	}
 
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	if !rawValue.Found {
-		return false, nil
+		return nil, nil
 	}
 
-	err = json.Unmarshal(*rawValue.Source, &value)
+	structPtr := s.witness.Allocate()
+	err = json.Unmarshal(*rawValue.Source, structPtr)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return true, nil
+	return structPtr, nil
 }
 
 // Put updates key in store with serialized value
-func (s *ElasticsearchKeyValueStore) Put(key string, value StoreValue) error {
+func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) error {
+	s.witness.Assert(structPtr)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return fmt.Errorf("invalid key: '%s'", key)
@@ -106,7 +111,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, value StoreValue) error {
 		Index(indexName).
 		Type(indexType).
 		Id(valueID).
-		BodyJson(value).
+		BodyJson(structPtr).
 		Do(s.context)
 
 	return err

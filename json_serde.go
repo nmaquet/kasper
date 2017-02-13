@@ -2,36 +2,23 @@ package kasper
 
 import (
 	"encoding/json"
-	"reflect"
 )
 
 // JSONSerde serializes and deserializes structs using JSON type descriptions
 type JSONSerde struct {
-	value reflect.Value
+	witness *StructPtrWitness
 }
 
 // NewJSONSerde creates a serde for given witness
-func NewJSONSerde(witness interface{}) *JSONSerde {
-	value := reflect.ValueOf(witness)
-	if value.Kind() != reflect.Ptr {
-		panic("Value must be a pointer type")
-	}
-	if value.Elem().Kind() != reflect.Struct {
-		panic("Witness must be a struct")
-	}
-	return &JSONSerde{value.Elem()}
+func NewJSONSerde(structPtr interface{}) *JSONSerde {
+	witness := NewStructPtrWitness(structPtr)
+	return &JSONSerde{witness}
 }
 
 // Serialize returns serialized value as a byte array
-func (serde *JSONSerde) Serialize(value interface{}) []byte {
-	v := reflect.ValueOf(value)
-	if v.Kind() != reflect.Ptr {
-		panic("Value must be a pointer type")
-	}
-	if v.Elem().Type() != serde.value.Type() {
-		panic("Value struct type doesn't match witness")
-	}
-	bytes, err := json.Marshal(value)
+func (serde *JSONSerde) Serialize(structPtr interface{}) []byte {
+	serde.witness.Assert(structPtr)
+	bytes, err := json.Marshal(structPtr)
 	if err != nil {
 		panic(err)
 	}
@@ -40,10 +27,10 @@ func (serde *JSONSerde) Serialize(value interface{}) []byte {
 
 // Deserialize returns a struct deserialized from byte array
 func (serde *JSONSerde) Deserialize(bytes []byte) interface{} {
-	value := reflect.New(serde.value.Type()).Interface()
-	err := json.Unmarshal(bytes, &value)
+	structPtr := serde.witness.Allocate()
+	err := json.Unmarshal(bytes, structPtr)
 	if err != nil {
 		panic(err)
 	}
-	return value
+	return structPtr
 }

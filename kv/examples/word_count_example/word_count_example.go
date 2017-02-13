@@ -19,7 +19,7 @@ type WordCountExample struct {
 	store kv.KeyValueStore
 }
 
-// WordCount desribes Kafka outgoing message
+// WordCount describes Kafka outgoing message
 type WordCount struct {
 	Count int `json:"count"`
 }
@@ -29,15 +29,14 @@ func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender ka
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")
 	for _, word := range words {
-		var wordCount WordCount
 		wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
-		found := processor.get(wordStoreKey, &wordCount)
-		if !found {
-			wordCount.Count = 1
+		wordCount := processor.get(wordStoreKey)
+		if wordCount == nil {
+			wordCount = &WordCount{1}
 		} else {
 			wordCount.Count++
 		}
-		processor.put(wordStoreKey, &wordCount)
+		processor.put(wordStoreKey, wordCount)
 		outgoingMessage := kasper.OutgoingMessage{
 			Topic:     "words-counts",
 			Partition: 0,
@@ -48,12 +47,12 @@ func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender ka
 	}
 }
 
-func (processor *WordCountExample) get(key string, value *WordCount) bool {
-	found, err := processor.store.Get(key, value)
+func (processor *WordCountExample) get(key string) *WordCount {
+	wordCount, err := processor.store.Get(key)
 	if err != nil {
 		log.Fatalf("Failed to Get(): %s", err)
 	}
-	return found
+	return wordCount.(*WordCount)
 }
 
 func (processor *WordCountExample) put(key string, value *WordCount) {
@@ -85,8 +84,8 @@ func main() {
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
 		Config:                  kasper.DefaultConfig(),
 	}
-	// store := kasper.NewElasticsearchKeyValueStore("localhost:9200")
-	// store := kasper.NewInMemoryKeyValueStore(10000)
+	// store := kv.NewElasticsearchKeyValueStore("localhost:9200", &WordCount{})
+	store := kv.NewInMemoryKeyValueStore(10000, &WordCount{})
 	// store, err := kv.NewCouchbaseKeyValueStore(&kv.CouchbaseConfig{
 	//	Host:          "localhost",
 	//	Bucket:        "default",
@@ -94,11 +93,11 @@ func main() {
 	//	DurableWrites: false,
 	//	PersistTo:     0,
 	//	ReplicateTo:   0,
-	// })
+	// }, &WordCount{})
 	// if err != nil {
 	//	log.Fatal(err)
 	// }
-	store := kv.NewRiakKeyValueStore("127.0.0.1:8087")
+	// store := kv.NewRiakKeyValueStore("127.0.0.1:8087", &WordCount{})
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()

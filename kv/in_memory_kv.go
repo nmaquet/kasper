@@ -1,42 +1,36 @@
 package kv
 
 import (
-	"log"
-	"reflect"
+	"github.com/movio/kasper"
 )
 
 // InMemoryKeyValueStore is a key-value storage that stores data in memory using map
 type InMemoryKeyValueStore struct {
-	m map[string]StoreValue
+	witness *kasper.StructPtrWitness
+	m map[string]interface{}
 }
 
 // NewInMemoryKeyValueStore creates new store
-func NewInMemoryKeyValueStore(size int) *InMemoryKeyValueStore {
+func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValueStore {
+
 	return &InMemoryKeyValueStore{
-		m: make(map[string]StoreValue, size),
+		witness: kasper.NewStructPtrWitness(structPtr),
+		m: make(map[string]interface{}, size),
 	}
 }
 
 // Get gets data by key from store and populates value
-func (s *InMemoryKeyValueStore) Get(key string, dst StoreValue) (bool, error) {
+func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 	src, found := s.m[key]
 	if !found {
 		return false, nil
 	}
-	x := reflect.ValueOf(src)
-	if x.Kind() != reflect.Ptr {
-		log.Fatal("InMemoryKeyValueStore.Get() must receive a pointer value as second argument")
-	}
-	starX := x.Elem()
-	y := reflect.New(starX.Type())
-	starY := y.Elem()
-	starY.Set(starX)
-	reflect.ValueOf(dst).Elem().Set(y.Elem())
-	return true, nil
+	return src, nil
 }
 
 // Put updates key in store with serialized value
-func (s *InMemoryKeyValueStore) Put(key string, value StoreValue) error {
+func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
+	s.witness.Assert(value)
 	s.m[key] = value
 	return nil
 }

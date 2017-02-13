@@ -4,17 +4,19 @@ import (
 	"encoding/json"
 
 	riak "github.com/basho/riak-go-client"
+	"github.com/movio/kasper"
 )
 
 // RiakKeyValueStore is a key-value storage that uses Riak.
 // See: http://basho.com/products/riak-kv/
 type RiakKeyValueStore struct {
+	witness *kasper.StructPtrWitness
 	cluster *riak.Cluster
 }
 
 // NewRiakKeyValueStore creates new Riak connection.
 // Host must of the format hostname:port.
-func NewRiakKeyValueStore(host string) *RiakKeyValueStore {
+func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{
 		RemoteAddress: host,
 	}
@@ -32,43 +34,46 @@ func NewRiakKeyValueStore(host string) *RiakKeyValueStore {
 		panic(err)
 	}
 	return &RiakKeyValueStore{
+		kasper.NewStructPtrWitness(structPtr),
 		cluster,
 	}
 }
 
 // Get gets data by key from store and populates value
-func (kv *RiakKeyValueStore) Get(key string, value StoreValue) (bool, error) {
+func (kv *RiakKeyValueStore) Get(key string) (interface{}, error) {
 	cmd, err := riak.NewFetchValueCommandBuilder().
 		WithBucket("default").
 		WithKey(key).
 		Build()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	err = kv.cluster.Execute(cmd)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	svc := cmd.(*riak.FetchValueCommand)
 	rsp := svc.Response
 	if rsp.IsNotFound {
-		return false, nil
+		return nil, nil
 	}
 	if len(rsp.Values) != 1 {
 		panic("should have gotten only one value")
 	}
 	object := rsp.Values[0]
 	bytes := object.Value
-	err = json.Unmarshal(bytes, value)
+	structPtr := kv.witness.Allocate()
+	err = json.Unmarshal(bytes, structPtr)
 	if err != nil {
-		return false, err
+		return structPtr, err
 	}
-	return true, nil
+	return structPtr, nil
 }
 
 // Put updates key in store with serialized value
-func (kv *RiakKeyValueStore) Put(key string, value StoreValue) error {
-	bytes, err := json.Marshal(value)
+func (kv *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
+	kv.witness.Assert(structPtr)
+	bytes, err := json.Marshal(structPtr)
 	if err != nil {
 		return err
 	}
