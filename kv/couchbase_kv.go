@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	couch "gopkg.in/couchbaselabs/gocb.v1"
-	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
 // CouchbaseKeyValueStore is a key-value storage that uses Couchbase Data Storage.
 // See: http://docs.couchbase.com/admin/admin/Concepts/concept-dataStorage.html
 type CouchbaseKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	cluster *couch.Cluster
 	bucket  *couch.Bucket
 	config  *CouchbaseConfig
@@ -37,7 +37,7 @@ func NewCouchbaseKeyValueStore(config *CouchbaseConfig, structPtr interface{}) (
 		return nil, err
 	}
 	return &CouchbaseKeyValueStore{
-		kasper.NewStructPtrWitness(structPtr),
+		util.NewStructPtrWitness(structPtr),
 		cluster,
 		bucket,
 		config,

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 
 	riak "github.com/basho/riak-go-client"
-	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
 // RiakKeyValueStore is a key-value storage that uses Riak.
 // See: http://basho.com/products/riak-kv/
 type RiakKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	cluster *riak.Cluster
 }
 
@@ -34,7 +34,7 @@ func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore
 		panic(err)
 	}
 	return &RiakKeyValueStore{
-		kasper.NewStructPtrWitness(structPtr),
+		util.NewStructPtrWitness(structPtr),
 		cluster,
 	}
 }

@@ -1,4 +1,4 @@
-package kasper
+package util
 
 import (
 	"testing"

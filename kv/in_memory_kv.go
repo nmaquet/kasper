@@ -1,19 +1,19 @@
 package kv
 
 import (
-	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
 // InMemoryKeyValueStore is a key-value storage that stores data in memory using map
 type InMemoryKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	m map[string]interface{}
 }
 
 // NewInMemoryKeyValueStore creates new store
 func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValueStore {
 	return &InMemoryKeyValueStore{
-		witness: kasper.NewStructPtrWitness(structPtr),
+		witness: util.NewStructPtrWitness(structPtr),
 		m: make(map[string]interface{}, size),
 	}
 }

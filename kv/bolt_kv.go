@@ -5,10 +5,11 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
 type BoltKeyValueStore struct {
-	witness *kasper.StructPtrWitness
+	witness *util.StructPtrWitness
 	serde   kasper.Serde
 	db      *bolt.DB
 }
@@ -30,7 +31,7 @@ func NewBoltKeyValueStore(path string, structPtr interface{}) (*BoltKeyValueStor
 		return nil, err
 	}
 	return &BoltKeyValueStore{
-		kasper.NewStructPtrWitness(structPtr),
+		util.NewStructPtrWitness(structPtr),
 		kasper.NewJSONSerde(structPtr),
 		db,
 	}, nil

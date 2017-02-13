@@ -7,14 +7,14 @@ import (
 
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"github.com/movio/kasper"
+	"github.com/movio/kasper/util"
 )
 
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 // See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
-	witness            *kasper.StructPtrWitness
+	witness            *util.StructPtrWitness
 	client             *elastic.Client
 	context            context.Context
 	existingIndexNames []string
@@ -31,7 +31,7 @@ func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *Elastics
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	return &ElasticsearchKeyValueStore{
-		witness: kasper.NewStructPtrWitness(structPtr),
+		witness: util.NewStructPtrWitness(structPtr),
 		client:  client,
 		context: context.Background(),
 	}
