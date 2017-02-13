@@ -65,7 +65,7 @@ func (kv *RiakKeyValueStore) Get(key string) (interface{}, error) {
 	structPtr := kv.witness.Allocate()
 	err = json.Unmarshal(bytes, structPtr)
 	if err != nil {
-		return structPtr, err
+		return nil, err
 	}
 	return structPtr, nil
 }
