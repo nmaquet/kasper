@@ -16,7 +16,7 @@ type RiakKeyValueStore struct {
 
 // NewRiakKeyValueStore creates new Riak connection.
 // Host must of the format hostname:port.
-// structPtr should be a pointer to struct type that is used
+// StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{

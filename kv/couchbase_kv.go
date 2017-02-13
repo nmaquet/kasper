@@ -27,7 +27,7 @@ type CouchbaseConfig struct {
 }
 
 // NewCouchbaseKeyValueStore creates new store connection.
-// structPtr should be a pointer to struct type that is used
+// StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewCouchbaseKeyValueStore(config *CouchbaseConfig, structPtr interface{}) (*CouchbaseKeyValueStore, error) {
 	cluster, err := couch.Connect(fmt.Sprintf("couchbase://%s", config.Host))

@@ -11,7 +11,7 @@ type InMemoryKeyValueStore struct {
 }
 
 // NewInMemoryKeyValueStore creates new store.
-// structPtr should be a pointer to struct type that is used
+// StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValueStore {
 	return &InMemoryKeyValueStore{

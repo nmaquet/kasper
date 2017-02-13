@@ -17,7 +17,8 @@ type BoltKeyValueStore struct {
 }
 
 // NewBoltKeyValueStore creates new store connection.
-// structPtr should be a pointer to struct type that is used
+// Path is op path to store, for example: /tmp/db.bolt.
+// StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewBoltKeyValueStore(path string, structPtr interface{}) (*BoltKeyValueStore, error) {
 	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})

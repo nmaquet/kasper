@@ -22,7 +22,7 @@ type ElasticsearchKeyValueStore struct {
 
 // NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
-// structPtr should be a pointer to struct type that is used
+// StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *ElasticsearchKeyValueStore {
 	url := fmt.Sprintf("http://%s", host)
