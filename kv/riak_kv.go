@@ -16,6 +16,8 @@ type RiakKeyValueStore struct {
 
 // NewRiakKeyValueStore creates new Riak connection.
 // Host must of the format hostname:port.
+// structPtr should be a pointer to struct type that is used
+// for serialization and deserialization of store values.
 func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore {
 	nodeOpts := &riak.NodeOptions{
 		RemoteAddress: host,
@@ -39,7 +41,7 @@ func NewRiakKeyValueStore(host string, structPtr interface{}) *RiakKeyValueStore
 	}
 }
 
-// Get gets data by key from store and populates value
+// Get gets value by key from store
 func (s *RiakKeyValueStore) Get(key string) (interface{}, error) {
 	cmd, err := riak.NewFetchValueCommandBuilder().
 		WithBucket("default").
