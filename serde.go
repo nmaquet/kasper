@@ -2,8 +2,8 @@ package kasper
 
 // TopicSerde describes a serdes interface for keys and values of a Kafka topic
 type TopicSerde struct {
-	KeySerde   Serde
-	ValueSerde Serde
+	KeySerde   Serde // Srrde used for Kafka message keys
+	ValueSerde Serde // Srrde used for Kafka message values
 }
 
 // Serde describes a serializer/deserializer interface
