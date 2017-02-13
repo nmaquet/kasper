@@ -20,7 +20,7 @@ func NewStructPtrWitness(structPtr interface{}) *StructPtrWitness {
 	return &StructPtrWitness{value.Elem()}
 }
 
-// Assert panics if the given struct pointer type doesn't match the witness
+// Assert panics if the given struct pointer type doesn't match the witnessed type
 func (w *StructPtrWitness) Assert(structPtr interface{}) {
 	structPtrValue := reflect.ValueOf(structPtr)
 	if structPtrValue.Kind() != reflect.Ptr {
