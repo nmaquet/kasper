@@ -8,7 +8,7 @@ import (
 
 // Sender describes an interface for sending messages to Kafka topics
 type Sender interface {
-	Send(OutgoingMessage)
+	Send(OutgoingMessage) // Send message to output topics
 }
 
 type sender struct {
