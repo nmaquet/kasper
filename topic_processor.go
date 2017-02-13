@@ -32,7 +32,7 @@ type TopicProcessor struct {
 // MessageProcessor describes kafka message processor
 type MessageProcessor interface {
 	// Process message from Kafka input topics.
-	// This is the funtion where you perform all needed actions, like
+	// This is the function where you perform all needed actions, like
 	// population KV stroage or producing Kafka output messages
 	Process(IncomingMessage, Sender, Coordinator)
 }
