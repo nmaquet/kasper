@@ -101,7 +101,7 @@ func (tp *TopicProcessor) Start() {
 }
 
 func (tp *TopicProcessor) runLoop() {
-	consumerChan := tp.getConsumerMessagesChan()
+	consumerChan, consumerSyncChans := tp.getConsumerMessagesChan()
 	var tickerChan <-chan time.Time
 	var ticker *time.Ticker
 
@@ -129,6 +129,9 @@ func (tp *TopicProcessor) runLoop() {
 		case <-tickerChan:
 			tp.onTick()
 		case <-tp.shutdown:
+			for _, ch := range consumerSyncChans {
+				ch <- true
+			}
 			tp.onShutdown(ticker)
 			return
 		}
@@ -180,18 +183,27 @@ func (tp *TopicProcessor) onShutdown(ticker *time.Ticker) {
 	}
 }
 
-func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
+func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMessage, []chan<- bool) {
+	syncChans := []chan<-bool{}
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		tp.waitGroup.Add(1)
-		go func(c <-chan *sarama.ConsumerMessage) {
+		syncChan := make(chan bool)
+		syncChans = append(syncChans, syncChan)
+		go func(c <-chan *sarama.ConsumerMessage, s <-chan bool) {
 			defer tp.waitGroup.Done()
 			for msg := range c {
-				consumerMessagesChan <- msg
+				select {
+					case consumerMessagesChan <- msg:
+						continue
+					case <-s:
+						return
+				}
+
 			}
-		}(ch)
+		}(ch, syncChan)
 	}
-	return consumerMessagesChan
+	return consumerMessagesChan, syncChans
 }
 
 func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {
