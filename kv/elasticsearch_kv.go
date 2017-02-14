@@ -28,6 +28,7 @@ func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *Elastics
 	url := fmt.Sprintf("http://%s", host)
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
+		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
 	)
 	if err != nil {
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
