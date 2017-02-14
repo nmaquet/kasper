@@ -236,6 +236,7 @@ func (tp *TopicProcessor) onProducerAck(producerMessage *sarama.ProducerMessage,
 	if !more {
 		return
 	}
-	pp := tp.partitionProcessors[producerMessage.Partition]
+	incomingMessage := producerMessage.Metadata.(*IncomingMessage)
+	pp := tp.partitionProcessors[int32(incomingMessage.Partition)]
 	pp.onProducerAck(producerMessage)
 }
