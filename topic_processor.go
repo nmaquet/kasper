@@ -22,7 +22,7 @@ type TopicProcessor struct {
 	client              sarama.Client
 	producer            sarama.AsyncProducer
 	offsetManager       sarama.OffsetManager
-	partitionProcessors []*partitionProcessor
+	partitionProcessors map[int32]*partitionProcessor
 	inputTopics         []string
 	partitions          []int
 	shutdown            chan bool
@@ -69,7 +69,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	if err != nil {
 		log.Fatal(err)
 	}
-	partitionProcessors := make([]*partitionProcessor, len(partitions))
+	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
 	requiredAcks := config.Config.RequiredAcks
 	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks)
 	topicProcessor := TopicProcessor{
@@ -84,9 +84,9 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		make(chan bool),
 		sync.WaitGroup{},
 	}
-	for i, partition := range partitions {
+	for _, partition := range partitions {
 		processor := makeProcessor()
-		partitionProcessors[i] = newPartitionProcessor(&topicProcessor, processor, partition)
+		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, partition)
 	}
 	return &topicProcessor
 }
