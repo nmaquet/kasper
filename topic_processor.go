@@ -129,7 +129,7 @@ func (tp *TopicProcessor) runLoop() {
 		case <-tickerChan:
 			tp.onTick()
 		case <-tp.shutdown:
-			tp.onShutdown()
+			tp.onShutdown(ticker)
 			return
 		}
 	}
@@ -163,7 +163,10 @@ func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.Consume
 	}
 }
 
-func (tp *TopicProcessor) onShutdown() {
+func (tp *TopicProcessor) onShutdown(ticker *time.Ticker) {
+	if ticker != nil {
+		ticker.Stop()
+	}
 	for _, pp := range tp.partitionProcessors {
 		pp.onShutdown()
 	}
