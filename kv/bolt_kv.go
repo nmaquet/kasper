@@ -76,3 +76,7 @@ func (s *BoltKeyValueStore) Delete(key string) error {
 		return bucket.Delete([]byte(key))
 	})
 }
+
+func (s *BoltKeyValueStore) Flush() error {
+	panic("implement me")
+}

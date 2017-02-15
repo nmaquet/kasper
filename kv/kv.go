@@ -12,4 +12,5 @@ type KeyValueStore interface {
 	Get(key string) (interface{}, error)
 	Put(key string, value interface{}) error
 	Delete(key string) error
+	Flush() error
 }

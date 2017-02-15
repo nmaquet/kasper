@@ -80,3 +80,7 @@ func (s *CouchbaseKeyValueStore) Delete(key string) error {
 	_, err := s.bucket.Remove(key, 0)
 	return err
 }
+
+func (s *CouchbaseKeyValueStore) Flush() error {
+	panic("implement me")
+}

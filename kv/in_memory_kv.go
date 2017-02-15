@@ -41,3 +41,7 @@ func (s *InMemoryKeyValueStore) Delete(key string) error {
 	delete(s.m, key)
 	return nil
 }
+
+func (s *InMemoryKeyValueStore) Flush() error {
+	return nil
+}

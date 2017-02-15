@@ -8,6 +8,7 @@ import (
 	"github.com/movio/kasper/util"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
+	"log"
 )
 
 const indexSettings = `{
@@ -181,8 +182,10 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 
 // Flush the Elasticsearch translog to disk
 func (s* ElasticsearchKeyValueStore) Flush() error {
+	log.Println("Flusing ES indexes...")
 	_, err := s.client.Flush(s.existingIndexes...).
 		WaitIfOngoing(true).
 		Do(s.context)
+	log.Println("Done flusing ES indexes.")
 	return err
 }
