@@ -13,7 +13,7 @@ import (
 const indexSettings = `{
 	"index.translog.durability": "async",
 	"index.translog.sync_interval": "60s",
-	"index.translog.flush_threshold_size: "512m",
+	"index.translog.flush_threshold_size: "512m"
 }`
 
 const indexMapping = `{
