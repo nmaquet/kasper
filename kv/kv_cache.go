@@ -32,8 +32,9 @@ func (s *CachedKeyValueStore) Put(key string, value interface{}) error {
 	s.witness.Assert(value)
 	s.cache[key] = value
 	if len(s.cache) > s.maxItemCount {
-		s.Flush()
+		return s.Flush()
 	}
+	return nil
 }
 
 func (s *CachedKeyValueStore) Delete(key string) error {
