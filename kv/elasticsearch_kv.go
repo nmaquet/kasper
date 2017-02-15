@@ -32,6 +32,8 @@ const indexMapping = `{
 
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
+// For performance reasons, this implementation create indexes with async durability.
+// You must call Flush() at appropriate times to ensure Elasticsearch syncs it's translog to disk.
 // See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
 	witness         *util.StructPtrWitness
@@ -174,5 +176,13 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 		Id(valueID).
 		Do(s.context)
 
+	return err
+}
+
+// Flush the Elasticsearch translog to disk
+func (s* ElasticsearchKeyValueStore) Flush() error {
+	_, err := s.client.Flush(s.existingIndexes...).
+		WaitIfOngoing(true).
+		Do(s.context)
 	return err
 }
