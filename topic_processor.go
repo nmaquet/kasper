@@ -184,7 +184,7 @@ func (tp *TopicProcessor) onShutdown(ticker *time.Ticker) {
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMessage, []chan<- bool) {
-	syncChans := []chan<-bool{}
+	syncChans := []chan<- bool{}
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		tp.waitGroup.Add(1)
@@ -194,10 +194,10 @@ func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMess
 			defer tp.waitGroup.Done()
 			for msg := range c {
 				select {
-					case consumerMessagesChan <- msg:
-						continue
-					case <-s:
-						return
+				case consumerMessagesChan <- msg:
+					continue
+				case <-s:
+					return
 				}
 
 			}
