@@ -14,10 +14,10 @@ import (
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 // See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
-	witness            *util.StructPtrWitness
-	client             *elastic.Client
-	context            context.Context
-	existingIndexNames []string
+	witness         *util.StructPtrWitness
+	client          *elastic.Client
+	context         context.Context
+	existingIndexes []string
 }
 
 // NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
@@ -40,9 +40,10 @@ func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *Elastics
 	}
 }
 
-func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string) {
-	for _, existingIndexName := range s.existingIndexNames {
-		if existingIndexName == indexName {
+func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexType string) {
+	index := strings.Join([]string{indexName, indexType}, "/")
+	for _, existingIndex := range s.existingIndexes {
+		if existingIndex == index {
 			return
 		}
 	}
@@ -51,12 +52,59 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string) {
 		panic(fmt.Sprintf("Failed to check if index exists: %s", err))
 	}
 	if !exists {
-		_, err := s.client.CreateIndex(indexName).Do(s.context)
+		_, err = s.client.CreateIndex(indexName).Do(s.context)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create index: %s", err))
 		}
+		s.putMapping(indexName, indexType)
 	}
-	s.existingIndexNames = append(s.existingIndexNames, indexName)
+
+	s.existingIndexes = append(s.existingIndexes, index)
+}
+
+func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType string) {
+	mapping := fmt.Sprintf(`{
+		"settings": {
+			"index": {
+				"number_of_shards": 3,
+				"number_of_replicas": 1
+			}
+		},
+		"mappings": { "%s": {
+				"dynamic_templates": [{
+					"data_template": {
+						"mapping": {
+							"index": "no"
+						},
+						"path_match": "data.*"
+					}
+				}],
+				"properties": {
+					"data": {
+						"type": "nested"
+					},
+					"metadata": {
+						"properties": {
+							"campaignId": {
+								"type": "string"
+							}
+						}
+					}
+				}
+			}
+		}
+	}`, indexType)
+
+	resp, err := s.client.PutMapping().Index(indexName).Type(indexType).BodyString(mapping).Do(s.context)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s", indexName, indexType))
+	}
+	if resp == nil {
+		panic(fmt.Sprintf("Expected put mapping response; got: %v", resp))
+	}
+	if !resp.Acknowledged {
+		panic(fmt.Sprintf("Expected put mapping ack; got: %v", resp.Acknowledged))
+	}
 }
 
 // Get gets value by key from store
@@ -69,7 +117,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	indexType := keyParts[1]
 	valueID := keyParts[2]
 
-	s.checkOrCreateIndex(indexName)
+	s.checkOrCreateIndex(indexName, indexType)
 
 	rawValue, err := s.client.Get().
 		Index(indexName).
@@ -108,7 +156,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 	indexType := keyParts[1]
 	valueID := keyParts[2]
 
-	s.checkOrCreateIndex(indexName)
+	s.checkOrCreateIndex(indexName, indexType)
 
 	_, err := s.client.Index().
 		Index(indexName).
@@ -130,7 +178,7 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	indexType := keyParts[1]
 	valueID := keyParts[2]
 
-	s.checkOrCreateIndex(indexName)
+	s.checkOrCreateIndex(indexName, indexType)
 
 	_, err := s.client.Delete().
 		Index(indexName).
