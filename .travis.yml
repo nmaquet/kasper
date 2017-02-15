@@ -13,6 +13,7 @@ install:
  - go get github.com/mattn/goveralls
  - go get -u github.com/kardianos/govendor
  - govendor sync
+ - cd kv ; govendor sync ; cd ..
  - curl -sSL "https://get.docker.com/gpg" | sudo -E apt-key add -
  - echo "deb https://apt.dockerproject.org/repo ubuntu-precise main" | sudo tee -a /etc/apt/sources.list
  - sudo apt-get update
