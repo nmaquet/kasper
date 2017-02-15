@@ -63,41 +63,23 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 }
 
 func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType string) {
-	mapping := fmt.Sprintf(`{
-		"settings": {
-			"index": {
-				"number_of_shards": 3,
-				"number_of_replicas": 1
-			}
+	mapping := `{
+		"_all" : {
+			"enabled" : false
 		},
-		"mappings": { "%s": {
-				"dynamic_templates": [{
-					"data_template": {
-						"mapping": {
-							"index": "no"
-						},
-						"path_match": "data.*"
-					}
-				}],
-				"properties": {
-					"data": {
-						"type": "nested"
-					},
-					"metadata": {
-						"properties": {
-							"campaignId": {
-								"type": "string"
-							}
-						}
-					}
-				}
+		"dynamic_templates": [{
+			"no_index": {
+				"mapping": {
+					"index": "no"
+				},
+				"match": "*"
 			}
-		}
-	}`, indexType)
+		}]
+	}`
 
 	resp, err := s.client.PutMapping().Index(indexName).Type(indexType).BodyString(mapping).Do(s.context)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s", indexName, indexType))
+		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s: %s", indexName, indexType, err))
 	}
 	if resp == nil {
 		panic(fmt.Sprintf("Expected put mapping response; got: %v", resp))
