@@ -26,6 +26,14 @@ type TopicProcessorConfig struct {
 	Config *Config
 }
 
+func FairPartitionToContainerID(partitionCount, containerCount int) map[int]int {
+	res := make(map[int]int)
+	for i := 0; i < partitionCount; i++ {
+		res[i] = i % containerCount
+	}
+	return res
+}
+
 func (config *TopicProcessorConfig) partitionsForContainer(containerID int) []int {
 	partitions := []int{}
 	for partition, partitionContainerID := range config.PartitionToContainerID {

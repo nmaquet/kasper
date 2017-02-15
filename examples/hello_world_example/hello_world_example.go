@@ -37,9 +37,7 @@ func main() {
 			},
 		},
 		ContainerCount: 1,
-		PartitionToContainerID: map[int]int{
-			0: 0,
-		},
+		PartitionToContainerID: kasper.FairPartitionToContainerID(1, 1),
 		AutoMarkOffsetsInterval: 5 * time.Second,
 		Config:                  kasper.DefaultConfig(),
 	}
