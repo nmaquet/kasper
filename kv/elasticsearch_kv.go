@@ -10,6 +10,26 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+const indexSettings = `{
+	"index.translog.durability": "async",
+	"index.translog.sync_interval": "60s",
+	"index.translog.flush_threshold_size: "512m",
+}`
+
+const indexMapping = `{
+	"_all" : {
+		"enabled" : false
+	},
+	"dynamic_templates": [{
+		"no_index": {
+			"mapping": {
+				"index": "no"
+			},
+			"match": "*"
+		}
+	}]
+}`
+
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 // See: https://www.elastic.co/products/elasticsearch
@@ -52,7 +72,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 		panic(fmt.Sprintf("Failed to check if index exists: %s", err))
 	}
 	if !exists {
-		_, err = s.client.CreateIndex(indexName).Do(s.context)
+		_, err = s.client.CreateIndex(indexName).BodyString(indexSettings).Do(s.context)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create index: %s", err))
 		}
@@ -63,21 +83,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 }
 
 func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType string) {
-	mapping := `{
-		"_all" : {
-			"enabled" : false
-		},
-		"dynamic_templates": [{
-			"no_index": {
-				"mapping": {
-					"index": "no"
-				},
-				"match": "*"
-			}
-		}]
-	}`
-
-	resp, err := s.client.PutMapping().Index(indexName).Type(indexType).BodyString(mapping).Do(s.context)
+	resp, err := s.client.PutMapping().Index(indexName).Type(indexType).BodyString(indexMapping).Do(s.context)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s: %s", indexName, indexType, err))
 	}
