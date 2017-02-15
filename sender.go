@@ -25,11 +25,10 @@ func newSender(pp *partitionProcessor, incomingMessage *IncomingMessage) *sender
 	}
 }
 
-func (sender *sender) createInFlightMessageGroup(committed bool) *inFlightMessageGroup {
+func (sender *sender) createInFlightMessageGroup() *inFlightMessageGroup {
 	res := inFlightMessageGroup{
 		incomingMessage:  sender.incomingMessage,
 		inFlightMessages: nil,
-		committed:        committed,
 	}
 	for _, msg := range sender.producerMessages {
 		res.inFlightMessages = append(res.inFlightMessages, &inFlightMessage{

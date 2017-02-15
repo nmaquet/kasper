@@ -9,11 +9,11 @@ import (
 func TestPartitionProcessorCoordinator_Commit(t *testing.T) {
 	c := partitionProcessorCoordinator{
 		&partitionProcessor{
-			commitNextInFlightMessageGroup: false,
+			messageProcessorRequestedCommit: false,
 		},
 	}
 	c.Commit()
-	assert.Equal(t, true, c.pp.commitNextInFlightMessageGroup)
+	assert.Equal(t, true, c.pp.messageProcessorRequestedCommit)
 }
 
 func TestPartitionProcessorCoordinator_ShutdownTopicProcessor(t *testing.T) {

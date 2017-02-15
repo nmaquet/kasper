@@ -10,7 +10,6 @@ type inFlightMessage struct {
 type inFlightMessageGroup struct {
 	incomingMessage  *IncomingMessage
 	inFlightMessages []*inFlightMessage
-	committed        bool
 }
 
 func (group *inFlightMessageGroup) allAcksAreTrue() bool {

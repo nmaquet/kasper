@@ -7,16 +7,16 @@ import (
 )
 
 type partitionProcessor struct {
-	topicProcessor                 *TopicProcessor
-	coordinator                    Coordinator
-	consumer                       sarama.Consumer
-	partitionConsumers             []sarama.PartitionConsumer
-	offsetManagers                 map[string]sarama.PartitionOffsetManager
-	messageProcessor               MessageProcessor
-	inputTopics                    []string
-	partition                      int
-	inFlightMessageGroups          map[string][]*inFlightMessageGroup
-	commitNextInFlightMessageGroup bool
+	topicProcessor                  *TopicProcessor
+	coordinator                     Coordinator
+	consumer                        sarama.Consumer
+	partitionConsumers              []sarama.PartitionConsumer
+	offsetManagers                  map[string]sarama.PartitionOffsetManager
+	messageProcessor                MessageProcessor
+	inputTopics                     []string
+	partition                       int
+	inFlightMessageGroups           map[string][]*inFlightMessageGroup
+	messageProcessorRequestedCommit bool
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -70,7 +70,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 	return pp
 }
 
-func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
+func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) ([]*sarama.ProducerMessage, bool) {
 	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[consumerMessage.Topic]
 	if !ok {
 		log.Fatalf("Could not find Serde for topic '%s'", consumerMessage.Topic)
@@ -84,14 +84,14 @@ func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) [
 		Timestamp: consumerMessage.Timestamp,
 	}
 	sender := newSender(pp, &incomingMessage)
-	pp.commitNextInFlightMessageGroup = false
+	pp.messageProcessorRequestedCommit = false
 	pp.messageProcessor.Process(incomingMessage, sender, pp.coordinator)
-	inFlightMessageGroup := sender.createInFlightMessageGroup(pp.commitNextInFlightMessageGroup)
+	inFlightMessageGroup := sender.createInFlightMessageGroup()
 	pp.inFlightMessageGroups[consumerMessage.Topic] = append(
 		pp.inFlightMessageGroups[consumerMessage.Topic],
 		inFlightMessageGroup,
 	)
-	return sender.producerMessages
+	return sender.producerMessages, pp.messageProcessorRequestedCommit
 }
 
 func (pp *partitionProcessor) onProcessCompleted() {
@@ -120,13 +120,13 @@ func (pp *partitionProcessor) isReadyForMessage(msg *sarama.ConsumerMessage) boo
 	return len(pp.inFlightMessageGroups[msg.Topic]) <= maxGroups
 }
 
-func (pp *partitionProcessor) markOffsetsIfPossible() {
+func (pp *partitionProcessor) onMarkOffsetsTick() {
 	for _, topic := range pp.topicProcessor.inputTopics {
-		pp.markOffsetsForTopicIfPossible(topic)
+		pp.onMarkOffsetsTickForTopic(topic)
 	}
 }
 
-func (pp *partitionProcessor) markOffsetsForTopicIfPossible(topic string) {
+func (pp *partitionProcessor) onMarkOffsetsTickForTopic(topic string) {
 	var offset int64 = -1
 	for len(pp.inFlightMessageGroups[topic]) > 0 {
 		group := pp.inFlightMessageGroups[topic][0]
@@ -134,13 +134,9 @@ func (pp *partitionProcessor) markOffsetsForTopicIfPossible(topic string) {
 			break
 		}
 		offset = group.incomingMessage.Offset
-		if group.committed && pp.topicProcessor.config.markOffsetsManually() {
-			offsetManager := pp.offsetManagers[topic]
-			offsetManager.MarkOffset(offset+1, "")
-		}
 		pp.inFlightMessageGroups[topic] = pp.inFlightMessageGroups[topic][1:]
 	}
-	if offset != -1 && pp.topicProcessor.config.markOffsetsAutomatically() {
+	if offset != -1 {
 		offsetManager := pp.offsetManagers[topic]
 		offsetManager.MarkOffset(offset+1, "")
 	}
@@ -189,5 +185,34 @@ func (pp *partitionProcessor) onShutdown() {
 	err = pp.consumer.Close()
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func (pp *partitionProcessor) isReadyToCommit() bool {
+	pp.pruneInFlightMessageGroups()
+	for _, topic := range pp.inputTopics {
+		if len(pp.inFlightMessageGroups[topic]) == 0 {
+			continue
+		} else if len(pp.inFlightMessageGroups[topic]) > 1 {
+			return false
+		} else {
+			group := pp.inFlightMessageGroups[topic][0]
+			if !group.allAcksAreTrue() {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (pp *partitionProcessor) commit() {
+	for _, topic := range pp.inputTopics {
+		if len(pp.inFlightMessageGroups[topic]) == 0 {
+			continue
+		}
+		group := pp.inFlightMessageGroups[topic][0]
+		offset := group.incomingMessage.Offset
+		offsetManager := pp.offsetManagers[topic]
+		offsetManager.MarkOffset(offset+1, "")
 	}
 }

@@ -121,10 +121,9 @@ func TestSender_createInFlightMessageGroup(t *testing.T) {
 		Key:       "CCC",
 		Value:     "DDD",
 	})
-	actual := sender.createInFlightMessageGroup(true)
+	actual := sender.createInFlightMessageGroup()
 	expected := &inFlightMessageGroup{
 		incomingMessage: f.in,
-		committed:       true,
 		inFlightMessages: []*inFlightMessage{
 			{
 				msg: &sarama.ProducerMessage{

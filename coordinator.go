@@ -14,7 +14,7 @@ type partitionProcessorCoordinator struct {
 }
 
 func (c *partitionProcessorCoordinator) Commit() {
-	c.pp.commitNextInFlightMessageGroup = true
+	c.pp.messageProcessorRequestedCommit = true
 }
 
 func (c *partitionProcessorCoordinator) ShutdownTopicProcessor() {

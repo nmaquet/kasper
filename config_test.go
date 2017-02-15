@@ -12,6 +12,7 @@ func TestDefaultConfig(t *testing.T) {
 	expected := &Config{
 		RequiredAcks:             sarama.WaitForAll,
 		MaxInFlightMessageGroups: 5000,
+		MarkOffsetsHook:          func() {},
 	}
 	assert.Equal(t, expected, actual)
 }

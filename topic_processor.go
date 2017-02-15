@@ -15,7 +15,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-// TopicProcessor desribes kafka topic processor
+// TopicProcessor describes kafka topic processor
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
 	containerID         int
@@ -100,16 +100,22 @@ func (tp *TopicProcessor) Start() {
 	}()
 }
 
+// Shutdown safely shuts down topic processing, waiting for unfinished jobs
+func (tp *TopicProcessor) Shutdown() {
+	tp.shutdown <- true
+	tp.waitGroup.Wait()
+}
+
 func (tp *TopicProcessor) runLoop() {
 	consumerChan, consumerSyncChans := tp.getConsumerMessagesChan()
-	var tickerChan <-chan time.Time
-	var ticker *time.Ticker
+	var markOffsetsTickerChan <-chan time.Time
+	var markOffsetsTicker *time.Ticker
 
 	if tp.config.markOffsetsAutomatically() {
-		ticker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
-		tickerChan = ticker.C
+		markOffsetsTicker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
+		markOffsetsTickerChan = markOffsetsTicker.C
 	} else {
-		tickerChan = make(<-chan time.Time)
+		markOffsetsTickerChan = make(<-chan time.Time)
 	}
 
 	tp.waitGroup.Add(1)
@@ -123,16 +129,16 @@ func (tp *TopicProcessor) runLoop() {
 	for {
 		select {
 		case consumerMessage := <-consumerChan:
-			tp.processConsumerMessage(consumerMessage, tickerChan)
+			tp.processConsumerMessage(consumerMessage, markOffsetsTickerChan)
 		case msg, more := <-tp.producer.Successes():
 			tp.onProducerAck(msg, more)
-		case <-tickerChan:
-			tp.onTick()
+		case <-markOffsetsTickerChan:
+			tp.onMarkOffsetsTick()
 		case <-tp.shutdown:
 			for _, ch := range consumerSyncChans {
 				ch <- true
 			}
-			tp.onShutdown(ticker)
+			tp.onShutdown(markOffsetsTicker)
 			return
 		}
 	}
@@ -142,25 +148,32 @@ func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.Consume
 	pp := tp.partitionProcessors[consumerMessage.Partition]
 	for {
 		if pp.isReadyForMessage(consumerMessage) {
-			producerMessages := pp.process(consumerMessage)
+			producerMessages, mustCommit := pp.process(consumerMessage)
 			for len(producerMessages) > 0 {
 				select {
 				case tp.producer.Input() <- producerMessages[0]:
 					producerMessages = producerMessages[1:]
 				case msg, more := <-tp.producer.Successes():
 					tp.onProducerAck(msg, more)
-				case <-tickerChan:
-					tp.onTick()
 				}
 			}
 			pp.onProcessCompleted()
+			if mustCommit {
+				for {
+					if pp.isReadyToCommit() {
+						tp.config.Config.MarkOffsetsHook()
+						pp.commit()
+						break
+					}
+					msg, more := <-tp.producer.Successes()
+					tp.onProducerAck(msg, more)
+				}
+			}
 			break
 		} else {
 			select {
 			case msg, more := <-tp.producer.Successes():
 				tp.onProducerAck(msg, more)
-			case <-tickerChan:
-				tp.onTick()
 			}
 		}
 	}
@@ -210,9 +223,10 @@ func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {
 	log.Fatal(error) /* FIXME Handle this gracefully with a retry count / backoff period */
 }
 
-func (tp *TopicProcessor) onTick() {
+func (tp *TopicProcessor) onMarkOffsetsTick() {
+	tp.config.Config.MarkOffsetsHook()
 	for _, pp := range tp.partitionProcessors {
-		pp.markOffsetsIfPossible()
+		pp.onMarkOffsetsTick()
 	}
 }
 
@@ -239,12 +253,6 @@ func mustSetupProducer(brokers []string, producerClientID string, requiredAcks s
 	}
 
 	return producer
-}
-
-// Shutdown safely shuts down topic processing, waiting for unfinished jobs
-func (tp *TopicProcessor) Shutdown() {
-	tp.shutdown <- true
-	tp.waitGroup.Wait()
 }
 
 func (tp *TopicProcessor) onProducerAck(producerMessage *sarama.ProducerMessage, more bool) {
