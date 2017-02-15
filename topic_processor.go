@@ -81,7 +81,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitionProcessors,
 		inputTopics,
 		partitions,
-		make(chan bool),
+		make(chan bool, 1),
 		sync.WaitGroup{},
 	}
 	for _, partition := range partitions {
@@ -201,7 +201,7 @@ func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMess
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		tp.waitGroup.Add(1)
-		syncChan := make(chan bool)
+		syncChan := make(chan bool, 1)
 		syncChans = append(syncChans, syncChan)
 		go func(c <-chan *sarama.ConsumerMessage, s <-chan bool) {
 			defer tp.waitGroup.Done()
