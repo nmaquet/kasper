@@ -169,7 +169,10 @@ func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 		indexName := keyParts[0]
 		indexType := keyParts[1]
 		valueID := keyParts[2]
+
 		s.witness.Assert(entry.value)
+		s.checkOrCreateIndex(indexName, indexType)
+
 		bulk.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
 			Type(indexType).
