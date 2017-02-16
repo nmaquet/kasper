@@ -72,4 +72,5 @@ func (s *CachedKeyValueStore) clearCache() error {
 		return err
 	}
 	s.cache = make(map[string]interface{})
+	return nil
 }
