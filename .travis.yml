@@ -32,10 +32,12 @@ before_script:
  - cd ../../
 
 script:
+ - "echo 'mode: set' > coverage_final.out"
  - go test . -v -covermode=count -coverprofile=coverage.out
- - go test ./kv -v -covermode=count -coverprofile=coverage_kv.out
- - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
- - $HOME/gopath/bin/goveralls -coverprofile=coverage_kv.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+ - "cat coverage.out | grep -v 'mode: set' >> coverage_final.out"
+ - go test ./kv -v -covermode=count -coverprofile=coverage.out
+ - "cat coverage.out | grep -v 'mode: set' >> coverage_final.out"
+ - $HOME/gopath/bin/goveralls -coverprofile=coverage_final.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 after_script:
  - cd integration_tests/kafka
