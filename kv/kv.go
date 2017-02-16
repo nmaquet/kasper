@@ -6,6 +6,7 @@ Kasper companion library for stateful stream processing.
 
 package kv
 
+// Entry is a key-value pair for KeyValueStore
 type Entry struct {
 	key   string
 	value interface{}

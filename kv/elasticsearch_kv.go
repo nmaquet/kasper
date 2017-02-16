@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"log"
+
 	"github.com/movio/kasper/util"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"log"
 )
 
 const indexSettings = `{
@@ -163,6 +164,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 	return err
 }
 
+// PutAll bulk executes Put operation for several entries
 func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 	bulk := s.client.Bulk()
 	for _, entry := range entries {

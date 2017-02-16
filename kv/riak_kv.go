@@ -99,11 +99,20 @@ func (s *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
 	return nil
 }
 
+// PutAll bulk executes Put operation for several entries
+// TODO: implement method
 func (*RiakKeyValueStore) PutAll(entries []*Entry) error {
 	panic("implement me")
 }
 
 // Delete removes key from store
+// TODO: implement method
 func (s *RiakKeyValueStore) Delete(key string) error {
+	panic("implement me")
+}
+
+// Flush writes all values to the store
+// TODO: implement method
+func (s *RiakKeyValueStore) Flush() error {
 	panic("implement me")
 }

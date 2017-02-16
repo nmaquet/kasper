@@ -69,6 +69,8 @@ func (s *BoltKeyValueStore) Put(key string, value interface{}) error {
 	})
 }
 
+// PutAll bulk executes Put operation for several entries
+// TODO: implement method
 func (*BoltKeyValueStore) PutAll(entries []*Entry) error {
 	panic("implement me")
 }
@@ -81,6 +83,8 @@ func (s *BoltKeyValueStore) Delete(key string) error {
 	})
 }
 
+// Flush writes all values to the store
+// TODO: implement method
 func (s *BoltKeyValueStore) Flush() error {
 	panic("implement me")
 }

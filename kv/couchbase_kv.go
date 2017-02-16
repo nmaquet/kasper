@@ -70,6 +70,8 @@ func (s *CouchbaseKeyValueStore) Put(key string, structPtr interface{}) error {
 	return err
 }
 
+// PutAll bulk executes all Put operations
+// TODO: implement method
 func (*CouchbaseKeyValueStore) PutAll(entries []*Entry) error {
 	panic("implement me")
 }
@@ -85,6 +87,8 @@ func (s *CouchbaseKeyValueStore) Delete(key string) error {
 	return err
 }
 
+// Flush writes all values to the store
+// TODO: implement method
 func (s *CouchbaseKeyValueStore) Flush() error {
 	panic("implement me")
 }

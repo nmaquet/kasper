@@ -36,6 +36,7 @@ func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 	return nil
 }
 
+// PutAll bulk executes all Put operations
 func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
 	for _, entry := range entries {
 		err := s.Put(entry.key, entry.value)
@@ -52,6 +53,7 @@ func (s *InMemoryKeyValueStore) Delete(key string) error {
 	return nil
 }
 
+// Flush does nothing for in memory storage
 func (s *InMemoryKeyValueStore) Flush() error {
 	return nil
 }
