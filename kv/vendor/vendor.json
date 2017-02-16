@@ -9,6 +9,24 @@
 			"revisionTime": "2017-01-31T19:20:18Z"
 		},
 		{
+			"checksumSHA1": "ncB97TqhsqLzFWWZCXRO3i1NoXk=",
+			"path": "github.com/spaolacci/murmur3",
+			"revision": "0d12bf811670bf6a1a63828dfbd003eded177fce",
+			"revisionTime": "2015-08-29T17:28:44Z"
+		},
+		{
+			"checksumSHA1": "doovHC9unIuBjNsyXszhX0cfmSY=",
+			"path": "github.com/willf/bitset",
+			"revision": "5c3c0fce48842b2c0bbaa99b4e61b0175d84b47c",
+			"revisionTime": "2016-12-02T17:00:36Z"
+		},
+		{
+			"checksumSHA1": "bdekg0A9QUoBAz/lIhZlMJ68suw=",
+			"path": "github.com/willf/bloom",
+			"revision": "278d7d8b14584245fe9f826a30e48d4301bd6fd9",
+			"revisionTime": "2016-12-03T02:09:25Z"
+		},
+		{
 			"checksumSHA1": "ujkdYz/AOSZ4dVskaUGW9g/V/dM=",
 			"path": "golang.org/x/net/context",
 			"revision": "61557ac0112b576429a0df080e1c2cef5dfbb642",

@@ -84,7 +84,7 @@ func main() {
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
 		Config:                  kasper.DefaultConfig(),
 	}
-	// store := kv.NewElasticsearchKeyValueStore("localhost:9200", &WordCount{})
+	// store := kv.NewESKeyValueStore("localhost:9200", &WordCount{})
 	// store := kv.NewInMemoryKeyValueStore(10000, &WordCount{})
 	// store, err := kv.NewCouchbaseKeyValueStore(&kv.CouchbaseConfig{
 	//	Host:          "localhost",
