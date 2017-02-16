@@ -43,9 +43,9 @@ type indexAndType struct {
 // See https://godoc.org/github.com/willf/bloom#NewWithEstimates for more information.
 type BloomFilterConfig struct {
 	// An estimate size the entire data set
-	sizeEstimate      uint
+	SizeEstimate uint
 	// An estimate of the desired false positive rate
-	falsePositiveRate float64
+	FalsePositiveRate float64
 }
 
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
@@ -108,7 +108,7 @@ func (s *ElasticsearchKeyValueStore) newBloomFilter() *bloom.BloomFilter {
 	if s.bfConfig == nil {
 		return nil
 	}
-	return bloom.NewWithEstimates(s.bfConfig.sizeEstimate, s.bfConfig.falsePositiveRate)
+	return bloom.NewWithEstimates(s.bfConfig.SizeEstimate, s.bfConfig.FalsePositiveRate)
 }
 
 func (s *ElasticsearchKeyValueStore) removeBloomFilter(indexName, indexType string) {
