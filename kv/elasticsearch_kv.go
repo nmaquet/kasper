@@ -31,6 +31,11 @@ const indexMapping = `{
 	}]
 }`
 
+type indexAndType struct {
+	indexName string
+	indexType string
+}
+
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 // For performance reasons, this implementation create indexes with async durability.
@@ -40,7 +45,7 @@ type ElasticsearchKeyValueStore struct {
 	witness         *util.StructPtrWitness
 	client          *elastic.Client
 	context         context.Context
-	existingIndexes []string
+	existingIndexes []indexAndType
 }
 
 // NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
@@ -64,9 +69,8 @@ func NewElasticsearchKeyValueStore(host string, structPtr interface{}) *Elastics
 }
 
 func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexType string) {
-	index := strings.Join([]string{indexName, indexType}, "/")
-	for _, existingIndex := range s.existingIndexes {
-		if existingIndex == index {
+	for _, existing := range s.existingIndexes {
+		if existing.indexName == indexName && existing.indexType == indexType {
 			return
 		}
 	}
@@ -82,7 +86,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 		s.putMapping(indexName, indexType)
 	}
 
-	s.existingIndexes = append(s.existingIndexes, index)
+	s.existingIndexes = append(s.existingIndexes, indexAndType{indexName, indexType})
 }
 
 func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType string) {
@@ -206,9 +210,13 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 }
 
 // Flush the Elasticsearch translog to disk
-func (s* ElasticsearchKeyValueStore) Flush() error {
+func (s *ElasticsearchKeyValueStore) Flush() error {
 	log.Println("Flusing ES indexes...")
-	_, err := s.client.Flush(s.existingIndexes...).
+	indexNames := []string{}
+	for _, existing := range s.existingIndexes {
+		indexNames = append(indexNames, existing.indexName)
+	}
+	_, err := s.client.Flush(indexNames...).
 		WaitIfOngoing(true).
 		Do(s.context)
 	log.Println("Done flusing ES indexes.")
