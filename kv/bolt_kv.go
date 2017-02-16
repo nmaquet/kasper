@@ -70,9 +70,14 @@ func (s *BoltKeyValueStore) Put(key string, value interface{}) error {
 }
 
 // PutAll bulk executes Put operation for several entries
-// TODO: implement method
-func (*BoltKeyValueStore) PutAll(entries []*Entry) error {
-	panic("implement me")
+func (s *BoltKeyValueStore) PutAll(entries []*Entry) error {
+	for _, entry := range entries {
+		err := s.Put(entry.key, entry.value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete removes key from store
@@ -83,8 +88,8 @@ func (s *BoltKeyValueStore) Delete(key string) error {
 	})
 }
 
-// Flush writes all values to the store
-// TODO: implement method
+// Flush is not implemented for Bolt store
+// TODO: implement Flush and Put methods to support bulk inserts
 func (s *BoltKeyValueStore) Flush() error {
-	panic("implement me")
+	return nil
 }

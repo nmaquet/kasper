@@ -70,10 +70,15 @@ func (s *CouchbaseKeyValueStore) Put(key string, structPtr interface{}) error {
 	return err
 }
 
-// PutAll bulk executes all Put operations
-// TODO: implement method
-func (*CouchbaseKeyValueStore) PutAll(entries []*Entry) error {
-	panic("implement me")
+// PutAll bulk executes Put operation for several entries
+func (s *CouchbaseKeyValueStore) PutAll(entries []*Entry) error {
+	for _, entry := range entries {
+		err := s.Put(entry.key, entry.value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete removes key from store
@@ -87,8 +92,8 @@ func (s *CouchbaseKeyValueStore) Delete(key string) error {
 	return err
 }
 
-// Flush writes all values to the store
-// TODO: implement method
+// Flush is not implemented for Couchbase store
+// TODO: implement Flush and Put methods to support bulk inserts
 func (s *CouchbaseKeyValueStore) Flush() error {
-	panic("implement me")
+	return nil
 }

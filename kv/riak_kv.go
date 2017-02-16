@@ -100,19 +100,31 @@ func (s *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
 }
 
 // PutAll bulk executes Put operation for several entries
-// TODO: implement method
-func (*RiakKeyValueStore) PutAll(entries []*Entry) error {
-	panic("implement me")
+func (s *RiakKeyValueStore) PutAll(entries []*Entry) error {
+	for _, entry := range entries {
+		err := s.Put(entry.key, entry.value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete removes key from store
-// TODO: implement method
 func (s *RiakKeyValueStore) Delete(key string) error {
-	panic("implement me")
+	cmd, err := riak.NewDeleteValueCommandBuilder().
+		WithBucket("default").
+		WithKey(key).
+		Build()
+	if err != nil {
+		return err
+	}
+	err = s.cluster.Execute(cmd)
+	return err
 }
 
-// Flush writes all values to the store
-// TODO: implement method
+// Flush is not implemented for Riak store
+// TODO: implement Flush and Put methods to support bulk inserts
 func (s *RiakKeyValueStore) Flush() error {
-	panic("implement me")
+	return nil
 }
