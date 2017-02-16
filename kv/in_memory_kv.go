@@ -36,6 +36,16 @@ func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 	return nil
 }
 
+func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
+	for _, entry := range entries {
+		err := s.Put(entry.key, entry.value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Delete removes key from store
 func (s *InMemoryKeyValueStore) Delete(key string) error {
 	delete(s.m, key)

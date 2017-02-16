@@ -70,6 +70,10 @@ func (s *CouchbaseKeyValueStore) Put(key string, structPtr interface{}) error {
 	return err
 }
 
+func (*CouchbaseKeyValueStore) PutAll(entries []*Entry) error {
+	panic("implement me")
+}
+
 // Delete removes key from store
 func (s *CouchbaseKeyValueStore) Delete(key string) error {
 	if s.config.DurableWrites {

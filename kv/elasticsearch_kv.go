@@ -159,6 +159,28 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 	return err
 }
 
+func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
+	bulk := s.client.Bulk()
+	for _, entry := range entries {
+		keyParts := strings.Split(entry.key, "/")
+		if len(keyParts) != 3 {
+			return fmt.Errorf("invalid key: '%s'", entry.key)
+		}
+		indexName := keyParts[0]
+		indexType := keyParts[1]
+		valueID := keyParts[2]
+		s.witness.Assert(entry.value)
+		bulk.Add(elastic.NewBulkIndexRequest().
+			Index(indexName).
+			Type(indexType).
+			Id(valueID).
+			Doc(entry.value),
+		)
+	}
+	_, err := bulk.Do(s.context)
+	return err
+}
+
 // Delete removes key from store
 func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	keyParts := strings.Split(key, "/")

@@ -31,8 +31,18 @@ func (s *CachedKeyValueStore) Get(key string) (interface{}, error) {
 func (s *CachedKeyValueStore) Put(key string, value interface{}) error {
 	s.witness.Assert(value)
 	s.cache[key] = value
-	if len(s.cache) > s.maxItemCount {
-		return s.Flush()
+	if len(s.cache) <= s.maxItemCount {
+		return nil
+	}
+	return s.clearCache()
+}
+
+func (s *CachedKeyValueStore) PutAll(entries []*Entry) error {
+	for _, entry := range entries {
+		err := s.Put(entry.key, entry.value)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -43,12 +53,23 @@ func (s *CachedKeyValueStore) Delete(key string) error {
 }
 
 func (s *CachedKeyValueStore) Flush() error {
-	for k, v := range s.cache {
-		err := s.child.Put(k, v)
-		if err != nil {
-			return err
-		}
+	err := s.clearCache()
+	if err != nil {
+		return err
+	}
+	return s.child.Flush()
+}
+
+func (s *CachedKeyValueStore) clearCache() error {
+	entries := make([]*Entry, len(s.cache))
+	i := 0
+	for key, value := range s.cache {
+		entries[i] = &Entry{key, value}
+		i++
+	}
+	err := s.child.PutAll(entries)
+	if err != nil {
+		return err
 	}
 	s.cache = make(map[string]interface{})
-	return nil
 }

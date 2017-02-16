@@ -99,6 +99,10 @@ func (s *RiakKeyValueStore) Put(key string, structPtr interface{}) error {
 	return nil
 }
 
+func (*RiakKeyValueStore) PutAll(entries []*Entry) error {
+	panic("implement me")
+}
+
 // Delete removes key from store
 func (s *RiakKeyValueStore) Delete(key string) error {
 	panic("implement me")

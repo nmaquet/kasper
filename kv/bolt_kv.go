@@ -69,6 +69,10 @@ func (s *BoltKeyValueStore) Put(key string, value interface{}) error {
 	})
 }
 
+func (*BoltKeyValueStore) PutAll(entries []*Entry) error {
+	panic("implement me")
+}
+
 // Delete removes key from store
 func (s *BoltKeyValueStore) Delete(key string) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
