@@ -32,8 +32,10 @@ before_script:
  - cd ../../
 
 script:
- - go test . ./kv -v -covermode=count -coverprofile=coverage.out
+ - go test . -v -covermode=count -coverprofile=coverage.out
+ - go test ./kv -v -covermode=count -coverprofile=coverage_kv.out
  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+ - $HOME/gopath/bin/goveralls -coverprofile=coverage_kv.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 after_script:
  - cd integration_tests/kafka
