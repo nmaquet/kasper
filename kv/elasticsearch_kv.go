@@ -236,6 +236,9 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 
 // PutAll bulk executes Put operation for several entries
 func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
+	if len(entries) == 0 {
+		return nil
+	}
 	bulk := s.client.Bulk()
 	for _, entry := range entries {
 		keyParts := strings.Split(entry.key, "/")
