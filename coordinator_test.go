@@ -17,7 +17,7 @@ func TestPartitionProcessorCoordinator_Commit(t *testing.T) {
 }
 
 func TestPartitionProcessorCoordinator_ShutdownTopicProcessor(t *testing.T) {
-	shutdown := make(chan bool, 1)
+	shutdown := make(chan struct{})
 	c := partitionProcessorCoordinator{
 		&partitionProcessor{
 			topicProcessor: &TopicProcessor{

@@ -25,7 +25,7 @@ type TopicProcessor struct {
 	partitionProcessors map[int32]*partitionProcessor
 	inputTopics         []string
 	partitions          []int
-	shutdown            chan bool
+	shutdown            chan struct{}
 	waitGroup           sync.WaitGroup
 }
 
@@ -81,7 +81,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitionProcessors,
 		inputTopics,
 		partitions,
-		make(chan bool, 1),
+		make(chan struct{}),
 		sync.WaitGroup{},
 	}
 	for _, partition := range partitions {
@@ -102,12 +102,12 @@ func (tp *TopicProcessor) Start() {
 
 // Shutdown safely shuts down topic processing, waiting for unfinished jobs
 func (tp *TopicProcessor) Shutdown() {
-	tp.shutdown <- true
+	close(tp.shutdown)
 	tp.waitGroup.Wait()
 }
 
 func (tp *TopicProcessor) runLoop() {
-	consumerChan, consumerSyncChans := tp.getConsumerMessagesChan()
+	consumerChan, consumerSyncChan := tp.getConsumerMessagesChan()
 	var markOffsetsTickerChan <-chan time.Time
 	var markOffsetsTicker *time.Ticker
 
@@ -135,9 +135,7 @@ func (tp *TopicProcessor) runLoop() {
 		case <-markOffsetsTickerChan:
 			tp.onMarkOffsetsTick()
 		case <-tp.shutdown:
-			for _, ch := range consumerSyncChans {
-				ch <- true
-			}
+			close(consumerSyncChan)
 			tp.onShutdown(markOffsetsTicker)
 			return
 		}
@@ -196,27 +194,25 @@ func (tp *TopicProcessor) onShutdown(ticker *time.Ticker) {
 	}
 }
 
-func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMessage, []chan<- bool) {
-	syncChans := []chan<- bool{}
+func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMessage, chan<- struct{}) {
+	syncChan := make(chan struct{})
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		tp.waitGroup.Add(1)
-		syncChan := make(chan bool, 1)
-		syncChans = append(syncChans, syncChan)
-		go func(c <-chan *sarama.ConsumerMessage, s <-chan bool) {
+		go func(c <-chan *sarama.ConsumerMessage) {
 			defer tp.waitGroup.Done()
 			for msg := range c {
 				select {
 				case consumerMessagesChan <- msg:
 					continue
-				case <-s:
+				case <-syncChan:
 					return
 				}
 
 			}
-		}(ch, syncChan)
+		}(ch)
 	}
-	return consumerMessagesChan, syncChans
+	return consumerMessagesChan, syncChan
 }
 
 func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {

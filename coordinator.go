@@ -18,5 +18,5 @@ func (c *partitionProcessorCoordinator) Commit() {
 }
 
 func (c *partitionProcessorCoordinator) ShutdownTopicProcessor() {
-	c.pp.topicProcessor.shutdown <- true
+	close(c.pp.topicProcessor.shutdown)
 }
