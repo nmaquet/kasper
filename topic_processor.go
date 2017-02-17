@@ -107,7 +107,7 @@ func (tp *TopicProcessor) Shutdown() {
 }
 
 func (tp *TopicProcessor) runLoop() {
-	consumerChan, consumerSyncChan := tp.getConsumerMessagesChan()
+	consumerChan := tp.getConsumerMessagesChan()
 	var markOffsetsTickerChan <-chan time.Time
 	var markOffsetsTicker *time.Ticker
 
@@ -135,7 +135,6 @@ func (tp *TopicProcessor) runLoop() {
 		case <-markOffsetsTickerChan:
 			tp.onMarkOffsetsTick()
 		case <-tp.shutdown:
-			close(consumerSyncChan)
 			tp.onShutdown(markOffsetsTicker)
 			return
 		}
@@ -194,8 +193,7 @@ func (tp *TopicProcessor) onShutdown(ticker *time.Ticker) {
 	}
 }
 
-func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMessage, chan<- struct{}) {
-	syncChan := make(chan struct{})
+func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
 	consumerMessagesChan := make(chan *sarama.ConsumerMessage)
 	for _, ch := range tp.consumerMessageChannels() {
 		tp.waitGroup.Add(1)
@@ -205,14 +203,14 @@ func (tp *TopicProcessor) getConsumerMessagesChan() (<-chan *sarama.ConsumerMess
 				select {
 				case consumerMessagesChan <- msg:
 					continue
-				case <-syncChan:
+				case <-tp.shutdown:
 					return
 				}
 
 			}
 		}(ch)
 	}
-	return consumerMessagesChan, syncChan
+	return consumerMessagesChan
 }
 
 func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {
