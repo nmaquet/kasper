@@ -283,7 +283,7 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 		Id(valueID).
 		Do(s.context)
 
-	if !response.Found {
+	if response != nil && !response.Found {
 		return nil
 	}
 
