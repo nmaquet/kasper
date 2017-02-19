@@ -67,7 +67,7 @@ type ElasticsearchKeyValueStore struct {
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
 func NewESKeyValueStore(host string, structPtr interface{}) *ElasticsearchKeyValueStore {
-	return NewESKeyValueStoreWithBloomFilter(host, structPtr,nil)
+	return NewESKeyValueStoreWithBloomFilter(host, structPtr, nil)
 }
 
 // NewESKeyValueStoreWithBloomFilter enables an optional bloom filter to optimize Get() heavy workloads.
@@ -277,11 +277,15 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	s.checkOrCreateIndex(indexName, indexType)
 	s.removeBloomFilter(indexName, indexType)
 
-	_, err := s.client.Delete().
+	response, err := s.client.Delete().
 		Index(indexName).
 		Type(indexType).
 		Id(valueID).
 		Do(s.context)
+
+	if !response.Found {
+		return nil
+	}
 
 	return err
 }
