@@ -32,11 +32,11 @@ before_script:
  - cd ../../
 
 script:
- - "echo 'mode: set' > coverage_final.out"
+ - "echo 'mode: count' > coverage_final.out"
  - go test . -v -covermode=count -coverprofile=coverage.out
- - "cat coverage.out | grep -v 'mode: set' >> coverage_final.out"
+ - "cat coverage.out | grep -v 'mode: count' >> coverage_final.out"
  - go test ./kv -v -covermode=count -coverprofile=coverage.out
- - "cat coverage.out | grep -v 'mode: set' >> coverage_final.out"
+ - "cat coverage.out | grep -v 'mode: count' >> coverage_final.out"
  - $HOME/gopath/bin/goveralls -coverprofile=coverage_final.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 after_script:
