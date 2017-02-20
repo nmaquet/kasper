@@ -9,6 +9,18 @@
 			"revisionTime": "2017-01-31T19:20:18Z"
 		},
 		{
+			"checksumSHA1": "CugKDIiTN7Xl2ID3yQ17ytRmNOY=",
+			"path": "github.com/garyburd/redigo/internal",
+			"revision": "0d253a66e6e1349f4581d6d2b300ee434ee2da9f",
+			"revisionTime": "2017-02-16T21:49:44Z"
+		},
+		{
+			"checksumSHA1": "kB76idnBbBSxbtkGcVojbDMp+s4=",
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "0d253a66e6e1349f4581d6d2b300ee434ee2da9f",
+			"revisionTime": "2017-02-16T21:49:44Z"
+		},
+		{
 			"checksumSHA1": "ncB97TqhsqLzFWWZCXRO3i1NoXk=",
 			"path": "github.com/spaolacci/murmur3",
 			"revision": "0d12bf811670bf6a1a63828dfbd003eded177fce",
