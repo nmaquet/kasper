@@ -10,9 +10,9 @@ import (
 	"log"
 	"sync"
 	"time"
+	"strconv"
 
 	"github.com/Shopify/sarama"
-	"strconv"
 )
 
 // TopicProcessor describes kafka topic processor
@@ -27,6 +27,8 @@ type TopicProcessor struct {
 	partitions          []int
 	shutdown            chan struct{}
 	waitGroup           sync.WaitGroup
+	batchSize           int
+	batchWaitDuration   time.Duration
 
 	processCount                Counter
 	markOffsetsCount            Counter
@@ -42,24 +44,103 @@ type MessageProcessor interface {
 	Process(IncomingMessage, Sender, Coordinator)
 }
 
+// TBD
+type BatchMessageProcessor interface {
+	// TBD
+	ProcessBatch([]*IncomingMessage, Sender, Coordinator)
+}
+
 // NewTopicProcessor creates a new TopicProcessor with the given config.
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerID int) *TopicProcessor {
+	mustHaveValidConfig(config, containerID)
+	inputTopics := config.InputTopics
+	client, partitions, offsetManager := mustSetupClient(config, containerID)
+	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
+	requiredAcks := config.Config.RequiredAcks
+	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks)
+	topicProcessor := TopicProcessor{
+		config:              config,
+		containerID:         containerID,
+		client:              client,
+		producer:            producer,
+		offsetManager:       offsetManager,
+		partitionProcessors: partitionProcessors,
+		inputTopics:         inputTopics,
+		partitions:          partitions,
+		shutdown:            make(chan struct{}),
+		waitGroup:           sync.WaitGroup{},
+		batchSize:           1,
+		batchWaitDuration:   0,
+	}
+	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
+	for _, partition := range partitions {
+		processor := makeProcessor()
+		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, partition)
+	}
+	return &topicProcessor
+}
+
+// TBD
+type BatchingOpts struct {
+	makeProcessor     func() BatchMessageProcessor
+	batchSize         int
+	batchWaitDuration time.Duration
+}
+
+// TBD
+func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, containerID int) *TopicProcessor {
+	mustHaveValidConfig(config, containerID)
+	inputTopics := config.InputTopics
+	client, partitions, offsetManager := mustSetupClient(config, containerID)
+	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
+	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), config.Config.RequiredAcks)
+	topicProcessor := TopicProcessor{
+		config:              config,
+		containerID:         containerID,
+		client:              client,
+		producer:            producer,
+		offsetManager:       offsetManager,
+		partitionProcessors: partitionProcessors,
+		inputTopics:         inputTopics,
+		partitions:          partitions,
+		shutdown:            make(chan struct{}),
+		waitGroup:           sync.WaitGroup{},
+		batchSize:           opts.batchSize,
+		batchWaitDuration:   opts.batchWaitDuration,
+	}
+	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
+	for _, partition := range partitions {
+		processor := opts.makeProcessor()
+		partitionProcessors[int32(partition)] = newBatchPartitionProcessor(&topicProcessor, processor, partition)
+	}
+	return &topicProcessor
+}
+
+func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
+	tp.processCount = provider.NewCounter("process_count", "Number of times Process() is called", "topic", "partition")
+	tp.markOffsetsCount = provider.NewCounter("mark_offset_count", "Number of times MarkOffsets() is called")
+	tp.inFlightMessagesCount = provider.NewGauge("in_flight_messages_count", "Number of messages sent but not acked", "topic", "partition")
+	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
+}
+
+func mustHaveValidConfig(config *TopicProcessorConfig, containerID int) {
 	if containerID < 0 || containerID >= config.ContainerCount {
 		log.Fatalf("ContainerID expected to be between 0 and %d, got: %d", config.ContainerCount-1, containerID)
 	}
-	inputTopics := config.InputTopics
-	brokerList := config.BrokerList
-	for _, topic := range inputTopics {
+	for _, topic := range config.InputTopics {
 		_, ok := config.TopicSerdes[topic]
 		if !ok {
 			log.Fatalf("Could not find Serde for topic '%s'", topic)
 		}
 	}
+}
+
+func mustSetupClient(config *TopicProcessorConfig, containerID int) (sarama.Client, []int, sarama.OffsetManager) {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // TODO: make this configurable
-	client, err := sarama.NewClient(brokerList, saramaConfig)
+	client, err := sarama.NewClient(config.BrokerList, saramaConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,31 +155,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	if err != nil {
 		log.Fatal(err)
 	}
-	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
-	requiredAcks := config.Config.RequiredAcks
-	provider := config.Config.MetricsProvider
-	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks)
-	topicProcessor := TopicProcessor{
-		config,
-		containerID,
-		client,
-		producer,
-		offsetManager,
-		partitionProcessors,
-		inputTopics,
-		partitions,
-		make(chan struct{}),
-		sync.WaitGroup{},
-		provider.NewCounter("process_count", "Number of times Process() is called", "topic", "partition"),
-		provider.NewCounter("mark_offset_count", "Number of times MarkOffsets() is called"),
-		provider.NewGauge("in_flight_messages_count", "Number of messages sent but not acked", "topic", "partition"),
-		provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition"),
-	}
-	for _, partition := range partitions {
-		processor := makeProcessor()
-		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, partition)
-	}
-	return &topicProcessor
+	return client, partitions, offsetManager
 }
 
 // Start launches a deferred routine for topic processing.

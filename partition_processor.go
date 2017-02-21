@@ -71,6 +71,10 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 	return pp
 }
 
+func newBatchPartitionProcessor(topicProcessor *TopicProcessor, processor BatchMessageProcessor, partition int) *partitionProcessor {
+	panic("not implemented")
+}
+
 func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) ([]*sarama.ProducerMessage, bool) {
 	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[consumerMessage.Topic]
 	if !ok {
