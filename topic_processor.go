@@ -229,6 +229,7 @@ func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.Consume
 	if err != nil {
 		tp.onProducerError(err)
 	}
+	pp.markOffsets(consumerMessage)
 	for _, message := range producerMessages {
 		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}
@@ -244,6 +245,7 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 	if err != nil {
 		tp.onProducerError(err)
 	}
+	pp.markOffsetsForBatch(messages)
 	for _, message := range producerMessages {
 		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}

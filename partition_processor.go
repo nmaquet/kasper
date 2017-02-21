@@ -86,7 +86,6 @@ func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) [
 	}
 	sender := newSender(pp)
 	pp.messageProcessor.Process(incomingMessage, sender, pp.coordinator)
-	pp.offsetManagers[consumerMessage.Topic].MarkOffset(consumerMessage.Offset + 1, "")
 	return sender.producerMessages
 }
 
@@ -107,6 +106,20 @@ func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
 
 func (pp *partitionProcessor) onMetricsTick() {
 	pp.countMessagesBehindHighWaterMark()
+}
+
+func (pp *partitionProcessor) markOffsets(message *sarama.ConsumerMessage) {
+	pp.offsetManagers[message.Topic].MarkOffset(message.Offset + 1, "")
+}
+
+func (pp *partitionProcessor) markOffsetsForBatch(messages []*sarama.ConsumerMessage) {
+	latestOffset := make(map[string]int64)
+	for _, message := range messages {
+		latestOffset[message.Topic] = message.Offset
+	}
+	for topic, offset := range latestOffset {
+		pp.offsetManagers[topic].MarkOffset(offset + 1, "")
+	}
 }
 
 func (pp *partitionProcessor) onShutdown() {
