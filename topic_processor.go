@@ -186,11 +186,11 @@ func (tp *TopicProcessor) runLoop() {
 	}
 
 	batches := make(map[int][]*sarama.ConsumerMessage)
-	batched := make(map[int]int)
+	lengths := make(map[int]int)
 
 	for _, partition := range tp.partitions {
 		batches[partition] = make([]*sarama.ConsumerMessage, tp.batchSize)
-		batched[partition] = 0
+		lengths[partition] = 0
 	}
 
 	for {
@@ -198,11 +198,11 @@ func (tp *TopicProcessor) runLoop() {
 		case consumerMessage := <-consumerChan:
 			if tp.batchingEnabled {
 				partition := int(consumerMessage.Partition)
-				batches[partition][batched[partition]] = consumerMessage
-				batched[partition]++
-				if batched[partition] == tp.batchSize {
+				batches[partition][lengths[partition]] = consumerMessage
+				lengths[partition]++
+				if lengths[partition] == tp.batchSize {
 					tp.processConsumerMessageBatch(batches[partition], partition)
-					batched[partition] = 0
+					lengths[partition] = 0
 				}
 			} else {
 				tp.processConsumerMessage(consumerMessage)
@@ -211,8 +211,8 @@ func (tp *TopicProcessor) runLoop() {
 			tp.onMetricsTick()
 		case <-batchTickerChan:
 			for _, partition := range tp.partitions {
-				tp.processConsumerMessageBatch(batches[partition][0:batched[partition]], partition)
-				batched[partition] = 0
+				tp.processConsumerMessageBatch(batches[partition][0:lengths[partition]], partition)
+				lengths[partition] = 0
 			}
 		case <-tp.shutdown:
 			tp.onShutdown(metricsTicker, batchTicker)
