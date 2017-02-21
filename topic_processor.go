@@ -76,7 +76,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
 	for _, partition := range partitions {
 		processor := makeProcessor()
-		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, partition)
+		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, nil, partition)
 	}
 	return &topicProcessor
 }
@@ -113,7 +113,7 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, con
 	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
 	for _, partition := range partitions {
 		processor := opts.makeProcessor()
-		partitionProcessors[int32(partition)] = newBatchPartitionProcessor(&topicProcessor, processor, partition)
+		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, nil, processor, partition)
 	}
 	return &topicProcessor
 }

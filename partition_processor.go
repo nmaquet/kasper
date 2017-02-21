@@ -8,14 +8,15 @@ import (
 )
 
 type partitionProcessor struct {
-	topicProcessor     *TopicProcessor
-	coordinator        Coordinator
-	consumer           sarama.Consumer
-	partitionConsumers []sarama.PartitionConsumer
-	offsetManagers     map[string]sarama.PartitionOffsetManager
-	messageProcessor   MessageProcessor
-	inputTopics        []string
-	partition          int
+	topicProcessor        *TopicProcessor
+	coordinator           Coordinator
+	consumer              sarama.Consumer
+	partitionConsumers    []sarama.PartitionConsumer
+	offsetManagers        map[string]sarama.PartitionOffsetManager
+	messageProcessor      MessageProcessor
+	batchMessageProcessor BatchMessageProcessor
+	inputTopics           []string
+	partition             int
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -26,7 +27,10 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 	return chans
 }
 
-func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int) *partitionProcessor {
+func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMessageProcessor, partition int) *partitionProcessor {
+	if (mp == nil && bmp == nil) || (mp != nil && bmp != nil) {
+		panic("Exactly one message processor must be provided")
+	}
 	consumer, err := sarama.NewConsumerFromClient(tp.client)
 	if err != nil {
 		log.Fatal(err)
@@ -60,15 +64,12 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		partitionConsumers,
 		partitionOffsetManagers,
 		mp,
+		bmp,
 		tp.inputTopics,
 		partition,
 	}
 	pp.coordinator = &partitionProcessorCoordinator{pp}
 	return pp
-}
-
-func newBatchPartitionProcessor(topicProcessor *TopicProcessor, processor BatchMessageProcessor, partition int) *partitionProcessor {
-	panic("not implemented")
 }
 
 func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
@@ -90,7 +91,24 @@ func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) [
 }
 
 func (pp *partitionProcessor) processBatch(messages []*sarama.ConsumerMessage) []*sarama.ProducerMessage {
-	panic("Not implemented")
+	incomingMessages := make([]*IncomingMessage, len(messages))
+	for i, message := range messages {
+		topicSerde, ok := pp.topicProcessor.config.TopicSerdes[message.Topic]
+		if !ok {
+			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
+		}
+		incomingMessages[i] =  &IncomingMessage{
+			Topic:     message.Topic,
+			Partition: int(message.Partition),
+			Offset:    message.Offset,
+			Key:       topicSerde.KeySerde.Deserialize(message.Key),
+			Value:     topicSerde.ValueSerde.Deserialize(message.Value),
+			Timestamp: message.Timestamp,
+		}
+	}
+	sender := newSender(pp)
+	pp.batchMessageProcessor.ProcessBatch(incomingMessages, sender, pp.coordinator)
+	return sender.producerMessages
 }
 
 func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
@@ -109,7 +127,7 @@ func (pp *partitionProcessor) onMetricsTick() {
 }
 
 func (pp *partitionProcessor) markOffsets(message *sarama.ConsumerMessage) {
-	pp.offsetManagers[message.Topic].MarkOffset(message.Offset + 1, "")
+	pp.offsetManagers[message.Topic].MarkOffset(message.Offset+1, "")
 }
 
 func (pp *partitionProcessor) markOffsetsForBatch(messages []*sarama.ConsumerMessage) {
@@ -118,7 +136,7 @@ func (pp *partitionProcessor) markOffsetsForBatch(messages []*sarama.ConsumerMes
 		latestOffset[message.Topic] = message.Offset
 	}
 	for topic, offset := range latestOffset {
-		pp.offsetManagers[topic].MarkOffset(offset + 1, "")
+		pp.offsetManagers[topic].MarkOffset(offset+1, "")
 	}
 }
 
