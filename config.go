@@ -26,6 +26,6 @@ func DefaultConfig() *Config {
 		RequiredAcks:             sarama.WaitForAll,
 		MaxInFlightMessageGroups: 5000,
 		MarkOffsetsHook:          func() {},
-		MetricsProvider:          NewPrometheusMetricsProvider(),
+		MetricsProvider:          NoopMetricsProvider{},
 	}
 }
