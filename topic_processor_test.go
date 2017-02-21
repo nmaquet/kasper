@@ -310,7 +310,7 @@ const expectedResultJSON string = `
 
 func populateFictionAndCharactersTopic() int {
 	config := TopicProcessorConfig{
-		TopicProcessorName: "topic-processor-integration-test",
+		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"characters", "fictions"},
 		TopicSerdes: map[string]TopicSerde{
