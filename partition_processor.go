@@ -103,8 +103,6 @@ func (pp *partitionProcessor) pruneInFlightMessageGroups() {
 	for _, topic := range pp.topicProcessor.inputTopics {
 		pp.pruneInFlightMessageGroupsForTopic(topic)
 	}
-	pp.countInFlightMessages()
-	pp.countMessagesBehindHighWaterMark()
 }
 
 func (pp *partitionProcessor) countInFlightMessages() {
@@ -149,6 +147,11 @@ func (pp *partitionProcessor) onMarkOffsetsTick() {
 	for _, topic := range pp.topicProcessor.inputTopics {
 		pp.onMarkOffsetsTickForTopic(topic)
 	}
+}
+
+func (pp *partitionProcessor) onMetricsTick() {
+	pp.countInFlightMessages()
+	pp.countMessagesBehindHighWaterMark()
 }
 
 func (pp *partitionProcessor) onMarkOffsetsTickForTopic(topic string) {

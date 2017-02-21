@@ -117,6 +117,7 @@ func (tp *TopicProcessor) Shutdown() {
 
 func (tp *TopicProcessor) runLoop() {
 	consumerChan := tp.getConsumerMessagesChan()
+	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
 	var markOffsetsTickerChan <-chan time.Time
 	var markOffsetsTicker *time.Ticker
 
@@ -143,8 +144,10 @@ func (tp *TopicProcessor) runLoop() {
 			tp.onProducerAck(msg, more)
 		case <-markOffsetsTickerChan:
 			tp.onMarkOffsetsTick()
+		case <-metricsTicker.C:
+			tp.onMetricsTick()
 		case <-tp.shutdown:
-			tp.onShutdown(markOffsetsTicker)
+			tp.onShutdown(markOffsetsTicker, metricsTicker)
 			return
 		}
 	}
@@ -186,9 +189,11 @@ func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.Consume
 	}
 }
 
-func (tp *TopicProcessor) onShutdown(ticker *time.Ticker) {
-	if ticker != nil {
-		ticker.Stop()
+func (tp *TopicProcessor) onShutdown(tickers ...*time.Ticker) {
+	for _, ticker := range tickers {
+		if ticker != nil {
+			ticker.Stop()
+		}
 	}
 	for _, pp := range tp.partitionProcessors {
 		pp.onShutdown()
@@ -232,6 +237,12 @@ func (tp *TopicProcessor) onMarkOffsetsTick() {
 	tp.config.Config.MarkOffsetsHook()
 	for _, pp := range tp.partitionProcessors {
 		pp.onMarkOffsetsTick()
+	}
+}
+
+func (tp *TopicProcessor) onMetricsTick() {
+	for _, pp := range tp.partitionProcessors {
+		pp.onMetricsTick()
 	}
 }
 

@@ -1,6 +1,8 @@
 package kasper
 
 import (
+	"time"
+
 	"github.com/Shopify/sarama"
 )
 
@@ -18,6 +20,8 @@ type Config struct {
 	MarkOffsetsHook func()
 	// TBD
 	MetricsProvider MetricsProvider
+	// TBD
+	MetricsUpdateInterval time.Duration
 }
 
 // DefaultConfig creates a config that you can start with
@@ -27,5 +31,6 @@ func DefaultConfig() *Config {
 		MaxInFlightMessageGroups: 5000,
 		MarkOffsetsHook:          func() {},
 		MetricsProvider:          NoopMetricsProvider{},
+		MetricsUpdateInterval:    5 * time.Second,
 	}
 }
