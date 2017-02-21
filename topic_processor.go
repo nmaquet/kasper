@@ -27,6 +27,7 @@ type TopicProcessor struct {
 	partitions          []int
 	shutdown            chan struct{}
 	waitGroup           sync.WaitGroup
+	batchingEnabled     bool
 	batchSize           int
 	batchWaitDuration   time.Duration
 
@@ -71,8 +72,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitions:          partitions,
 		shutdown:            make(chan struct{}),
 		waitGroup:           sync.WaitGroup{},
-		batchSize:           1,
-		batchWaitDuration:   0,
+		batchingEnabled:     false,
 	}
 	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
 	for _, partition := range partitions {
@@ -107,6 +107,7 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, con
 		partitions:          partitions,
 		shutdown:            make(chan struct{}),
 		waitGroup:           sync.WaitGroup{},
+		batchingEnabled:     true,
 		batchSize:           opts.batchSize,
 		batchWaitDuration:   opts.batchWaitDuration,
 	}
@@ -178,12 +179,21 @@ func (tp *TopicProcessor) runLoop() {
 	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
 	var markOffsetsTickerChan <-chan time.Time
 	var markOffsetsTicker *time.Ticker
+	var batchTickerChan <-chan time.Time
+	var batchTicker *time.Ticker
 
 	if tp.config.markOffsetsAutomatically() {
 		markOffsetsTicker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
 		markOffsetsTickerChan = markOffsetsTicker.C
 	} else {
 		markOffsetsTickerChan = make(<-chan time.Time)
+	}
+
+	if tp.batchingEnabled {
+		batchTicker = time.NewTicker(tp.batchWaitDuration)
+		batchTickerChan = batchTicker.C
+	} else {
+		batchTickerChan = make(<-chan time.Time)
 	}
 
 	tp.waitGroup.Add(1)
@@ -194,18 +204,41 @@ func (tp *TopicProcessor) runLoop() {
 		}
 	}()
 
+	batches := make(map[int][]*sarama.ConsumerMessage)
+	batched := make(map[int]int)
+
+	for _, partition := range tp.partitions {
+		batches[partition] = make([]*sarama.ConsumerMessage, tp.batchSize)
+		batched[partition] = 0
+	}
+
 	for {
 		select {
 		case consumerMessage := <-consumerChan:
-			tp.processConsumerMessage(consumerMessage, markOffsetsTickerChan)
+			if tp.batchingEnabled {
+				partition := int(consumerMessage.Partition)
+				batches[partition][batched[partition]] = consumerMessage
+				batched[partition]++
+				if batched[partition] == tp.batchSize {
+					tp.processConsumerMessageBatch(batches[partition][0:batched[partition]], partition)
+					batched[partition] = 0
+				}
+			} else {
+				tp.processConsumerMessage(consumerMessage, markOffsetsTickerChan)
+			}
 		case msg, more := <-tp.producer.Successes():
 			tp.onProducerAck(msg, more)
 		case <-markOffsetsTickerChan:
 			tp.onMarkOffsetsTick()
 		case <-metricsTicker.C:
 			tp.onMetricsTick()
+		case <-batchTickerChan:
+			for _, partition := range tp.partitions {
+				tp.processConsumerMessageBatch(batches[partition][0:batched[partition]], partition)
+				batched[partition] = 0
+			}
 		case <-tp.shutdown:
-			tp.onShutdown(markOffsetsTicker, metricsTicker)
+			tp.onShutdown(markOffsetsTicker, metricsTicker, batchTicker)
 			return
 		}
 	}
@@ -238,6 +271,41 @@ func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.Consume
 				}
 			}
 			break
+		} else {
+			select {
+			case msg, more := <-tp.producer.Successes():
+				tp.onProducerAck(msg, more)
+			}
+		}
+	}
+}
+
+func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.ConsumerMessage, partition int) {
+	// FIXME: add missing metric
+	pp := tp.partitionProcessors[int32(partition)]
+	for {
+		if pp.isReadyForMessageBatch() {
+			producerMessages, mustCommit := pp.processBatch(messages)
+			for len(producerMessages) > 0 {
+				select {
+				case tp.producer.Input() <- producerMessages[0]:
+					producerMessages = producerMessages[1:]
+				case msg, more := <-tp.producer.Successes():
+					tp.onProducerAck(msg, more)
+				}
+			}
+			pp.onProcessBatchCompleted()
+			if mustCommit {
+				for {
+					if pp.isReadyToCommit() {
+						tp.config.Config.MarkOffsetsHook()
+						pp.commit()
+						break
+					}
+					msg, more := <-tp.producer.Successes()
+					tp.onProducerAck(msg, more)
+				}
+			}
 		} else {
 			select {
 			case msg, more := <-tp.producer.Successes():

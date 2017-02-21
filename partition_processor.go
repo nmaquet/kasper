@@ -99,7 +99,15 @@ func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) (
 	return sender.producerMessages, pp.messageProcessorRequestedCommit
 }
 
+func (pp *partitionProcessor) processBatch(messages []*sarama.ConsumerMessage) ([]*sarama.ProducerMessage, bool) {
+	panic("Not implemented")
+}
+
 func (pp *partitionProcessor) onProcessCompleted() {
+	pp.pruneInFlightMessageGroups()
+}
+
+func (pp *partitionProcessor) onProcessBatchCompleted() {
 	pp.pruneInFlightMessageGroups()
 }
 
@@ -145,6 +153,16 @@ func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic string) {
 func (pp *partitionProcessor) isReadyForMessage(msg *sarama.ConsumerMessage) bool {
 	maxGroups := pp.topicProcessor.config.Config.MaxInFlightMessageGroups
 	return len(pp.inFlightMessageGroups[msg.Topic]) <= maxGroups
+}
+
+func (pp *partitionProcessor) isReadyForMessageBatch() bool {
+	maxGroups := pp.topicProcessor.config.Config.MaxInFlightMessageGroups
+	for _, groups := range pp.inFlightMessageGroups {
+		if len(groups) >= maxGroups {
+			return false
+		}
+	}
+	return true
 }
 
 func (pp *partitionProcessor) onMarkOffsetsTick() {
