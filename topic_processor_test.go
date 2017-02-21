@@ -43,8 +43,10 @@ type Test struct {
 	characterToFictionsStore map[string]*IDs
 }
 
-func (*Test) ProcessBatch([]*IncomingMessage, Sender, Coordinator) {
-	panic("implement me")
+func (t *Test) ProcessBatch(msgs []*IncomingMessage, sender Sender, coordinator Coordinator) {
+	for _, msg := range msgs {
+		t.Process(*msg, sender, coordinator)
+	}
 }
 
 func (t *Test) Process(msg IncomingMessage, sender Sender, coordinator Coordinator) {
@@ -356,7 +358,7 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	batchingOpts := BatchingOpts{
 		makeProcessor:     func() BatchMessageProcessor { return test },
 		batchSize:         3,
-		batchWaitDuration: 1 * time.Minute,
+		batchWaitDuration: 3 * time.Second,
 	}
 
 	var topicProcessor *TopicProcessor
