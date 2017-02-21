@@ -107,6 +107,9 @@ func (s *ElasticsearchKeyValueStore) getBloomFilter(indexName, indexType string)
 }
 
 func (s *ElasticsearchKeyValueStore) setBloomFilter(indexName, indexType string, bf *bloom.BloomFilter) {
+	if s.bfConfig == nil {
+		return
+	}
 	if s.bloomFilters[indexName] == nil {
 		s.bloomFilters[indexName] = make(map[string]*bloom.BloomFilter)
 	}
