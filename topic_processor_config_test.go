@@ -3,7 +3,6 @@ package kasper
 import (
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -43,32 +42,4 @@ func TestTopicProcessorConfig_producerClientID(t *testing.T) {
 		TopicProcessorName: "ford-prefect",
 	}
 	assert.Equal(t, "kasper-topic-processor-ford-prefect-42", c.producerClientID(42))
-}
-
-func TestTopicProcessorConfig_markOffsetsAutomatically_true(t *testing.T) {
-	c := &TopicProcessorConfig{
-		AutoMarkOffsetsInterval: 1 * time.Second,
-	}
-	assert.Equal(t, true, c.markOffsetsAutomatically())
-}
-
-func TestTopicProcessorConfig_markOffsetsAutomatically_false(t *testing.T) {
-	c := &TopicProcessorConfig{
-		AutoMarkOffsetsInterval: 0,
-	}
-	assert.Equal(t, false, c.markOffsetsAutomatically())
-}
-
-func TestTopicProcessorConfig_markOffsetsManually_false(t *testing.T) {
-	c := &TopicProcessorConfig{
-		AutoMarkOffsetsInterval: 1 * time.Second,
-	}
-	assert.Equal(t, false, c.markOffsetsManually())
-}
-
-func TestTopicProcessorConfig_markOffsetsManually_true(t *testing.T) {
-	c := &TopicProcessorConfig{
-		AutoMarkOffsetsInterval: 0,
-	}
-	assert.Equal(t, true, c.markOffsetsManually())
 }

@@ -331,7 +331,6 @@ func populateFictionAndCharactersTopic() int {
 		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
-		AutoMarkOffsetsInterval: 0, // don't mark offsets so the test can be run multiple times
 		Config:                  DefaultConfig(),
 	}
 	characterCount := 0

@@ -2,7 +2,6 @@ package kasper
 
 import (
 	"fmt"
-	"time"
 )
 
 // TopicProcessorConfig desribes a config for Kafka topic processor
@@ -19,9 +18,6 @@ type TopicProcessorConfig struct {
 	ContainerCount int
 	// Mapping of partition to container to use
 	PartitionToContainerID map[int]int
-	// Interval used for marking offsets automatically.
-	// Value <= 0 will disable the automatic marking of offsets.
-	AutoMarkOffsetsInterval time.Duration
 	// Kasper config
 	Config *Config
 }
@@ -50,12 +46,4 @@ func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
 
 func (config *TopicProcessorConfig) producerClientID(containerID int) string {
 	return fmt.Sprintf("kasper-topic-processor-%s-%d", config.TopicProcessorName, containerID)
-}
-
-func (config *TopicProcessorConfig) markOffsetsAutomatically() bool {
-	return config.AutoMarkOffsetsInterval > 0
-}
-
-func (config *TopicProcessorConfig) markOffsetsManually() bool {
-	return config.AutoMarkOffsetsInterval <= 0
 }

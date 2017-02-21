@@ -2,6 +2,7 @@ package kasper
 
 type Counter interface {
 	Inc(labelValues...string)
+	Add(value float64, labelValues...string)
 }
 
 type Gauge interface {

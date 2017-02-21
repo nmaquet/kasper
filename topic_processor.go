@@ -20,7 +20,7 @@ type TopicProcessor struct {
 	config              *TopicProcessorConfig
 	containerID         int
 	client              sarama.Client
-	producer            sarama.AsyncProducer
+	producer            sarama.SyncProducer
 	offsetManager       sarama.OffsetManager
 	partitionProcessors map[int32]*partitionProcessor
 	inputTopics         []string
@@ -31,9 +31,8 @@ type TopicProcessor struct {
 	batchSize           int
 	batchWaitDuration   time.Duration
 
-	processCount                Counter
-	markOffsetsCount            Counter
-	inFlightMessagesCount       Gauge
+	incomingMessageCount        Counter
+	outgoingMessageCount        Counter
 	messagesBehindHighWaterMark Gauge
 }
 
@@ -120,9 +119,8 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, con
 }
 
 func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
-	tp.processCount = provider.NewCounter("process_count", "Number of times Process() is called", "topic", "partition")
-	tp.markOffsetsCount = provider.NewCounter("mark_offset_count", "Number of times MarkOffsets() is called")
-	tp.inFlightMessagesCount = provider.NewGauge("in_flight_messages_count", "Number of messages sent but not acked", "topic", "partition")
+	tp.incomingMessageCount = provider.NewCounter("incoming_message_count", "Number of incoming messages received", "topic", "partition")
+	tp.outgoingMessageCount = provider.NewCounter("outgoing_message_count", "Number of outgoing messages sent", "topic", "partition")
 	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
 }
 
@@ -177,17 +175,8 @@ func (tp *TopicProcessor) Shutdown() {
 func (tp *TopicProcessor) runLoop() {
 	consumerChan := tp.getConsumerMessagesChan()
 	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
-	var markOffsetsTickerChan <-chan time.Time
-	var markOffsetsTicker *time.Ticker
 	var batchTickerChan <-chan time.Time
 	var batchTicker *time.Ticker
-
-	if tp.config.markOffsetsAutomatically() {
-		markOffsetsTicker = time.NewTicker(tp.config.AutoMarkOffsetsInterval)
-		markOffsetsTickerChan = markOffsetsTicker.C
-	} else {
-		markOffsetsTickerChan = make(<-chan time.Time)
-	}
 
 	if tp.batchingEnabled {
 		batchTicker = time.NewTicker(tp.batchWaitDuration)
@@ -195,14 +184,6 @@ func (tp *TopicProcessor) runLoop() {
 	} else {
 		batchTickerChan = make(<-chan time.Time)
 	}
-
-	tp.waitGroup.Add(1)
-	go func() {
-		defer tp.waitGroup.Done()
-		for err := range tp.producer.Errors() {
-			tp.onProducerError(err)
-		}
-	}()
 
 	batches := make(map[int][]*sarama.ConsumerMessage)
 	batched := make(map[int]int)
@@ -224,12 +205,8 @@ func (tp *TopicProcessor) runLoop() {
 					batched[partition] = 0
 				}
 			} else {
-				tp.processConsumerMessage(consumerMessage, markOffsetsTickerChan)
+				tp.processConsumerMessage(consumerMessage)
 			}
-		case msg, more := <-tp.producer.Successes():
-			tp.onProducerAck(msg, more)
-		case <-markOffsetsTickerChan:
-			tp.onMarkOffsetsTick()
 		case <-metricsTicker.C:
 			tp.onMetricsTick()
 		case <-batchTickerChan:
@@ -238,80 +215,37 @@ func (tp *TopicProcessor) runLoop() {
 				batched[partition] = 0
 			}
 		case <-tp.shutdown:
-			tp.onShutdown(markOffsetsTicker, metricsTicker, batchTicker)
+			tp.onShutdown(metricsTicker, batchTicker)
 			return
 		}
 	}
 }
 
-func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage, tickerChan <-chan time.Time) {
-	tp.processCount.Inc(consumerMessage.Topic, strconv.Itoa(int(consumerMessage.Partition)))
+func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage) {
+	tp.incomingMessageCount.Inc(consumerMessage.Topic, strconv.Itoa(int(consumerMessage.Partition)))
 	pp := tp.partitionProcessors[consumerMessage.Partition]
-	for {
-		if pp.isReadyForMessage(consumerMessage) {
-			producerMessages, mustCommit := pp.process(consumerMessage)
-			for len(producerMessages) > 0 {
-				select {
-				case tp.producer.Input() <- producerMessages[0]:
-					producerMessages = producerMessages[1:]
-				case msg, more := <-tp.producer.Successes():
-					tp.onProducerAck(msg, more)
-				}
-			}
-			pp.onProcessCompleted()
-			if mustCommit {
-				for {
-					if pp.isReadyToCommit() {
-						tp.config.Config.MarkOffsetsHook()
-						pp.commit()
-						break
-					}
-					msg, more := <-tp.producer.Successes()
-					tp.onProducerAck(msg, more)
-				}
-			}
-			break
-		} else {
-			select {
-			case msg, more := <-tp.producer.Successes():
-				tp.onProducerAck(msg, more)
-			}
-		}
+	producerMessages := pp.process(consumerMessage)
+	err := tp.producer.SendMessages(producerMessages)
+	if err != nil {
+		tp.onProducerError(err)
+	}
+	for _, message := range producerMessages {
+		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}
 }
 
 func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.ConsumerMessage, partition int) {
-	// FIXME: add missing metric
+	for _, message := range messages {
+		tp.incomingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
+	}
 	pp := tp.partitionProcessors[int32(partition)]
-	for {
-		if pp.isReadyForMessageBatch() {
-			producerMessages, mustCommit := pp.processBatch(messages)
-			for len(producerMessages) > 0 {
-				select {
-				case tp.producer.Input() <- producerMessages[0]:
-					producerMessages = producerMessages[1:]
-				case msg, more := <-tp.producer.Successes():
-					tp.onProducerAck(msg, more)
-				}
-			}
-			pp.onProcessBatchCompleted()
-			if mustCommit {
-				for {
-					if pp.isReadyToCommit() {
-						tp.config.Config.MarkOffsetsHook()
-						pp.commit()
-						break
-					}
-					msg, more := <-tp.producer.Successes()
-					tp.onProducerAck(msg, more)
-				}
-			}
-		} else {
-			select {
-			case msg, more := <-tp.producer.Successes():
-				tp.onProducerAck(msg, more)
-			}
-		}
+	producerMessages := pp.processBatch(messages)
+	err := tp.producer.SendMessages(producerMessages)
+	if err != nil {
+		tp.onProducerError(err)
+	}
+	for _, message := range producerMessages {
+		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}
 }
 
@@ -354,16 +288,8 @@ func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessa
 	return consumerMessagesChan
 }
 
-func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {
-	log.Fatal(error) /* FIXME Handle this gracefully with a retry count / backoff period */
-}
-
-func (tp *TopicProcessor) onMarkOffsetsTick() {
-	tp.markOffsetsCount.Inc()
-	tp.config.Config.MarkOffsetsHook()
-	for _, pp := range tp.partitionProcessors {
-		pp.onMarkOffsetsTick()
-	}
+func (tp *TopicProcessor) onProducerError(err error) {
+	log.Fatal(err)
 }
 
 func (tp *TopicProcessor) onMetricsTick() {
@@ -381,26 +307,17 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	return chans
 }
 
-func mustSetupProducer(brokers []string, producerClientID string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
+func mustSetupProducer(brokers []string, producerClientID string, requiredAcks sarama.RequiredAcks) sarama.SyncProducer {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.ClientID = producerClientID
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
 	saramaConfig.Producer.RequiredAcks = requiredAcks
 
-	producer, err := sarama.NewAsyncProducer(brokers, saramaConfig)
+	producer, err := sarama.NewSyncProducer(brokers, saramaConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return producer
-}
-
-func (tp *TopicProcessor) onProducerAck(producerMessage *sarama.ProducerMessage, more bool) {
-	if !more {
-		return
-	}
-	incomingMessage := producerMessage.Metadata.(*IncomingMessage)
-	pp := tp.partitionProcessors[int32(incomingMessage.Partition)]
-	pp.onProducerAck(producerMessage)
 }
