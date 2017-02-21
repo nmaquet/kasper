@@ -62,7 +62,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	for _, partition := range partitions {
 		_, ok := config.PartitionToContainerID[partition]
 		if !ok {
-			log.Fatalf("Could not find PartitionToContainerID mapping for partition %d", partition)
+			log.Print("Could not find PartitionToContainerID mapping for partition ", partition)
 		}
 	}
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
