@@ -16,6 +16,7 @@ type Entry struct {
 // Keys are strings, and values are pointers to structs
 type KeyValueStore interface {
 	Get(key string) (interface{}, error)
+	GetAll(keys []string) ([]*Entry, error)
 	Put(key string, value interface{}) error
 	PutAll(entries []*Entry) error
 	Delete(key string) error

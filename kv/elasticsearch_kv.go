@@ -7,7 +7,6 @@ import (
 
 	"log"
 
-	"github.com/willf/bloom"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
 
@@ -15,9 +14,7 @@ import (
 )
 
 const indexSettings = `{
-	"index.translog.durability": "async",
-	"index.translog.sync_interval": "60s",
-	"index.translog.flush_threshold_size": "512m"
+	"index.translog.durability": "sync",
 }`
 
 const indexMapping = `{
@@ -39,30 +36,13 @@ type indexAndType struct {
 	indexType string
 }
 
-// BloomFilterConfig contains estimates to configure the optional bloom filter.
-// See https://godoc.org/github.com/willf/bloom#NewWithEstimates for more information.
-type BloomFilterConfig struct {
-	// An estimate size the entire data set
-	SizeEstimate uint
-	// An estimate of the desired false positive rate
-	FalsePositiveRate float64
-	// How many bloom filters can exist at one time
-	MaxBloomFilters int
-}
-
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
-// For performance reasons, this implementation create indexes with async durability.
-// You must call Flush() at appropriate times to ensure Elasticsearch syncs its translog to disk.
-// See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
 	witness          *util.StructPtrWitness
 	client           *elastic.Client
 	context          context.Context
 	existingIndexes  []indexAndType
-	bloomFilters     map[string]map[string]*bloom.BloomFilter
-	bloomFiltersList []indexAndType
-	bfConfig         *BloomFilterConfig
 }
 
 // NewESKeyValueStore creates new ElasticsearchKeyValueStore instance.
@@ -70,11 +50,6 @@ type ElasticsearchKeyValueStore struct {
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
 func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValueStore {
-	return NewESKeyValueStoreWithBloomFilter(url, structPtr, nil)
-}
-
-// NewESKeyValueStoreWithBloomFilter enables an optional bloom filter to optimize Get() heavy workloads.
-func NewESKeyValueStoreWithBloomFilter(url string, structPtr interface{}, bfConfig *BloomFilterConfig) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -87,67 +62,7 @@ func NewESKeyValueStoreWithBloomFilter(url string, structPtr interface{}, bfConf
 		client:           client,
 		context:          context.Background(),
 		existingIndexes:  nil,
-		bloomFilters:     make(map[string]map[string]*bloom.BloomFilter),
-		bloomFiltersList: []indexAndType{},
-		bfConfig:         bfConfig,
 	}
-}
-
-func (s *ElasticsearchKeyValueStore) ejectOldestBloomFilter() {
-	i := s.bloomFiltersList[0]
-	s.bloomFiltersList = s.bloomFiltersList[1:]
-	s.removeBloomFilter(i.indexName, i.indexType)
-}
-
-func (s *ElasticsearchKeyValueStore) getBloomFilter(indexName, indexType string) *bloom.BloomFilter {
-	if s.bloomFilters[indexName] == nil {
-		return nil
-	}
-	return s.bloomFilters[indexName][indexType]
-}
-
-func (s *ElasticsearchKeyValueStore) setBloomFilter(indexName, indexType string, bf *bloom.BloomFilter) {
-	if s.bfConfig == nil {
-		return
-	}
-	if s.bloomFilters[indexName] == nil {
-		s.bloomFilters[indexName] = make(map[string]*bloom.BloomFilter)
-	}
-	for len(s.bloomFiltersList) >= s.bfConfig.MaxBloomFilters {
-		s.ejectOldestBloomFilter()
-	}
-	s.bloomFilters[indexName][indexType] = bf
-	s.bloomFiltersList = append(s.bloomFiltersList, indexAndType{indexName, indexType})
-}
-
-func (s *ElasticsearchKeyValueStore) newBloomFilter() *bloom.BloomFilter {
-	if s.bfConfig == nil {
-		return nil
-	}
-	return bloom.NewWithEstimates(s.bfConfig.SizeEstimate, s.bfConfig.FalsePositiveRate)
-}
-
-func (s *ElasticsearchKeyValueStore) removeBloomFilter(indexName, indexType string) {
-	if s.bloomFilters[indexName] == nil {
-		return
-	}
-	delete(s.bloomFilters[indexName], indexType)
-}
-
-func (s *ElasticsearchKeyValueStore) provenAbsentByBloomFilter(indexName, indexType, id string) bool {
-	bf := s.getBloomFilter(indexName, indexType)
-	if bf == nil {
-		return false
-	}
-	return bf.TestString(id) == false
-}
-
-func (s *ElasticsearchKeyValueStore) addToBloomFilter(indexName, indexType, id string) {
-	bf := s.getBloomFilter(indexName, indexType)
-	if bf == nil {
-		return
-	}
-	bf.AddString(id)
 }
 
 func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexType string) {
@@ -166,7 +81,6 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 			panic(fmt.Sprintf("Failed to create index: %s", err))
 		}
 		s.putMapping(indexName, indexType)
-		s.setBloomFilter(indexName, indexType, s.newBloomFilter())
 	}
 
 	s.existingIndexes = append(s.existingIndexes, indexAndType{indexName, indexType})
@@ -196,9 +110,6 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	valueID := keyParts[2]
 
 	s.checkOrCreateIndex(indexName, indexType)
-	if s.provenAbsentByBloomFilter(indexName, indexType, valueID) {
-		return s.witness.Nil(), nil
-	}
 
 	rawValue, err := s.client.Get().
 		Index(indexName).
@@ -226,6 +137,11 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	return structPtr, nil
 }
 
+
+func (*ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
+	panic("implement me")
+}
+
 // Put updates key in store with serialized value
 func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) error {
 	s.witness.Assert(structPtr)
@@ -238,7 +154,6 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 	valueID := keyParts[2]
 
 	s.checkOrCreateIndex(indexName, indexType)
-	s.addToBloomFilter(indexName, indexType, valueID)
 
 	_, err := s.client.Index().
 		Index(indexName).
@@ -267,7 +182,6 @@ func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 
 		s.witness.Assert(entry.value)
 		s.checkOrCreateIndex(indexName, indexType)
-		s.addToBloomFilter(indexName, indexType, valueID)
 
 		bulk.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
@@ -291,7 +205,6 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	valueID := keyParts[2]
 
 	s.checkOrCreateIndex(indexName, indexType)
-	s.removeBloomFilter(indexName, indexType)
 
 	response, err := s.client.Delete().
 		Index(indexName).
