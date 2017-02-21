@@ -211,6 +211,9 @@ func (tp *TopicProcessor) runLoop() {
 			tp.onMetricsTick()
 		case <-batchTickerChan:
 			for _, partition := range tp.partitions {
+				if lengths[partition] == 0 {
+					continue
+				}
 				tp.processConsumerMessageBatch(batches[partition][0:lengths[partition]], partition)
 				lengths[partition] = 0
 			}
