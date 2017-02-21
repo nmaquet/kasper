@@ -46,6 +46,8 @@ type BloomFilterConfig struct {
 	SizeEstimate uint
 	// An estimate of the desired false positive rate
 	FalsePositiveRate float64
+	// How many bloom filters can exist at one time
+	MaxBloomFilters int
 }
 
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
@@ -59,6 +61,7 @@ type ElasticsearchKeyValueStore struct {
 	context         context.Context
 	existingIndexes []indexAndType
 	bloomFilters    map[string]map[string]*bloom.BloomFilter
+	bloomFiltersList []indexAndType
 	bfConfig        *BloomFilterConfig
 }
 
@@ -90,6 +93,12 @@ func NewESKeyValueStoreWithBloomFilter(host string, structPtr interface{}, bfCon
 	}
 }
 
+func (s *ElasticsearchKeyValueStore) ejectOldestBloomFilter() {
+	i := s.bloomFiltersList[0]
+	s.bloomFiltersList = s.bloomFiltersList[1:]
+	s.removeBloomFilter(i.indexName, i.indexType)
+}
+
 func (s *ElasticsearchKeyValueStore) getBloomFilter(indexName, indexType string) *bloom.BloomFilter {
 	if s.bloomFilters[indexName] == nil {
 		return nil
@@ -101,7 +110,11 @@ func (s *ElasticsearchKeyValueStore) setBloomFilter(indexName, indexType string,
 	if s.bloomFilters[indexName] == nil {
 		s.bloomFilters[indexName] = make(map[string]*bloom.BloomFilter)
 	}
+	for len(s.bloomFiltersList) >= s.bfConfig.MaxBloomFilters {
+		s.ejectOldestBloomFilter()
+	}
 	s.bloomFilters[indexName][indexType] = bf
+	s.bloomFiltersList = append(s.bloomFiltersList, indexAndType{indexName, indexType})
 }
 
 func (s *ElasticsearchKeyValueStore) newBloomFilter() *bloom.BloomFilter {
