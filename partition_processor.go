@@ -4,8 +4,6 @@ import (
 	"log"
 
 	"github.com/Shopify/sarama"
-	"github.com/rcrowley/go-metrics"
-	"fmt"
 )
 
 type partitionProcessor struct {
@@ -19,9 +17,6 @@ type partitionProcessor struct {
 	partition                       int
 	inFlightMessageGroups           map[string][]*inFlightMessageGroup
 	messageProcessorRequestedCommit bool
-
-	inFlightMessagesCount       metrics.Gauge
-	messagesBehindHighWaterMark map[string]metrics.Gauge
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -59,7 +54,6 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		partitionConsumers[i] = c
 		partitionOffsetManagers[topic] = pom
 	}
-	registry := tp.config.Config.MetricsRegistry
 	pp := &partitionProcessor{
 		tp,
 		nil,
@@ -71,12 +65,6 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		partition,
 		make(map[string][]*inFlightMessageGroup),
 		false,
-		metrics.GetOrRegisterGauge(fmt.Sprintf("kasper-in-flight-messages-count-partition-%d", partition), registry),
-		map[string]metrics.Gauge{},
-	}
-	for _, topic := range pp.inputTopics {
-		name := fmt.Sprintf("kasper-messages-behind-high-water-mark-topic-%s-partition-%d", topic, partition)
-		pp.messagesBehindHighWaterMark[topic] = metrics.GetOrRegisterGauge(name, registry)
 	}
 	pp.coordinator = &partitionProcessorCoordinator{pp}
 	return pp
@@ -119,22 +107,24 @@ func (pp *partitionProcessor) pruneInFlightMessageGroups() {
 }
 
 func (pp *partitionProcessor) countInFlightMessages() {
-	var count int
+	partition := string(pp.partition)
 	for _, topic := range pp.topicProcessor.inputTopics {
+		var count int
 		for _, groups := range pp.inFlightMessageGroups[topic] {
 			count += len(groups.inFlightMessages)
 		}
+		pp.topicProcessor.inFlightMessagesCount.Set(float64(count), topic, partition)
 	}
-	pp.inFlightMessagesCount.Update(int64(count))
 }
 
 func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
+	partition := string(pp.partition)
 	highWaterMarks := pp.consumer.HighWaterMarks()
 	for _, topic := range pp.topicProcessor.inputTopics {
 		offsetManager := pp.offsetManagers[topic]
 		currentOffset, _ := offsetManager.NextOffset()
 		highWaterMark := highWaterMarks[topic][int32(pp.partition)]
-		pp.messagesBehindHighWaterMark[topic].Update(highWaterMark - currentOffset)
+		pp.topicProcessor.messagesBehindHighWaterMark.Set(float64(highWaterMark - currentOffset), topic, partition)
 	}
 }
 

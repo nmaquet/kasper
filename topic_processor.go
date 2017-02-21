@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/rcrowley/go-metrics"
 )
 
 // TopicProcessor describes kafka topic processor
@@ -28,8 +27,10 @@ type TopicProcessor struct {
 	shutdown            chan struct{}
 	waitGroup           sync.WaitGroup
 
-	processRate     metrics.Meter
-	markOffsetsRate metrics.Meter
+	processCount                Counter
+	markOffsetsCount            Counter
+	inFlightMessagesCount       Gauge
+	messagesBehindHighWaterMark Gauge
 }
 
 // MessageProcessor describes kafka message processor
@@ -74,8 +75,8 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	}
 	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
 	requiredAcks := config.Config.RequiredAcks
-	registry := config.Config.MetricsRegistry
-	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks, registry)
+	provider := config.Config.MetricsProvider
+	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks)
 	topicProcessor := TopicProcessor{
 		config,
 		containerID,
@@ -87,8 +88,10 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitions,
 		make(chan struct{}),
 		sync.WaitGroup{},
-		metrics.GetOrRegisterMeter("kasper-process-rate", registry),
-		metrics.GetOrRegisterMeter("kasper-mark-offset-rate", registry),
+		provider.NewCounter("process_count", "Number of times Process() is called"),
+		provider.NewCounter("mark_offset_count", "Number of times MarkOffsets() is called"),
+		provider.NewGauge("in_flight_messages_count", "Number of messages sent but not acked", "topic", "partition"),
+		provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition"),
 	}
 	for _, partition := range partitions {
 		processor := makeProcessor()
@@ -148,7 +151,7 @@ func (tp *TopicProcessor) runLoop() {
 }
 
 func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage, tickerChan <-chan time.Time) {
-	tp.processRate.Mark(1)
+	tp.processCount.Inc()
 	pp := tp.partitionProcessors[consumerMessage.Partition]
 	for {
 		if pp.isReadyForMessage(consumerMessage) {
@@ -225,7 +228,7 @@ func (tp *TopicProcessor) onProducerError(error *sarama.ProducerError) {
 }
 
 func (tp *TopicProcessor) onMarkOffsetsTick() {
-	tp.markOffsetsRate.Mark(1)
+	tp.markOffsetsCount.Inc()
 	tp.config.Config.MarkOffsetsHook()
 	for _, pp := range tp.partitionProcessors {
 		pp.onMarkOffsetsTick()
@@ -241,13 +244,12 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	return chans
 }
 
-func mustSetupProducer(brokers []string, producerClientID string, requiredAcks sarama.RequiredAcks, metricsRegistry metrics.Registry) sarama.AsyncProducer {
+func mustSetupProducer(brokers []string, producerClientID string, requiredAcks sarama.RequiredAcks) sarama.AsyncProducer {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.ClientID = producerClientID
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
 	saramaConfig.Producer.RequiredAcks = requiredAcks
-	saramaConfig.MetricRegistry = metricsRegistry
 
 	producer, err := sarama.NewAsyncProducer(brokers, saramaConfig)
 	if err != nil {
