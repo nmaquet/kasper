@@ -56,26 +56,25 @@ type BloomFilterConfig struct {
 // You must call Flush() at appropriate times to ensure Elasticsearch syncs its translog to disk.
 // See: https://www.elastic.co/products/elasticsearch
 type ElasticsearchKeyValueStore struct {
-	witness         *util.StructPtrWitness
-	client          *elastic.Client
-	context         context.Context
-	existingIndexes []indexAndType
-	bloomFilters    map[string]map[string]*bloom.BloomFilter
+	witness          *util.StructPtrWitness
+	client           *elastic.Client
+	context          context.Context
+	existingIndexes  []indexAndType
+	bloomFilters     map[string]map[string]*bloom.BloomFilter
 	bloomFiltersList []indexAndType
-	bfConfig        *BloomFilterConfig
+	bfConfig         *BloomFilterConfig
 }
 
 // NewESKeyValueStore creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
-func NewESKeyValueStore(host string, structPtr interface{}) *ElasticsearchKeyValueStore {
-	return NewESKeyValueStoreWithBloomFilter(host, structPtr, nil)
+func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValueStore {
+	return NewESKeyValueStoreWithBloomFilter(url, structPtr, nil)
 }
 
 // NewESKeyValueStoreWithBloomFilter enables an optional bloom filter to optimize Get() heavy workloads.
-func NewESKeyValueStoreWithBloomFilter(host string, structPtr interface{}, bfConfig *BloomFilterConfig) *ElasticsearchKeyValueStore {
-	url := fmt.Sprintf("http://%s", host)
+func NewESKeyValueStoreWithBloomFilter(url string, structPtr interface{}, bfConfig *BloomFilterConfig) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -84,13 +83,13 @@ func NewESKeyValueStoreWithBloomFilter(host string, structPtr interface{}, bfCon
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	return &ElasticsearchKeyValueStore{
-		witness:         util.NewStructPtrWitness(structPtr),
-		client:          client,
-		context:         context.Background(),
-		existingIndexes: nil,
-		bloomFilters:    make(map[string]map[string]*bloom.BloomFilter),
+		witness:          util.NewStructPtrWitness(structPtr),
+		client:           client,
+		context:          context.Background(),
+		existingIndexes:  nil,
+		bloomFilters:     make(map[string]map[string]*bloom.BloomFilter),
 		bloomFiltersList: []indexAndType{},
-		bfConfig:        bfConfig,
+		bfConfig:         bfConfig,
 	}
 }
 
