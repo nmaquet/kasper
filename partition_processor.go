@@ -20,7 +20,8 @@ type partitionProcessor struct {
 	inFlightMessageGroups           map[string][]*inFlightMessageGroup
 	messageProcessorRequestedCommit bool
 
-	inFlightMessagesCount metrics.Gauge
+	inFlightMessagesCount       metrics.Gauge
+	messagesBehindHighWaterMark map[string]metrics.Gauge
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -71,6 +72,11 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		make(map[string][]*inFlightMessageGroup),
 		false,
 		metrics.GetOrRegisterGauge(fmt.Sprintf("kasper-in-flight-messages-count-partition-%d", partition), registry),
+		map[string]metrics.Gauge{},
+	}
+	for _, topic := range pp.inputTopics {
+		name := fmt.Sprintf("kasper-messages-behind-high-water-mark-topic-%s-partition-%d", topic, partition)
+		pp.messagesBehindHighWaterMark[topic] = metrics.GetOrRegisterGauge(name, registry)
 	}
 	pp.coordinator = &partitionProcessorCoordinator{pp}
 	return pp
@@ -109,6 +115,7 @@ func (pp *partitionProcessor) pruneInFlightMessageGroups() {
 		pp.pruneInFlightMessageGroupsForTopic(topic)
 	}
 	pp.countInFlightMessages()
+	pp.countMessagesBehindHighWaterMark()
 }
 
 func (pp *partitionProcessor) countInFlightMessages() {
@@ -119,7 +126,16 @@ func (pp *partitionProcessor) countInFlightMessages() {
 		}
 	}
 	pp.inFlightMessagesCount.Update(int64(count))
-	log.Println(count)
+}
+
+func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
+	highWaterMarks := pp.consumer.HighWaterMarks()
+	for _, topic := range pp.topicProcessor.inputTopics {
+		offsetManager := pp.offsetManagers[topic]
+		currentOffset, _ := offsetManager.NextOffset()
+		highWaterMark := highWaterMarks[topic][int32(pp.partition)]
+		pp.messagesBehindHighWaterMark[topic].Update(highWaterMark - currentOffset)
+	}
 }
 
 func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic string) {
