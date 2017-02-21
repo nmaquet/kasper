@@ -1,6 +1,9 @@
 package kasper
 
-import "github.com/Shopify/sarama"
+import (
+	"github.com/Shopify/sarama"
+	"github.com/rcrowley/go-metrics"
+)
 
 // Config describes a configuration for Kasper
 type Config struct {
@@ -14,6 +17,9 @@ type Config struct {
 	// This hook can be used to synchronously flush output buffers or external storage before marking offsets.
 	// Default: a no-op func
 	MarkOffsetsHook func()
+	// MetricsRegistry is a github.com/rcrowley/go-metrics registry of metrics shared with sarama.
+	// Default: a local registry.
+	MetricsRegistry metrics.Registry
 }
 
 // DefaultConfig creates a config that you can start with
@@ -22,5 +28,6 @@ func DefaultConfig() *Config {
 		RequiredAcks:             sarama.WaitForAll,
 		MaxInFlightMessageGroups: 5000,
 		MarkOffsetsHook:          func() {},
+		MetricsRegistry:          metrics.DefaultRegistry,
 	}
 }

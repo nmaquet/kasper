@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/Shopify/sarama"
+	"github.com/rcrowley/go-metrics"
+	"fmt"
 )
 
 type partitionProcessor struct {
@@ -17,6 +19,8 @@ type partitionProcessor struct {
 	partition                       int
 	inFlightMessageGroups           map[string][]*inFlightMessageGroup
 	messageProcessorRequestedCommit bool
+
+	inFlightMessagesCount metrics.Gauge
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -54,6 +58,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		partitionConsumers[i] = c
 		partitionOffsetManagers[topic] = pom
 	}
+	registry := tp.config.Config.MetricsRegistry
 	pp := &partitionProcessor{
 		tp,
 		nil,
@@ -65,6 +70,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		partition,
 		make(map[string][]*inFlightMessageGroup),
 		false,
+		metrics.GetOrRegisterGauge(fmt.Sprintf("kasper-in-flight-messages-count-partition-%d", partition), registry),
 	}
 	pp.coordinator = &partitionProcessorCoordinator{pp}
 	return pp
@@ -102,6 +108,18 @@ func (pp *partitionProcessor) pruneInFlightMessageGroups() {
 	for _, topic := range pp.topicProcessor.inputTopics {
 		pp.pruneInFlightMessageGroupsForTopic(topic)
 	}
+	pp.countInFlightMessages()
+}
+
+func (pp *partitionProcessor) countInFlightMessages() {
+	var count int
+	for _, topic := range pp.topicProcessor.inputTopics {
+		for _, groups := range pp.inFlightMessageGroups[topic] {
+			count += len(groups.inFlightMessages)
+		}
+	}
+	pp.inFlightMessagesCount.Update(int64(count))
+	log.Println(count)
 }
 
 func (pp *partitionProcessor) pruneInFlightMessageGroupsForTopic(topic string) {
