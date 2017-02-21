@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/Shopify/sarama"
+	"strconv"
 )
 
 type partitionProcessor struct {
@@ -107,7 +108,7 @@ func (pp *partitionProcessor) pruneInFlightMessageGroups() {
 }
 
 func (pp *partitionProcessor) countInFlightMessages() {
-	partition := string(pp.partition)
+	partition := strconv.Itoa(pp.partition)
 	for _, topic := range pp.topicProcessor.inputTopics {
 		var count int
 		for _, groups := range pp.inFlightMessageGroups[topic] {
@@ -118,7 +119,7 @@ func (pp *partitionProcessor) countInFlightMessages() {
 }
 
 func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
-	partition := string(pp.partition)
+	partition := strconv.Itoa(pp.partition)
 	highWaterMarks := pp.consumer.HighWaterMarks()
 	for _, topic := range pp.topicProcessor.inputTopics {
 		offsetManager := pp.offsetManagers[topic]
