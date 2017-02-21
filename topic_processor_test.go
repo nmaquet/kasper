@@ -43,6 +43,10 @@ type Test struct {
 	characterToFictionsStore map[string]*IDs
 }
 
+func (*Test) ProcessBatch([]*IncomingMessage, Sender, Coordinator) {
+	panic("implement me")
+}
+
 func (t *Test) Process(msg IncomingMessage, sender Sender, coordinator Coordinator) {
 	topic := msg.Topic
 	if topic == "characters" {
@@ -308,7 +312,7 @@ const expectedResultJSON string = `
 }
 `
 
-func populateFictionAndCharactersTopic() int {
+func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	config := TopicProcessorConfig{
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
 		BrokerList:         []string{"localhost:9092"},
@@ -331,22 +335,37 @@ func populateFictionAndCharactersTopic() int {
 		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
-		Config:                  DefaultConfig(),
+		Config: DefaultConfig(),
 	}
+
 	characterCount := 0
 	fictionCount := 0
 	sendCount := 0
-	mkMessageProcessor := func() MessageProcessor {
-		return &Test{
-			&characterCount,
-			&fictionCount,
-			&sendCount,
-			make(map[string]*Character, 100),
-			make(map[string]*Fiction, 100),
-			make(map[string]*IDs, 100),
-		}
+
+	test := &Test{
+		&characterCount,
+		&fictionCount,
+		&sendCount,
+		make(map[string]*Character, 100),
+		make(map[string]*Fiction, 100),
+		make(map[string]*IDs, 100),
 	}
-	topicProcessor := NewTopicProcessor(&config, mkMessageProcessor, 0)
+
+	mkMessageProcessor := func() MessageProcessor { return test }
+
+	batchingOpts := BatchingOpts{
+		makeProcessor:     func() BatchMessageProcessor { return test },
+		batchSize:         3,
+		batchWaitDuration: 1 * time.Minute,
+	}
+
+	var topicProcessor *TopicProcessor
+	if batchingEnabled {
+		topicProcessor = NewBatchTopicProcessor(&config, batchingOpts, 0)
+	} else {
+		topicProcessor = NewTopicProcessor(&config, mkMessageProcessor, 0)
+	}
+
 	topicProcessor.Start()
 	for {
 		time.Sleep(100 * time.Millisecond)
@@ -362,6 +381,21 @@ func TestTopicProcessor(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	consumer, partitionConsumer := mustSetupConsumer()
+	sendCount := populateFictionAndCharactersTopic(false)
+	validateFictionsAndCharactersTopic(partitionConsumer, sendCount, consumer, t)
+}
+
+func TestBatchTopicProcessor(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	consumer, partitionConsumer := mustSetupConsumer()
+	sendCount := populateFictionAndCharactersTopic(true)
+	validateFictionsAndCharactersTopic(partitionConsumer, sendCount, consumer, t)
+}
+
+func mustSetupConsumer() (sarama.Consumer, sarama.PartitionConsumer) {
 	consumer, err := sarama.NewConsumer([]string{"127.0.0.1:9092"}, sarama.NewConfig())
 	if err != nil {
 		panic(err)
@@ -370,13 +404,16 @@ func TestTopicProcessor(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	sendCount := populateFictionAndCharactersTopic()
+	return consumer, partitionConsumer
+}
+
+func validateFictionsAndCharactersTopic(partitionConsumer sarama.PartitionConsumer, sendCount int, consumer sarama.Consumer, t *testing.T) {
 	result := make(map[string]*FictionAndCharacters)
 	consumedCount := 0
 	for msg := range partitionConsumer.Messages() {
 		key := string(msg.Key)
 		value := FictionAndCharacters{}
-		err = json.Unmarshal(msg.Value, &value)
+		err := json.Unmarshal(msg.Value, &value)
 		if err != nil {
 			panic(err)
 		}
@@ -386,7 +423,7 @@ func TestTopicProcessor(t *testing.T) {
 			break
 		}
 	}
-	err = partitionConsumer.Close()
+	err := partitionConsumer.Close()
 	if err != nil {
 		panic(err)
 	}
