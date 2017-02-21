@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"strconv"
 )
 
 // TopicProcessor describes kafka topic processor
@@ -88,7 +89,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitions,
 		make(chan struct{}),
 		sync.WaitGroup{},
-		provider.NewCounter("process_count", "Number of times Process() is called"),
+		provider.NewCounter("process_count", "Number of times Process() is called", "topic", "partition"),
 		provider.NewCounter("mark_offset_count", "Number of times MarkOffsets() is called"),
 		provider.NewGauge("in_flight_messages_count", "Number of messages sent but not acked", "topic", "partition"),
 		provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition"),
@@ -154,7 +155,7 @@ func (tp *TopicProcessor) runLoop() {
 }
 
 func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage, tickerChan <-chan time.Time) {
-	tp.processCount.Inc()
+	tp.processCount.Inc(consumerMessage.Topic, strconv.Itoa(int(consumerMessage.Partition)))
 	pp := tp.partitionProcessors[consumerMessage.Partition]
 	for {
 		if pp.isReadyForMessage(consumerMessage) {
