@@ -309,11 +309,7 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 // Flush the Elasticsearch translog to disk
 func (s *ElasticsearchKeyValueStore) Flush() error {
 	log.Println("Flusing ES indexes...")
-	indexNames := []string{}
-	for _, existing := range s.existingIndexes {
-		indexNames = append(indexNames, existing.indexName)
-	}
-	_, err := s.client.Flush(indexNames...).
+	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
 		Do(s.context)
 	log.Println("Done flusing ES indexes.")
