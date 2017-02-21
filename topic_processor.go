@@ -201,7 +201,7 @@ func (tp *TopicProcessor) runLoop() {
 				batches[partition][batched[partition]] = consumerMessage
 				batched[partition]++
 				if batched[partition] == tp.batchSize {
-					tp.processConsumerMessageBatch(batches[partition][0:batched[partition]], partition)
+					tp.processConsumerMessageBatch(batches[partition], partition)
 					batched[partition] = 0
 				}
 			} else {
