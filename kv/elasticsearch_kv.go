@@ -89,6 +89,7 @@ func NewESKeyValueStoreWithBloomFilter(host string, structPtr interface{}, bfCon
 		context:         context.Background(),
 		existingIndexes: nil,
 		bloomFilters:    make(map[string]map[string]*bloom.BloomFilter),
+		bloomFiltersList: []indexAndType{},
 		bfConfig:        bfConfig,
 	}
 }
