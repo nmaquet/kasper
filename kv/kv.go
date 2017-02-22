@@ -33,3 +33,13 @@ func ToMap(entries []*Entry, err error) (map[string]interface{}, error) {
 	}
 	return res, nil
 }
+
+func FromMap(m map[string]interface{}) []*Entry {
+	res := make([]*Entry, len(m))
+	i := 0
+	for key, value := range m {
+		res[i] = &Entry{key, value}
+		i++
+	}
+	return res
+}
