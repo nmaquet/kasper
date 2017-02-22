@@ -52,7 +52,7 @@ func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 // PutAll bulk executes all Put operations
 func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
 	for _, entry := range entries {
-		err := s.Put(entry.key, entry.value)
+		err := s.Put(entry.Key, entry.Value)
 		if err != nil {
 			return err
 		}

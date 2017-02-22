@@ -94,13 +94,13 @@ func (s *RedisKeyValueStore) PutAll(entries []*Entry) error {
 		return err
 	}
 	for _, entry := range entries {
-		s.witness.Assert(entry.value)
+		s.witness.Assert(entry.Value)
 		var bytes []byte
-		bytes, err = json.Marshal(entry.value)
+		bytes, err = json.Marshal(entry.Value)
 		if err != nil {
 			return err
 		}
-		err = s.conn.Send("SET", s.getPrefixedKey(entry.key), bytes)
+		err = s.conn.Send("SET", s.getPrefixedKey(entry.Key), bytes)
 		if err != nil {
 			return err
 		}

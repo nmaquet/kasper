@@ -8,8 +8,8 @@ package kv
 
 // Entry is a key-value pair for KeyValueStore
 type Entry struct {
-	key   string
-	value interface{}
+	Key   string
+	Value interface{}
 }
 
 // KeyValueStore is universal interface for a key-value store
@@ -29,7 +29,7 @@ func ToMap(entries []*Entry, err error) (map[string]interface{}, error) {
 	}
 	res := make(map[string] interface{}, len(entries))
 	for _, entry := range entries {
-		res[entry.key] = entry.value
+		res[entry.Key] = entry.Value
 	}
 	return res, nil
 }

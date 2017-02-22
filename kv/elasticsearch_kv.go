@@ -209,22 +209,22 @@ func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 	}
 	bulk := s.client.Bulk()
 	for _, entry := range entries {
-		keyParts := strings.Split(entry.key, "/")
+		keyParts := strings.Split(entry.Key, "/")
 		if len(keyParts) != 3 {
-			return fmt.Errorf("invalid key: '%s'", entry.key)
+			return fmt.Errorf("invalid key: '%s'", entry.Key)
 		}
 		indexName := keyParts[0]
 		indexType := keyParts[1]
 		valueID := keyParts[2]
 
-		s.witness.Assert(entry.value)
+		s.witness.Assert(entry.Value)
 		s.checkOrCreateIndex(indexName, indexType)
 
 		bulk.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
 			Type(indexType).
 			Id(valueID).
-			Doc(entry.value),
+			Doc(entry.Value),
 		)
 	}
 	_, err := bulk.Do(s.context)
