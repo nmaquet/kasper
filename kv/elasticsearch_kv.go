@@ -14,7 +14,7 @@ import (
 )
 
 const indexSettings = `{
-	"index.translog.durability": "sync"
+	"index.translog.durability": "request"
 }`
 
 const indexMapping = `{
