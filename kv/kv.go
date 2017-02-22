@@ -22,3 +22,14 @@ type KeyValueStore interface {
 	Delete(key string) error
 	Flush() error
 }
+
+func ToMap(entries []*Entry, err error) (map[string]interface{}, error) {
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string] interface{}, len(entries))
+	for _, entry := range entries {
+		res[entry.key] = entry.value
+	}
+	return res, nil
+}
