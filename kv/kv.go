@@ -46,5 +46,5 @@ func FromMap(m map[string]interface{}) []*Entry {
 		res[i] = &Entry{key, value}
 		i++
 	}
-	return res
+	return res[0:i]
 }
