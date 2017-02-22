@@ -29,7 +29,9 @@ func ToMap(entries []*Entry, err error) (map[string]interface{}, error) {
 	}
 	res := make(map[string] interface{}, len(entries))
 	for _, entry := range entries {
-		res[entry.Key] = entry.Value
+		if entry.Value != nil {
+			res[entry.Key] = entry.Value
+		}
 	}
 	return res, nil
 }
@@ -38,6 +40,9 @@ func FromMap(m map[string]interface{}) []*Entry {
 	res := make([]*Entry, len(m))
 	i := 0
 	for key, value := range m {
+		if value == nil {
+			continue
+		}
 		res[i] = &Entry{key, value}
 		i++
 	}
