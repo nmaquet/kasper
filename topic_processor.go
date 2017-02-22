@@ -83,9 +83,9 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 
 // TBD
 type BatchingOpts struct {
-	makeProcessor     func() BatchMessageProcessor
-	batchSize         int
-	batchWaitDuration time.Duration
+	MakeProcessor     func() BatchMessageProcessor
+	BatchSize         int
+	BatchWaitDuration time.Duration
 }
 
 // TBD
@@ -107,12 +107,12 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, con
 		shutdown:            make(chan struct{}),
 		waitGroup:           sync.WaitGroup{},
 		batchingEnabled:     true,
-		batchSize:           opts.batchSize,
-		batchWaitDuration:   opts.batchWaitDuration,
+		batchSize:           opts.BatchSize,
+		batchWaitDuration:   opts.BatchWaitDuration,
 	}
 	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
 	for _, partition := range partitions {
-		processor := opts.makeProcessor()
+		processor := opts.MakeProcessor()
 		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, nil, processor, partition)
 	}
 	return &topicProcessor

@@ -356,9 +356,9 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	mkMessageProcessor := func() MessageProcessor { return test }
 
 	batchingOpts := BatchingOpts{
-		makeProcessor:     func() BatchMessageProcessor { return test },
-		batchSize:         3,
-		batchWaitDuration: 3 * time.Second,
+		MakeProcessor:     func() BatchMessageProcessor { return test },
+		BatchSize:         3,
+		BatchWaitDuration: 3 * time.Second,
 	}
 
 	var topicProcessor *TopicProcessor
