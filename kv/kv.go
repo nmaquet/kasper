@@ -6,6 +6,10 @@ Kasper companion library for stateful stream processing.
 
 package kv
 
+import (
+	"reflect"
+)
+
 // Entry is a key-value pair for KeyValueStore
 type Entry struct {
 	Key   string
@@ -27,9 +31,9 @@ func ToMap(entries []*Entry, err error) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := make(map[string] interface{}, len(entries))
+	res := make(map[string]interface{}, len(entries))
 	for _, entry := range entries {
-		if entry.Value != nil {
+		if entry.Value != reflect.Zero(reflect.TypeOf(entry.Value)).Interface() {
 			res[entry.Key] = entry.Value
 		}
 	}
@@ -40,7 +44,7 @@ func FromMap(m map[string]interface{}) []*Entry {
 	res := make([]*Entry, len(m))
 	i := 0
 	for key, value := range m {
-		if value == nil {
+		if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
 			continue
 		}
 		res[i] = &Entry{key, value}
