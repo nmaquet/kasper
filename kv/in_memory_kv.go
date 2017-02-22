@@ -29,6 +29,19 @@ func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 	return src, nil
 }
 
+// TBD
+func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
+	entries := make([]*Entry, len(keys))
+	for i, key := range keys {
+		value, err := s.Get(key)
+		if err != nil {
+			return nil, err
+		}
+		entries[i] = &Entry{ key, value }
+	}
+	return entries, nil
+}
+
 // Put updates key in store with serialized value
 func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 	s.witness.Assert(value)

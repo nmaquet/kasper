@@ -3,8 +3,8 @@ package kasper
 type NoopMetric struct{}
 
 func (NoopMetric) Set(value float64, labelValues ...string) {}
-
-func (NoopMetric) Inc(labelValues ...string) {}
+func (NoopMetric) Inc(labelValues ...string)                {}
+func (NoopMetric) Add(value float64, labelValues ...string) {}
 
 type NoopMetricsProvider struct{}
 

@@ -15,6 +15,11 @@ func (counter *prometheusCounter) Inc(labelValues ...string) {
 	counter.promCounterVec.WithLabelValues(labelValues...).Inc()
 }
 
+func (counter *prometheusCounter) Add(value float64, labelValues ...string) {
+	labelValues = append(labelValues, counter.provider.tpConfig.TopicProcessorName, counter.provider.containerID)
+	counter.promCounterVec.WithLabelValues(labelValues...).Add(value)
+}
+
 type prometheusGauge struct {
 	provider     *PrometheusMetricsProvider
 	promGaugeVec *prometheus.GaugeVec

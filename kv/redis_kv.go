@@ -28,14 +28,14 @@ func (s *RedisKeyValueStore) getPrefixedKey(key string) string {
 }
 
 func (s *RedisKeyValueStore) Get(key string) (interface{}, error) {
-	response, err := s.conn.Do("GET", s.getPrefixedKey(key))
+	value, err := s.conn.Do("GET", s.getPrefixedKey(key))
 	if err != nil {
 		return s.witness.Nil(), err
 	}
-	if response == nil {
+	if value == nil {
 		return s.witness.Nil(), nil
 	}
-	bytes, err := redis.Bytes(response, err)
+	bytes, err := redis.Bytes(value, err)
 	if err != nil {
 		return s.witness.Nil(), err
 	}
@@ -45,6 +45,37 @@ func (s *RedisKeyValueStore) Get(key string) (interface{}, error) {
 		return s.witness.Nil(), err
 	}
 	return structPtr, err
+}
+
+func (s *RedisKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
+	err := s.conn.Send("MULTI")
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		err = s.conn.Send("GET", s.getPrefixedKey(key))
+		if err != nil {
+			return nil, err
+		}
+	}
+	values, err := redis.Values(s.conn.Do("EXEC"))
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]*Entry, len(keys))
+	for i, value := range values {
+		bytes, err := redis.Bytes(value, err)
+		if err != nil {
+			return nil, err
+		}
+		structPtr := s.witness.Allocate()
+		err = json.Unmarshal(bytes, structPtr)
+		if err != nil {
+			return nil, err
+		}
+		entries[i] = &Entry{keys[i], bytes }
+	}
+	return entries, nil
 }
 
 func (s *RedisKeyValueStore) Put(key string, structPtr interface{}) error {
