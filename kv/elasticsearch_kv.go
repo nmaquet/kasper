@@ -39,10 +39,10 @@ type indexAndType struct {
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 type ElasticsearchKeyValueStore struct {
-	witness          *util.StructPtrWitness
-	client           *elastic.Client
-	context          context.Context
-	existingIndexes  []indexAndType
+	witness         *util.StructPtrWitness
+	client          *elastic.Client
+	context         context.Context
+	existingIndexes []indexAndType
 }
 
 // NewESKeyValueStore creates new ElasticsearchKeyValueStore instance.
@@ -58,10 +58,10 @@ func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValu
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	return &ElasticsearchKeyValueStore{
-		witness:          util.NewStructPtrWitness(structPtr),
-		client:           client,
-		context:          context.Background(),
-		existingIndexes:  nil,
+		witness:         util.NewStructPtrWitness(structPtr),
+		client:          client,
+		context:         context.Background(),
+		existingIndexes: nil,
 	}
 }
 
@@ -137,9 +137,46 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	return structPtr, nil
 }
 
+// TBD
+func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
+	multiGet := s.client.MultiGet()
+	for _, key := range keys {
+		keyParts := strings.Split(key, "/")
+		if len(keyParts) != 3 {
+			return nil, fmt.Errorf("invalid key: '%s'", key)
+		}
+		indexName := keyParts[0]
+		indexType := keyParts[1]
+		valueID := keyParts[2]
 
-func (*ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
-	panic("implement me")
+		s.checkOrCreateIndex(indexName, indexType)
+
+		item := elastic.NewMultiGetItem().
+			Index(indexName).
+			Type(indexType).
+			Id(valueID)
+
+		multiGet.Add(item)
+	}
+	response, err := multiGet.Do(s.context)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]*Entry, len(keys))
+	for i, doc := range response.Docs {
+		var structPtr interface{}
+		if !doc.Found {
+			structPtr = s.witness.Nil()
+		} else {
+			structPtr = s.witness.Allocate()
+			err = json.Unmarshal(*doc.Source, structPtr)
+			if err != nil {
+				return nil, err
+			}
+		}
+		entries[i] = &Entry{keys[i], structPtr}
+	}
+	return entries, nil
 }
 
 // Put updates key in store with serialized value
