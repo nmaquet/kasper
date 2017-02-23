@@ -12,7 +12,7 @@ type Config struct {
 	// Default: sarama.WaitForAll, wait for all in-sync replicas to commit.
 	RequiredAcks sarama.RequiredAcks
 	// TBD
-	MetricsProvider Provider
+	MetricsProvider MetricsProvider
 	// TBD
 	MetricsUpdateInterval time.Duration
 }

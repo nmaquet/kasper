@@ -16,8 +16,8 @@ type Summary interface {
 	Observe(value float64, labelValues ...string)
 }
 
-// Provider is used to create new metrics
-type Provider interface {
+// MetricsProvider is used to create new metrics
+type MetricsProvider interface {
 	NewCounter(name string, help string, labelNames ...string) Counter
 	NewGauge(name string, help string, labelNames ...string) Gauge
 	NewSummary(name string, help string, labelNames ...string) Summary

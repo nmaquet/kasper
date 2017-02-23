@@ -51,7 +51,7 @@ type ElasticsearchKeyValueStore struct {
 	client            *elastic.Client
 	context           context.Context
 	existingIndexes   []indexAndType
-	metricsProvider   Provider
+	metricsProvider   MetricsProvider
 	getCounter        Counter
 	getAllSummary     Summary
 	putCounter        Counter
@@ -69,7 +69,7 @@ func NewElasticsearchKeyValueStore(url string, structPtr interface{}) *Elasticse
 }
 
 // TBD
-func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider Provider) *ElasticsearchKeyValueStore {
+func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider MetricsProvider) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker

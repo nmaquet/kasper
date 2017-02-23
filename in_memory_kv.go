@@ -3,7 +3,7 @@ package kasper
 type InMemoryKeyValueStore struct {
 	witness         *structPtrWitness
 	m               map[string]interface{}
-	metricsProvider Provider
+	metricsProvider MetricsProvider
 	getCounter      Counter
 	getAllSummary   Summary
 	putCounter      Counter
@@ -23,7 +23,7 @@ func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValue
 // NewInMemoryKeyValueStoreWithMetrics creates new store.
 // StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
-func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metricsProvider Provider) *InMemoryKeyValueStore {
+func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metricsProvider MetricsProvider) *InMemoryKeyValueStore {
 	inMemoryKeyValueStore := &InMemoryKeyValueStore{
 		witness:         newStructPtrWitness(structPtr),
 		m:               make(map[string]interface{}, size),

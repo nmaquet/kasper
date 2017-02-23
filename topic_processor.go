@@ -126,7 +126,7 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, con
 	return &topicProcessor
 }
 
-func setupMetrics(tp *TopicProcessor, provider Provider) {
+func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
 	tp.incomingMessageCount = provider.NewCounter("incoming_message_count", "Number of incoming messages received", "topic", "partition")
 	tp.outgoingMessageCount = provider.NewCounter("outgoing_message_count", "Number of outgoing messages sent", "topic", "partition")
 	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
