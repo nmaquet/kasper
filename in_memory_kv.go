@@ -54,17 +54,17 @@ func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 }
 
 // TBD
-func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
+func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
-	entries := make([]*Entry, len(keys))
+	kvs := make([]*KeyValue, len(keys))
 	for i, key := range keys {
 		value, err := s.Get(key)
 		if err != nil {
 			return nil, err
 		}
-		entries[i] = &Entry{key, value}
+		kvs[i] = &KeyValue{key, value}
 	}
-	return entries, nil
+	return kvs, nil
 }
 
 // Put updates key in store with serialized value
@@ -78,15 +78,15 @@ func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 }
 
 // PutAll bulk executes all Put operations
-func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
-	for _, entry := range entries {
-		err := s.Put(entry.Key, entry.Value)
+func (s *InMemoryKeyValueStore) PutAll(kvs []*KeyValue) error {
+	for _, kv := range kvs {
+		err := s.Put(kv.Key, kv.Value)
 		if err != nil {
 			return err
 		}
 	}
 
-	s.putAllSummary.Observe(float64(len(entries)), s.witness.name)
+	s.putAllSummary.Observe(float64(len(kvs)), s.witness.name)
 	s.sizeGauge.Set(float64(len(s.m)), s.witness.name)
 	return nil
 }

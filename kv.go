@@ -10,8 +10,8 @@ import (
 	"reflect"
 )
 
-// Entry is a key-value pair for KeyValueStore
-type Entry struct {
+// KeyValue is a key-value pair for KeyValueStore
+type KeyValue struct {
 	Key   string
 	Value interface{}
 }
@@ -20,34 +20,34 @@ type Entry struct {
 // Keys are strings, and values are pointers to structs
 type KeyValueStore interface {
 	Get(key string) (interface{}, error)
-	GetAll(keys []string) ([]*Entry, error)
+	GetAll(keys []string) ([]*KeyValue, error)
 	Put(key string, value interface{}) error
-	PutAll(entries []*Entry) error
+	PutAll(kvs []*KeyValue) error
 	Delete(key string) error
 	Flush() error
 }
 
-func ToMap(entries []*Entry, err error) (map[string]interface{}, error) {
+func ToMap(kvs []*KeyValue, err error) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := make(map[string]interface{}, len(entries))
-	for _, entry := range entries {
-		if entry.Value != reflect.Zero(reflect.TypeOf(entry.Value)).Interface() {
-			res[entry.Key] = entry.Value
+	res := make(map[string]interface{}, len(kvs))
+	for _, kv := range kvs {
+		if kv.Value != reflect.Zero(reflect.TypeOf(kv.Value)).Interface() {
+			res[kv.Key] = kv.Value
 		}
 	}
 	return res, nil
 }
 
-func FromMap(m map[string]interface{}) []*Entry {
-	res := make([]*Entry, len(m))
+func FromMap(m map[string]interface{}) []*KeyValue {
+	res := make([]*KeyValue, len(m))
 	i := 0
 	for key, value := range m {
 		if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
 			continue
 		}
-		res[i] = &Entry{key, value}
+		res[i] = &KeyValue{key, value}
 		i++
 	}
 	return res[0:i]

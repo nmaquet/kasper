@@ -70,20 +70,20 @@ func TestInMemoryKeyValueStore_GetAll(t *testing.T) {
 	s := newTestInMemoryKV()
 	earth := &Planet{"Earth"}
 	s.m["earth"] = earth
-	entries, err := s.GetAll([]string{"mercury", "earth"})
+	kvs, err := s.GetAll([]string{"mercury", "earth"})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 2, len(entries))
-	assert.Equal(t, entries[0].Key, "mercury")
-	assert.Nil(t, entries[0].Value)
-	assert.Equal(t, entries[1].Key, "earth")
-	assert.Equal(t, entries[1].Value, earth)
+	assert.Equal(t, 2, len(kvs))
+	assert.Equal(t, kvs[0].Key, "mercury")
+	assert.Nil(t, kvs[0].Value)
+	assert.Equal(t, kvs[1].Key, "earth")
+	assert.Equal(t, kvs[1].Value, earth)
 }
 
 func TestInMemoryKeyValueStore_PutAll(t *testing.T) {
 	s := newTestInMemoryKV()
 	earth := &Planet{"Earth"}
 	mars := &Planet{"Mars"}
-	err := s.PutAll([]*Entry{{"earth", earth}, {"mars", mars}})
+	err := s.PutAll([]*KeyValue{{"earth", earth}, {"mars", mars}})
 	assert.Nil(t, err)
 	assert.Equal(t, len(s.m), 2)
 	assert.Equal(t, s.m["earth"], earth)
@@ -111,7 +111,7 @@ func BenchmarkInMemoryKeyValueStore_Get(b *testing.B) {
 
 func BenchmarkInMemoryKeyValueStore_Put(b *testing.B) {
 	s := newTestInMemoryKV()
-	entries := []*Entry{
+	kvs := []*KeyValue{
 		{"earth", &Planet{"Earth"}},
 		{"mars", &Planet{"Mars"}},
 		{"jupiter", &Planet{"Jupiter"}},
@@ -120,9 +120,9 @@ func BenchmarkInMemoryKeyValueStore_Put(b *testing.B) {
 		{"venus", &Planet{"Venus"}},
 		{"neptune", &Planet{"Neptune"}},
 	}
-	entriesLength := len(entries)
+	kvsLength := len(kvs)
 	for i := 0; i < b.N; i++ {
-		entry := entries[i%entriesLength]
-		s.Put(entry.Key, entry.Value)
+		kv := kvs[i%kvsLength]
+		s.Put(kv.Key, kv.Value)
 	}
 }

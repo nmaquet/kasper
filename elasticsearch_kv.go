@@ -178,7 +178,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 }
 
 // TBD
-func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
+func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
@@ -203,7 +203,7 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	entries := make([]*Entry, len(keys))
+	kvs := make([]*KeyValue, len(keys))
 	for i, doc := range response.Docs {
 		var structPtr interface{}
 		if !doc.Found {
@@ -215,9 +215,9 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 				return nil, err
 			}
 		}
-		entries[i] = &Entry{keys[i], structPtr}
+		kvs[i] = &KeyValue{keys[i], structPtr}
 	}
-	return entries, nil
+	return kvs, nil
 }
 
 // Put updates key in store with serialized value
@@ -244,30 +244,30 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 	return err
 }
 
-// PutAll bulk executes Put operation for several entries
-func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
-	s.putAllSummary.Observe(float64(len(entries)), s.witness.name)
-	if len(entries) == 0 {
+// PutAll bulk executes Put operation for several kvs
+func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
+	s.putAllSummary.Observe(float64(len(kvs)), s.witness.name)
+	if len(kvs) == 0 {
 		return nil
 	}
 	bulk := s.client.Bulk()
-	for _, entry := range entries {
-		keyParts := strings.Split(entry.Key, "/")
+	for _, kv := range kvs {
+		keyParts := strings.Split(kv.Key, "/")
 		if len(keyParts) != 3 {
-			return fmt.Errorf("invalid key: '%s'", entry.Key)
+			return fmt.Errorf("invalid key: '%s'", kv.Key)
 		}
 		indexName := keyParts[0]
 		indexType := keyParts[1]
 		valueID := keyParts[2]
 
-		s.witness.assert(entry.Value)
+		s.witness.assert(kv.Value)
 		s.checkOrCreateIndex(indexName, indexType)
 
 		bulk.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
 			Type(indexType).
 			Id(valueID).
-			Doc(entry.Value),
+			Doc(kv.Value),
 		)
 	}
 	_, err := bulk.Do(s.context)
