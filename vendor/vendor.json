@@ -3,6 +3,10 @@
 	"ignore": "",
 	"package": [
 		{
+			"path": "context",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "aYB9TjUAI2uVEtTb1LH5Y2BF7ns=",
 			"path": "github.com/Shopify/sarama",
 			"revision": "1416bd78f804d523005322194994f08c2a0ad797",
@@ -99,6 +103,18 @@
 			"revisionTime": "2016-08-05T00:47:13Z"
 		},
 		{
+			"checksumSHA1": "CugKDIiTN7Xl2ID3yQ17ytRmNOY=",
+			"path": "github.com/garyburd/redigo/internal",
+			"revision": "0d253a66e6e1349f4581d6d2b300ee434ee2da9f",
+			"revisionTime": "2017-02-16T21:49:44Z"
+		},
+		{
+			"checksumSHA1": "kB76idnBbBSxbtkGcVojbDMp+s4=",
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "0d253a66e6e1349f4581d6d2b300ee434ee2da9f",
+			"revisionTime": "2017-02-16T21:49:44Z"
+		},
+		{
 			"checksumSHA1": "OVfqk5qyKVLHFirVbQOfxSkFBPo=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "69b215d01a5606c843240eab4937eab3acee6530",
@@ -147,10 +163,10 @@
 			"revisionTime": "2017-02-17T23:44:32Z"
 		},
 		{
-			"checksumSHA1": "AJEXY7SrBzy53M3nJ4wthrOQ+ug=",
+			"checksumSHA1": "IhK3rKOSR3UfWHe5JmYv7Fnmkrk=",
 			"path": "github.com/golang/snappy",
-			"revision": "7db9049039a047d955fe8c19b83c8ff5abd765c7",
-			"revisionTime": "2017-01-19T01:47:23Z"
+			"revision": "553a641470496b2327abcac10b36396bd98e45c9",
+			"revisionTime": "2017-02-15T23:32:05Z"
 		},
 		{
 			"checksumSHA1": "jcHJL7j40puiZOV3qwnlsud2aoI=",
@@ -169,6 +185,24 @@
 			"path": "github.com/matttproud/golang_protobuf_extensions/testdata",
 			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
 			"revisionTime": "2016-04-24T11:30:07Z"
+		},
+		{
+			"checksumSHA1": "0aDMPJUo0ApesP15b+S+SlycT04=",
+			"path": "github.com/movio/kasper",
+			"revision": "656d913ac99dc5304eb2252fe61252e48e252bfc",
+			"revisionTime": "2017-02-23T02:56:07Z"
+		},
+		{
+			"checksumSHA1": "GzRDW9WTo2ZAZK+yhNZZP3g9l5c=",
+			"path": "github.com/movio/kasper/kv",
+			"revision": "656d913ac99dc5304eb2252fe61252e48e252bfc",
+			"revisionTime": "2017-02-23T02:56:07Z"
+		},
+		{
+			"checksumSHA1": "QYYs++rW0WteVMOhcaPb1EiE5Ck=",
+			"path": "github.com/movio/kasper/util",
+			"revision": "656d913ac99dc5304eb2252fe61252e48e252bfc",
+			"revisionTime": "2017-02-23T02:56:07Z"
 		},
 		{
 			"checksumSHA1": "XbspDYfuNXfVZGZZ+wrmeUGOUqs=",
@@ -257,8 +291,8 @@
 		{
 			"checksumSHA1": "EFv2fHTe/0194O+Zs+z8wp+GQLk=",
 			"path": "golang.org/x/net/context/ctxhttp",
-			"revision": "61557ac0112b576429a0df080e1c2cef5dfbb642",
-			"revisionTime": "2017-01-26T11:54:58Z"
+			"revision": "6b27048ae5e6ad1ef927e72e437531493de612fe",
+			"revisionTime": "2017-02-17T08:49:01Z"
 		},
 		{
 			"checksumSHA1": "N4WObJwRFBC6QDe67fHtXLnAAB4=",
@@ -291,17 +325,17 @@
 			"revisionTime": "2017-01-17T22:33:38Z"
 		},
 		{
-			"checksumSHA1": "OkhJgz+yqwRyt6PJKsPlZIqTNCg=",
+			"checksumSHA1": "lDIy8kQyaLWrPpZjfu6mExf11tM=",
 			"path": "gopkg.in/olivere/elastic.v5",
-			"revision": "4f7c9774c6041d96b9c522cfcbb657a5a49dbbb2",
-			"revisionTime": "2017-02-10T13:58:12Z"
+			"revision": "4133648a0323dccefeb03f127e920cc15c595308",
+			"revisionTime": "2017-02-19T12:14:04Z"
 		},
 		{
 			"checksumSHA1": "f3VOkFb2kFFVADcQdGMnk2GRkMo=",
 			"path": "gopkg.in/olivere/elastic.v5/uritemplates",
-			"revision": "4f7c9774c6041d96b9c522cfcbb657a5a49dbbb2",
-			"revisionTime": "2017-02-10T13:58:12Z"
+			"revision": "4133648a0323dccefeb03f127e920cc15c595308",
+			"revisionTime": "2017-02-19T12:14:04Z"
 		}
 	],
-	"rootPath": "github.com/movio/kasper"
+	"rootPath": "kasper"
 }

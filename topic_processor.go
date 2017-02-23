@@ -8,9 +8,9 @@ package kasper
 
 import (
 	"log"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
 
 	"github.com/Shopify/sarama"
 )
@@ -36,7 +36,8 @@ type TopicProcessor struct {
 	messagesBehindHighWaterMark Gauge
 }
 
-// MessageProcessor describes kafka message processor
+// MessageProcessor describes kafka message processor.
+// It can be useful if you use external data sources that support bulk requests.
 type MessageProcessor interface {
 	// Process message from Kafka input topics.
 	// This is the function where you perform all needed actions, like
@@ -44,9 +45,10 @@ type MessageProcessor interface {
 	Process(IncomingMessage, Sender, Coordinator)
 }
 
-// TBD
+// BatchMessageProcessor processes several messages at once.
 type BatchMessageProcessor interface {
-	// TBD
+	// ProcessBatch gets an array of incoming Kafka messages.
+	// Use Sender to send messages to ouput topics.
 	ProcessBatch([]*IncomingMessage, Sender, Coordinator)
 }
 
@@ -81,14 +83,20 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 	return &topicProcessor
 }
 
-// TBD
+// BatchingOpts set baching options for BatchMessageProcessor
 type BatchingOpts struct {
-	MakeProcessor     func() BatchMessageProcessor
-	BatchSize         int
+	// Function that return ne winstance of BatchMessageProcessor
+	MakeProcessor func() BatchMessageProcessor
+	// Max amount of messages to be processed at once in BatchMessageProcessor.Process.
+	// Actual amount of messages may be less then BatchSize.
+	BatchSize int
+	// BatchMessageProcessor.Process is executed for incoming messages if
+	// BatchSize has not been reached in BatchWaitDuration.
+	// If there are no incoming messages, BatchMessageProcessor.Process is not executed.
 	BatchWaitDuration time.Duration
 }
 
-// TBD
+// NewBatchTopicProcessor creates a new instance of BatchMessageProcessor
 func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, containerID int) *TopicProcessor {
 	mustHaveValidConfig(config, containerID)
 	inputTopics := config.InputTopics

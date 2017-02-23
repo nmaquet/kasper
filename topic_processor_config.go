@@ -22,6 +22,7 @@ type TopicProcessorConfig struct {
 	Config *Config
 }
 
+// FairPartitionToContainerID creates a map that evenly distributes partiotions to containers
 func FairPartitionToContainerID(partitionCount, containerCount int) map[int]int {
 	res := make(map[int]int)
 	for i := 0; i < partitionCount; i++ {

@@ -2,9 +2,9 @@ package kasper
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/Shopify/sarama"
-	"strconv"
 )
 
 type partitionProcessor struct {
@@ -97,7 +97,7 @@ func (pp *partitionProcessor) processBatch(messages []*sarama.ConsumerMessage) [
 		if !ok {
 			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
 		}
-		incomingMessages[i] =  &IncomingMessage{
+		incomingMessages[i] = &IncomingMessage{
 			Topic:     message.Topic,
 			Partition: int(message.Partition),
 			Offset:    message.Offset,

@@ -37,7 +37,7 @@ func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 		if err != nil {
 			return nil, err
 		}
-		entries[i] = &Entry{ key, value }
+		entries[i] = &Entry{key, value}
 	}
 	return entries, nil
 }

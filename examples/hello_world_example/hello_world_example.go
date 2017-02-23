@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/movio/kasper"
 )
@@ -36,10 +35,9 @@ func main() {
 				ValueSerde: kasper.NewStringSerde(),
 			},
 		},
-		ContainerCount: 1,
+		ContainerCount:         1,
 		PartitionToContainerID: kasper.FairPartitionToContainerID(1, 1),
-		AutoMarkOffsetsInterval: 5 * time.Second,
-		Config:                  kasper.DefaultConfig(),
+		Config:                 kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
