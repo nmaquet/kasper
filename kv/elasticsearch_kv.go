@@ -3,15 +3,13 @@ package kv
 import (
 	"encoding/json"
 	"fmt"
-	"kasper/metrics"
+	"log"
 	"strings"
 
-	"log"
-
+	"github.com/movio/kasper/metrics"
+	"github.com/movio/kasper/util"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
-
-	"github.com/movio/kasper/util"
 )
 
 type ElasticsearchOpts struct {
