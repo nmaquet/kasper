@@ -14,17 +14,17 @@ import (
 )
 
 type ElasticsearchOpts struct {
-	getIndexSettings func(indexName string) string
-	getIndexMappings func(indexName string) string
+	GetIndexSettings func(indexName string) string
+	GetIndexMappings func(indexName string) string
 }
 
 var DefaultElasticsearchOpts ElasticsearchOpts = ElasticsearchOpts{
-	getIndexSettings: func(indexName string) string {
+	GetIndexSettings: func(indexName string) string {
 		return `{
 			"index.translog.durability": "request"
 		}`
 	},
-	getIndexMappings: func(indexName string) string {
+	GetIndexMappings: func(indexName string) string {
 		return `{
 			"_all" : {
 				"enabled" : false
@@ -95,7 +95,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 	if !exists {
 		_, err = s.client.
 			CreateIndex(indexName).
-			BodyString(s.elasticSearchOpts.getIndexSettings(indexName)).
+			BodyString(s.elasticSearchOpts.GetIndexSettings(indexName)).
 			Do(s.context)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create index: %s", err))
@@ -111,7 +111,7 @@ func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType stri
 		PutMapping().
 		Index(indexName).
 		Type(indexType).
-		BodyString(s.elasticSearchOpts.getIndexMappings(indexName)).
+		BodyString(s.elasticSearchOpts.GetIndexMappings(indexName)).
 		Do(s.context)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s: %s", indexName, indexType, err))
