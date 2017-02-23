@@ -117,12 +117,13 @@ func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
 	for _, topic := range pp.topicProcessor.inputTopics {
 		offsetManager := pp.offsetManagers[topic]
 		currentOffset, _ := offsetManager.NextOffset()
-		if currentOffset < 0 {
-			currentOffset = 0
-		}
 		highWaterMark := highWaterMarks[topic][int32(pp.partition)]
-		messagesBehindHighWaterMark := highWaterMark - currentOffset
-		pp.topicProcessor.messagesBehindHighWaterMark.Set(float64(messagesBehindHighWaterMark), topic, partition)
+		if currentOffset == sarama.OffsetNewest {
+			pp.topicProcessor.messagesBehindHighWaterMark.Set(0, topic, partition)
+		} else if currentOffset != sarama.OffsetOldest {
+			messagesBehindHighWaterMark := highWaterMark - currentOffset
+			pp.topicProcessor.messagesBehindHighWaterMark.Set(float64(messagesBehindHighWaterMark), topic, partition)
+		}
 	}
 }
 
