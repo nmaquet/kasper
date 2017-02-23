@@ -60,3 +60,11 @@ func TestStructPtrWitness_AssertNotOk(t *testing.T) {
 		jediWitness.Assert(stormtrooper)
 	})
 }
+
+func TestStructPtrWitness_Name(t *testing.T) {
+	jediWitness := NewStructPtrWitness(&Jedi{})
+	assert.Equal(t, "Jedi", jediWitness.Name)
+
+	stormTrooperWitness := NewStructPtrWitness(&Stormtrooper{})
+	assert.Equal(t, "Stormtrooper", stormTrooperWitness.Name)
+}

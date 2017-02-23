@@ -4,6 +4,8 @@ import "reflect"
 
 // StructPtrWitness is a reflection utility to work with pointers to structs
 type StructPtrWitness struct {
+	Name string
+
 	structValue reflect.Value
 }
 
@@ -17,7 +19,7 @@ func NewStructPtrWitness(structPtr interface{}) *StructPtrWitness {
 	if value.Elem().Kind() != reflect.Struct {
 		panic("Witness must be a struct")
 	}
-	return &StructPtrWitness{value.Elem()}
+	return &StructPtrWitness{value.Elem().Type().Name(), value.Elem() }
 }
 
 // Assert panics if the given struct pointer type doesn't match the witnessed type

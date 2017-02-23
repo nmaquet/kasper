@@ -90,12 +90,12 @@ func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *Elastic
 }
 
 func (s *ElasticsearchKeyValueStore) createMetrics() {
-	s.getCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Get", "Number of Get() calls")
-	s.getAllSummary = s.metricsProvider.NewSummary("ElasticsearchKeyValueStore_GetAll", "Summary of GetAll() calls")
-	s.putCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Put", "Number of Put() calls")
-	s.putAllSummary = s.metricsProvider.NewSummary("ElasticsearchKeyValueStore_PutAll", "Summary of PutAll() calls")
-	s.deleteCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Delete", "Number of Delete() calls")
-	s.flushCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Flush", "Summary of Flush() calls")
+	s.getCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Get", "Number of Get() calls", "type")
+	s.getAllSummary = s.metricsProvider.NewSummary("ElasticsearchKeyValueStore_GetAll", "Summary of GetAll() calls", "type")
+	s.putCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Put", "Number of Put() calls", "type")
+	s.putAllSummary = s.metricsProvider.NewSummary("ElasticsearchKeyValueStore_PutAll", "Summary of PutAll() calls", "type")
+	s.deleteCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Delete", "Number of Delete() calls", "type")
+	s.flushCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Flush", "Summary of Flush() calls", "type")
 }
 
 func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexType string) {
@@ -142,7 +142,7 @@ func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType stri
 
 // Get gets value by key from store
 func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
-	s.getCounter.Inc()
+	s.getCounter.Inc(s.witness.Name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return nil, fmt.Errorf("invalid key: '%s'", key)
@@ -181,7 +181,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 
 // TBD
 func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
-	s.getAllSummary.Observe(float64(len(keys)))
+	s.getAllSummary.Observe(float64(len(keys)), s.witness.Name)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 		keyParts := strings.Split(key, "/")
@@ -225,7 +225,7 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 // Put updates key in store with serialized value
 func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) error {
 	s.witness.Assert(structPtr)
-	s.putCounter.Inc()
+	s.putCounter.Inc(s.witness.Name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return fmt.Errorf("invalid key: '%s'", key)
@@ -248,7 +248,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 
 // PutAll bulk executes Put operation for several entries
 func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
-	s.putAllSummary.Observe(float64(len(entries)))
+	s.putAllSummary.Observe(float64(len(entries)), s.witness.Name)
 	if len(entries) == 0 {
 		return nil
 	}
@@ -278,7 +278,7 @@ func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 
 // Delete removes key from store
 func (s *ElasticsearchKeyValueStore) Delete(key string) error {
-	s.deleteCounter.Inc()
+	s.deleteCounter.Inc(s.witness.Name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return fmt.Errorf("invalid key: '%s'", key)
@@ -304,7 +304,7 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 
 // Flush the Elasticsearch translog to disk
 func (s *ElasticsearchKeyValueStore) Flush() error {
-	s.flushCounter.Inc()
+	s.flushCounter.Inc(s.witness.Name)
 	log.Println("Flusing ES indexes...")
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
