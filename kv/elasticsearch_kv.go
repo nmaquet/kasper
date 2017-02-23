@@ -13,23 +13,33 @@ import (
 	"github.com/movio/kasper/util"
 )
 
-const indexSettings = `{
-	"index.translog.durability": "request"
-}`
+type ElasticsearchOpts struct {
+	getIndexSettings func(indexName string) string
+	getIndexMappings func(indexName string) string
+}
 
-const indexMapping = `{
-	"_all" : {
-		"enabled" : false
+var DefaultElasticsearchOpts ElasticsearchOpts = ElasticsearchOpts{
+	getIndexSettings: func(indexName string) string {
+		return `{
+			"index.translog.durability": "request"
+		}`
 	},
-	"dynamic_templates": [{
-		"no_index": {
-			"mapping": {
-				"index": "no"
+	getIndexMappings: func(indexName string) string {
+		return `{
+			"_all" : {
+				"enabled" : false
 			},
-			"match": "*"
-		}
-	}]
-}`
+			"dynamic_templates": [{
+				"no_index": {
+					"mapping": {
+						"index": "no"
+					},
+					"match": "*"
+				}
+			}]
+		}`
+	},
+}
 
 type indexAndType struct {
 	indexName string
@@ -39,10 +49,11 @@ type indexAndType struct {
 // ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 type ElasticsearchKeyValueStore struct {
-	witness         *util.StructPtrWitness
-	client          *elastic.Client
-	context         context.Context
-	existingIndexes []indexAndType
+	elasticSearchOpts *ElasticsearchOpts
+	witness           *util.StructPtrWitness
+	client            *elastic.Client
+	context           context.Context
+	existingIndexes   []indexAndType
 }
 
 // NewESKeyValueStore creates new ElasticsearchKeyValueStore instance.
@@ -50,6 +61,11 @@ type ElasticsearchKeyValueStore struct {
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
 func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValueStore {
+	return NewESKeyValueStoreWithOpts(url, structPtr, &DefaultElasticsearchOpts)
+}
+
+// TBD
+func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -58,10 +74,11 @@ func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValu
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	return &ElasticsearchKeyValueStore{
-		witness:         util.NewStructPtrWitness(structPtr),
-		client:          client,
-		context:         context.Background(),
-		existingIndexes: nil,
+		elasticSearchOpts: opts,
+		witness:           util.NewStructPtrWitness(structPtr),
+		client:            client,
+		context:           context.Background(),
+		existingIndexes:   nil,
 	}
 }
 
@@ -76,7 +93,10 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 		panic(fmt.Sprintf("Failed to check if index exists: %s", err))
 	}
 	if !exists {
-		_, err = s.client.CreateIndex(indexName).BodyString(indexSettings).Do(s.context)
+		_, err = s.client.
+			CreateIndex(indexName).
+			BodyString(s.elasticSearchOpts.getIndexSettings(indexName)).
+			Do(s.context)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create index: %s", err))
 		}
@@ -87,7 +107,12 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 }
 
 func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType string) {
-	resp, err := s.client.PutMapping().Index(indexName).Type(indexType).BodyString(indexMapping).Do(s.context)
+	resp, err := s.client.
+		PutMapping().
+		Index(indexName).
+		Type(indexType).
+		BodyString(s.elasticSearchOpts.getIndexMappings(indexName)).
+		Do(s.context)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s: %s", indexName, indexType, err))
 	}
