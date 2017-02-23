@@ -40,18 +40,18 @@ func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metric
 }
 
 func (s *InMemoryKeyValueStore) createMetrics() {
-	s.getCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Get", "Number of Get() calls")
-	s.getAllSummary = s.metricsProvider.NewSummary("InMemoryKeyValueStore_GetAll", "Summary of GetAll() calls")
-	s.putCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Put", "Number of Put() calls")
-	s.putAllSummary = s.metricsProvider.NewSummary("InMemoryKeyValueStore_PutAll", "Summary of PutAll() calls")
-	s.deleteCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Delete", "Number of Delete() calls")
-	s.flushCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Flush", "Summary of Flush() calls")
-	s.sizeGauge = s.metricsProvider.NewGauge("InMemoryKeyValueStore_Size", "Gauge of number of keys")
+	s.getCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Get", "Number of Get() calls", "type")
+	s.getAllSummary = s.metricsProvider.NewSummary("InMemoryKeyValueStore_GetAll", "Summary of GetAll() calls", "type")
+	s.putCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Put", "Number of Put() calls", "type")
+	s.putAllSummary = s.metricsProvider.NewSummary("InMemoryKeyValueStore_PutAll", "Summary of PutAll() calls", "type")
+	s.deleteCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Delete", "Number of Delete() calls", "type")
+	s.flushCounter = s.metricsProvider.NewCounter("InMemoryKeyValueStore_Flush", "Summary of Flush() calls", "type")
+	s.sizeGauge = s.metricsProvider.NewGauge("InMemoryKeyValueStore_Size", "Gauge of number of keys", "type")
 }
 
 // Get gets value by key from store
 func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
-	s.getCounter.Inc()
+	s.getCounter.Inc(s.witness.Name)
 	src, found := s.m[key]
 	if !found {
 		return s.witness.Nil(), nil
@@ -61,7 +61,7 @@ func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 
 // TBD
 func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
-	s.getAllSummary.Observe(float64(len(keys)))
+	s.getAllSummary.Observe(float64(len(keys)), s.witness.Name)
 	entries := make([]*Entry, len(keys))
 	for i, key := range keys {
 		value, err := s.Get(key)
@@ -78,8 +78,8 @@ func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 	s.witness.Assert(value)
 	s.m[key] = value
 
-	s.putCounter.Inc()
-	s.sizeGauge.Set(float64(len(s.m)))
+	s.putCounter.Inc(s.witness.Name)
+	s.sizeGauge.Set(float64(len(s.m)), s.witness.Name)
 	return nil
 }
 
@@ -92,8 +92,8 @@ func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
 		}
 	}
 
-	s.putAllSummary.Observe(float64(len(entries)))
-	s.sizeGauge.Set(float64(len(s.m)))
+	s.putAllSummary.Observe(float64(len(entries)), s.witness.Name)
+	s.sizeGauge.Set(float64(len(s.m)), s.witness.Name)
 	return nil
 }
 
@@ -101,13 +101,13 @@ func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
 func (s *InMemoryKeyValueStore) Delete(key string) error {
 	delete(s.m, key)
 
-	s.deleteCounter.Inc()
-	s.sizeGauge.Set(float64(len(s.m)))
+	s.deleteCounter.Inc(s.witness.Name)
+	s.sizeGauge.Set(float64(len(s.m)), s.witness.Name)
 	return nil
 }
 
 // Flush does nothing for in memory storage
 func (s *InMemoryKeyValueStore) Flush() error {
-	s.flushCounter.Inc()
+	s.flushCounter.Inc(s.witness.Name)
 	return nil
 }
