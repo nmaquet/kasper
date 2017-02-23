@@ -1,4 +1,4 @@
-package metrics
+package kasper
 
 import "fmt"
 

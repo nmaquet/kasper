@@ -223,16 +223,16 @@
 			"revisionTime": "2016-01-10T10:55:54Z"
 		},
 		{
-			"checksumSHA1": "hgbzT3cLIwshYJg33tVh/RXQPRQ=",
+			"checksumSHA1": "nQPd3/2Yva9N6vn+K7hVtqyhUqo=",
 			"path": "github.com/prometheus/client_golang/prometheus",
-			"revision": "6ab3432d241cbe3cb7543da7e7e9a934c7e9fe76",
-			"revisionTime": "2017-02-17T08:31:07Z"
+			"revision": "69bb3870645f63c67a8dc9c9ef94585fd0d98c80",
+			"revisionTime": "2017-02-23T09:28:41Z"
 		},
 		{
 			"checksumSHA1": "+O36qZ0fJbO4FuZ/0i6ewdupIPg=",
 			"path": "github.com/prometheus/client_golang/prometheus/promhttp",
-			"revision": "6ab3432d241cbe3cb7543da7e7e9a934c7e9fe76",
-			"revisionTime": "2017-02-17T08:31:07Z"
+			"revision": "69bb3870645f63c67a8dc9c9ef94585fd0d98c80",
+			"revisionTime": "2017-02-23T09:28:41Z"
 		},
 		{
 			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",
@@ -285,8 +285,8 @@
 		{
 			"checksumSHA1": "ujkdYz/AOSZ4dVskaUGW9g/V/dM=",
 			"path": "golang.org/x/net/context",
-			"revision": "6b27048ae5e6ad1ef927e72e437531493de612fe",
-			"revisionTime": "2017-02-17T08:49:01Z"
+			"revision": "dd2d9a67c97da0afa00d5726e28086007a0acce5",
+			"revisionTime": "2017-02-23T02:43:42Z"
 		},
 		{
 			"checksumSHA1": "EFv2fHTe/0194O+Zs+z8wp+GQLk=",
@@ -337,5 +337,5 @@
 			"revisionTime": "2017-02-19T12:14:04Z"
 		}
 	],
-	"rootPath": "kasper"
+	"rootPath": "github.com/movio/kasper"
 }

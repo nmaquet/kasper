@@ -1,37 +1,31 @@
-package kv
+package kasper
 
-import (
-	"github.com/movio/kasper/metrics"
-	"github.com/movio/kasper/util"
-)
-
-// InMemoryKeyValueStore is a key-value storage that stores data in memory using map
 type InMemoryKeyValueStore struct {
-	witness         *util.StructPtrWitness
+	witness         *StructPtrWitness
 	m               map[string]interface{}
-	metricsProvider metrics.Provider
-	getCounter      metrics.Counter
-	getAllSummary   metrics.Summary
-	putCounter      metrics.Counter
-	putAllSummary   metrics.Summary
-	deleteCounter   metrics.Counter
-	flushCounter    metrics.Counter
-	sizeGauge       metrics.Gauge
+	metricsProvider Provider
+	getCounter      Counter
+	getAllSummary   Summary
+	putCounter      Counter
+	putAllSummary   Summary
+	deleteCounter   Counter
+	flushCounter    Counter
+	sizeGauge       Gauge
 }
 
 // NewInMemoryKeyValueStore creates new store.
 // StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValueStore {
-	return NewInMemoryKeyValueStoreWithMetrics(size, structPtr, &metrics.NoopMetricsProvider{})
+	return NewInMemoryKeyValueStoreWithMetrics(size, structPtr, &NoopMetricsProvider{})
 }
 
 // NewInMemoryKeyValueStoreWithMetrics creates new store.
 // StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
-func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metricsProvider metrics.Provider) *InMemoryKeyValueStore {
+func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metricsProvider Provider) *InMemoryKeyValueStore {
 	inMemoryKeyValueStore := &InMemoryKeyValueStore{
-		witness:         util.NewStructPtrWitness(structPtr),
+		witness:         NewStructPtrWitness(structPtr),
 		m:               make(map[string]interface{}, size),
 		metricsProvider: metricsProvider,
 	}

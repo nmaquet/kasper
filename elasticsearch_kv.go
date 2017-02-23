@@ -1,4 +1,4 @@
-package kv
+package kasper
 
 import (
 	"encoding/json"
@@ -6,8 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/movio/kasper/metrics"
-	"github.com/movio/kasper/util"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
 )
@@ -49,17 +47,17 @@ type indexAndType struct {
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 type ElasticsearchKeyValueStore struct {
 	elasticSearchOpts *ElasticsearchOpts
-	witness           *util.StructPtrWitness
+	witness           *StructPtrWitness
 	client            *elastic.Client
 	context           context.Context
 	existingIndexes   []indexAndType
-	metricsProvider   metrics.Provider
-	getCounter        metrics.Counter
-	getAllSummary     metrics.Summary
-	putCounter        metrics.Counter
-	putAllSummary     metrics.Summary
-	deleteCounter     metrics.Counter
-	flushCounter      metrics.Counter
+	metricsProvider   Provider
+	getCounter        Counter
+	getAllSummary     Summary
+	putCounter        Counter
+	putAllSummary     Summary
+	deleteCounter     Counter
+	flushCounter      Counter
 }
 
 // NewESKeyValueStore creates new ElasticsearchKeyValueStore instance.
@@ -67,11 +65,11 @@ type ElasticsearchKeyValueStore struct {
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
 func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValueStore {
-	return NewESKeyValueStoreWithOpts(url, structPtr, &DefaultElasticsearchOpts, &metrics.NoopMetricsProvider{})
+	return NewESKeyValueStoreWithOpts(url, structPtr, &DefaultElasticsearchOpts, &NoopMetricsProvider{})
 }
 
 // TBD
-func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider metrics.Provider) *ElasticsearchKeyValueStore {
+func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider Provider) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -81,7 +79,7 @@ func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *Elastic
 	}
 	return &ElasticsearchKeyValueStore{
 		elasticSearchOpts: opts,
-		witness:           util.NewStructPtrWitness(structPtr),
+		witness:           NewStructPtrWitness(structPtr),
 		client:            client,
 		context:           context.Background(),
 		existingIndexes:   nil,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -9,18 +10,18 @@ import (
 	"time"
 
 	"github.com/movio/kasper"
+	"github.com/movio/kasper/kv"
 )
 
-// WordCountExample is message processor that shows how to use processor state
+// WordCountExample is message processor that shows how to use key-value store in processing Kafka messages
+// and outputs results to topic "word-counts"
 type WordCountExample struct {
-	wordCounts map[string]int // stores a counter of words from input topic
+	store kv.KeyValueStore
 }
 
-// WordCount desribes Kafka outgoing message.
+// WordCount describes Kafka outgoing message
 type WordCount struct {
-	Word     string
-	Count    int
-	LastSeen time.Time
+	Count int `json:"count"`
 }
 
 // Process processes Kafka messages from topic "words" and outputs each word with counter to "word-counts" topic
@@ -28,27 +29,42 @@ func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender ka
 	line := msg.Value.(string)
 	words := strings.Split(line, " ")
 	for _, word := range words {
-		word = strings.ToLower(word)
-		count, found := processor.wordCounts[word]
-		if !found {
-			count = 1
+		wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
+		wordCount := processor.get(wordStoreKey)
+		if wordCount == nil {
+			wordCount = &WordCount{1}
 		} else {
-			count++
+			wordCount.Count++
 		}
-		processor.wordCounts[word] = count
+		processor.put(wordStoreKey, wordCount)
 		outgoingMessage := kasper.OutgoingMessage{
 			Topic:     "word-counts",
 			Partition: 0,
-			Key:       word,
-			Value:     &WordCount{word, count, time.Now()},
+			Key:       msg.Key,
+			Value:     fmt.Sprintf("%s has been seen %d times", word, wordCount.Count),
 		}
 		sender.Send(outgoingMessage)
 	}
 }
 
+func (processor *WordCountExample) get(key string) *WordCount {
+	wordCount, err := processor.store.Get(key)
+	if err != nil {
+		log.Fatalf("Failed to Get(): %s", err)
+	}
+	return wordCount.(*WordCount)
+}
+
+func (processor *WordCountExample) put(key string, value *WordCount) {
+	err := processor.store.Put(key, value)
+	if err != nil {
+		log.Fatalf("Failed to Put(): %s", err)
+	}
+}
+
 func main() {
 	config := kasper.TopicProcessorConfig{
-		TopicProcessorName: "word-count-example",
+		TopicProcessorName: "key-value-store-example",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"words"},
 		TopicSerdes: map[string]kasper.TopicSerde{
@@ -58,7 +74,7 @@ func main() {
 			},
 			"word-counts": {
 				KeySerde:   kasper.NewStringSerde(),
-				ValueSerde: kasper.NewJSONSerde(&WordCount{}),
+				ValueSerde: kasper.NewStringSerde(),
 			},
 		},
 		ContainerCount: 1,
@@ -68,7 +84,22 @@ func main() {
 		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
 		Config:                  kasper.DefaultConfig(),
 	}
-	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{make(map[string]int)} }
+	store := kv.NewInMemoryKeyValueStore(10000, &WordCount{})
+	// store := kv.NewESKeyValueStore("http://localhost:9200", &WordCount{})
+	// store, err := kv.NewCouchbaseKeyValueStore(&kv.CouchbaseConfig{
+	//	Host:          "localhost",
+	//	Bucket:        "default",
+	//	Password:      "",
+	//	DurableWrites: false,
+	//	PersistTo:     0,
+	//	ReplicateTo:   0,
+	// }, &WordCount{})
+	// if err != nil {
+	//	log.Fatal(err)
+	// }
+	// store := kv.NewRiakKeyValueStore("127.0.0.1:8087", &WordCount{})
+
+	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()
 	signals := make(chan os.Signal, 1)

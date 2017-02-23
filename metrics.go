@@ -1,4 +1,4 @@
-package metrics
+package kasper
 
 // Counter is a incremental-only int value metric
 type Counter interface {

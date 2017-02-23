@@ -1,10 +1,7 @@
-package kv
+package kasper
 
 import (
 	"testing"
-
-	"github.com/movio/kasper/metrics"
-	"github.com/movio/kasper/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,9 +11,9 @@ type Planet struct {
 
 func newTestInMemoryKV() *InMemoryKeyValueStore {
 	s := &InMemoryKeyValueStore{
-		witness:         util.NewStructPtrWitness(&Planet{}),
+		witness:         NewStructPtrWitness(&Planet{}),
 		m:               make(map[string]interface{}, 10),
-		metricsProvider: &metrics.NoopMetricsProvider{},
+		metricsProvider: &NoopMetricsProvider{},
 	}
 	s.createMetrics()
 	return s

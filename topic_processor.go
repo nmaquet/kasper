@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/movio/kasper/metrics"
 )
 
 // TopicProcessor describes kafka topic processor
@@ -32,9 +31,9 @@ type TopicProcessor struct {
 	batchSize           int
 	batchWaitDuration   time.Duration
 
-	incomingMessageCount        metrics.Counter
-	outgoingMessageCount        metrics.Counter
-	messagesBehindHighWaterMark metrics.Gauge
+	incomingMessageCount        Counter
+	outgoingMessageCount        Counter
+	messagesBehindHighWaterMark Gauge
 }
 
 // MessageProcessor describes kafka message processor.
@@ -127,7 +126,7 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, con
 	return &topicProcessor
 }
 
-func setupMetrics(tp *TopicProcessor, provider metrics.Provider) {
+func setupMetrics(tp *TopicProcessor, provider Provider) {
 	tp.incomingMessageCount = provider.NewCounter("incoming_message_count", "Number of incoming messages received", "topic", "partition")
 	tp.outgoingMessageCount = provider.NewCounter("outgoing_message_count", "Number of outgoing messages sent", "topic", "partition")
 	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")

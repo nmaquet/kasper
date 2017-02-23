@@ -13,7 +13,6 @@ install:
  - go get github.com/mattn/goveralls
  - go get -u github.com/kardianos/govendor
  - govendor sync
- - cd kv ; govendor sync ; cd ..
  - curl -sSL "https://get.docker.com/gpg" | sudo -E apt-key add -
  - echo "deb https://apt.dockerproject.org/repo ubuntu-precise main" | sudo tee -a /etc/apt/sources.list
  - sudo apt-get update
@@ -32,12 +31,8 @@ before_script:
  - cd ../../
 
 script:
- - "echo 'mode: count' > coverage_final.out"
  - go test . -v -covermode=count -coverprofile=coverage.out
- - "cat coverage.out | grep -v 'mode: count' >> coverage_final.out"
- - go test ./kv -v -covermode=count -coverprofile=coverage.out
- - "cat coverage.out | grep -v 'mode: count' >> coverage_final.out"
- - $HOME/gopath/bin/goveralls -coverprofile=coverage_final.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+ - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 after_script:
  - cd integration_tests/kafka

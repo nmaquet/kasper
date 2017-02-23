@@ -4,7 +4,7 @@ Kasper companion library for stateful stream processing.
 
 */
 
-package kv
+package kasper
 
 import (
 	"reflect"

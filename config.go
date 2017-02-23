@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/movio/kasper/metrics"
 )
 
 // Config describes a configuration for Kasper
@@ -20,7 +19,7 @@ type Config struct {
 	// Default: a no-op funcMetrics
 	MarkOffsetsHook func()
 	// TBD
-	MetricsProvider metrics.Provider
+	MetricsProvider Provider
 	// TBD
 	MetricsUpdateInterval time.Duration
 }
@@ -31,7 +30,7 @@ func DefaultConfig() *Config {
 		RequiredAcks:             sarama.WaitForAll,
 		MaxInFlightMessageGroups: 5000,
 		MarkOffsetsHook:          func() {},
-		MetricsProvider:          metrics.NoopMetricsProvider{},
+		MetricsProvider:          &NoopMetricsProvider{},
 		MetricsUpdateInterval:    5 * time.Second,
 	}
 }

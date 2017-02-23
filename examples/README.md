@@ -16,4 +16,4 @@ This folder contains example applications to demonstrate the use of Kasper. For 
 
 #### Producer example
 
-[producer_example](./producer_example) outputs motified messages from input Kafka topic to output topic.
+[producer_example](./producer_example) outputs modified messages from input Kafka topic to output topic.
