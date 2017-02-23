@@ -16,55 +16,55 @@ type Stormtrooper struct {
 }
 
 func TestStructPtrWitness_NewOK(t *testing.T) {
-	NewStructPtrWitness(&Jedi{})
+	newStructPtrWitness(&Jedi{})
 }
 
 func TestStructPtrWitness_NewNotPtr(t *testing.T) {
 	assert.Panics(t, func() {
-		NewStructPtrWitness(Jedi{})
+		newStructPtrWitness(Jedi{})
 	})
 }
 
 func TestStructPtrWitness_NewNotStruct(t *testing.T) {
 	x := 42
 	assert.Panics(t, func() {
-		NewStructPtrWitness(&x)
+		newStructPtrWitness(&x)
 	})
 }
 
 func TestStructPtrWitness_Allocate(t *testing.T) {
-	jediWitness := NewStructPtrWitness(&Jedi{})
-	jedi := jediWitness.Allocate().(*Jedi)
+	jediWitness := newStructPtrWitness(&Jedi{})
+	jedi := jediWitness.allocate().(*Jedi)
 	jedi.Name = "Yoda"
 	jedi.Darksider = false
 	assert.Equal(t, &Jedi{"Yoda", false}, jedi)
 }
 
 func TestStructPtrWitness_Nil(t *testing.T) {
-	jediWitness := NewStructPtrWitness(&Jedi{})
-	actual := jediWitness.Nil().(*Jedi)
+	jediWitness := newStructPtrWitness(&Jedi{})
+	actual := jediWitness.nil().(*Jedi)
 	var expected *Jedi
 	assert.Equal(t, expected, actual)
 }
 
 func TestStructPtrWitness_AssertOk(t *testing.T) {
-	jediWitness := NewStructPtrWitness(&Jedi{})
+	jediWitness := newStructPtrWitness(&Jedi{})
 	jedi := &Jedi{"Anakin", true}
-	jediWitness.Assert(jedi)
+	jediWitness.assert(jedi)
 }
 
 func TestStructPtrWitness_AssertNotOk(t *testing.T) {
-	jediWitness := NewStructPtrWitness(&Jedi{})
+	jediWitness := newStructPtrWitness(&Jedi{})
 	stormtrooper := &Stormtrooper{"FN-2187"}
 	assert.Panics(t, func() {
-		jediWitness.Assert(stormtrooper)
+		jediWitness.assert(stormtrooper)
 	})
 }
 
 func TestStructPtrWitness_Name(t *testing.T) {
-	jediWitness := NewStructPtrWitness(&Jedi{})
-	assert.Equal(t, "Jedi", jediWitness.Name)
+	jediWitness := newStructPtrWitness(&Jedi{})
+	assert.Equal(t, "Jedi", jediWitness.name)
 
-	stormTrooperWitness := NewStructPtrWitness(&Stormtrooper{})
-	assert.Equal(t, "Stormtrooper", stormTrooperWitness.Name)
+	stormTrooperWitness := newStructPtrWitness(&Stormtrooper{})
+	assert.Equal(t, "Stormtrooper", stormTrooperWitness.name)
 }

@@ -1,7 +1,7 @@
 package kasper
 
 type InMemoryKeyValueStore struct {
-	witness         *StructPtrWitness
+	witness         *structPtrWitness
 	m               map[string]interface{}
 	metricsProvider Provider
 	getCounter      Counter
@@ -25,7 +25,7 @@ func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValue
 // for serialization and deserialization of store values.
 func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metricsProvider Provider) *InMemoryKeyValueStore {
 	inMemoryKeyValueStore := &InMemoryKeyValueStore{
-		witness:         NewStructPtrWitness(structPtr),
+		witness:         newStructPtrWitness(structPtr),
 		m:               make(map[string]interface{}, size),
 		metricsProvider: metricsProvider,
 	}
@@ -45,17 +45,17 @@ func (s *InMemoryKeyValueStore) createMetrics() {
 
 // Get gets value by key from store
 func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
-	s.getCounter.Inc(s.witness.Name)
+	s.getCounter.Inc(s.witness.name)
 	src, found := s.m[key]
 	if !found {
-		return s.witness.Nil(), nil
+		return s.witness.nil(), nil
 	}
 	return src, nil
 }
 
 // TBD
 func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
-	s.getAllSummary.Observe(float64(len(keys)), s.witness.Name)
+	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	entries := make([]*Entry, len(keys))
 	for i, key := range keys {
 		value, err := s.Get(key)
@@ -69,11 +69,11 @@ func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 
 // Put updates key in store with serialized value
 func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
-	s.witness.Assert(value)
+	s.witness.assert(value)
 	s.m[key] = value
 
-	s.putCounter.Inc(s.witness.Name)
-	s.sizeGauge.Set(float64(len(s.m)), s.witness.Name)
+	s.putCounter.Inc(s.witness.name)
+	s.sizeGauge.Set(float64(len(s.m)), s.witness.name)
 	return nil
 }
 
@@ -86,8 +86,8 @@ func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
 		}
 	}
 
-	s.putAllSummary.Observe(float64(len(entries)), s.witness.Name)
-	s.sizeGauge.Set(float64(len(s.m)), s.witness.Name)
+	s.putAllSummary.Observe(float64(len(entries)), s.witness.name)
+	s.sizeGauge.Set(float64(len(s.m)), s.witness.name)
 	return nil
 }
 
@@ -95,13 +95,13 @@ func (s *InMemoryKeyValueStore) PutAll(entries []*Entry) error {
 func (s *InMemoryKeyValueStore) Delete(key string) error {
 	delete(s.m, key)
 
-	s.deleteCounter.Inc(s.witness.Name)
-	s.sizeGauge.Set(float64(len(s.m)), s.witness.Name)
+	s.deleteCounter.Inc(s.witness.name)
+	s.sizeGauge.Set(float64(len(s.m)), s.witness.name)
 	return nil
 }
 
 // Flush does nothing for in memory storage
 func (s *InMemoryKeyValueStore) Flush() error {
-	s.flushCounter.Inc(s.witness.Name)
+	s.flushCounter.Inc(s.witness.name)
 	return nil
 }

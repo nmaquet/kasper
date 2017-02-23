@@ -47,7 +47,7 @@ type indexAndType struct {
 // In this key-value store, all keys must have the format "<index>/<type>/<_id>".
 type ElasticsearchKeyValueStore struct {
 	elasticSearchOpts *ElasticsearchOpts
-	witness           *StructPtrWitness
+	witness           *structPtrWitness
 	client            *elastic.Client
 	context           context.Context
 	existingIndexes   []indexAndType
@@ -79,7 +79,7 @@ func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *Elastic
 	}
 	return &ElasticsearchKeyValueStore{
 		elasticSearchOpts: opts,
-		witness:           NewStructPtrWitness(structPtr),
+		witness:           newStructPtrWitness(structPtr),
 		client:            client,
 		context:           context.Background(),
 		existingIndexes:   nil,
@@ -140,7 +140,7 @@ func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType stri
 
 // Get gets value by key from store
 func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
-	s.getCounter.Inc(s.witness.Name)
+	s.getCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return nil, fmt.Errorf("invalid key: '%s'", key)
@@ -158,28 +158,28 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 		Do(s.context)
 
 	if fmt.Sprintf("%s", err) == "elastic: Error 404 (Not Found)" {
-		return s.witness.Nil(), nil
+		return s.witness.nil(), nil
 	}
 
 	if err != nil {
-		return s.witness.Nil(), err
+		return s.witness.nil(), err
 	}
 
 	if !rawValue.Found {
-		return s.witness.Nil(), nil
+		return s.witness.nil(), nil
 	}
 
-	structPtr := s.witness.Allocate()
+	structPtr := s.witness.allocate()
 	err = json.Unmarshal(*rawValue.Source, structPtr)
 	if err != nil {
-		return s.witness.Nil(), err
+		return s.witness.nil(), err
 	}
 	return structPtr, nil
 }
 
 // TBD
 func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
-	s.getAllSummary.Observe(float64(len(keys)), s.witness.Name)
+	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 		keyParts := strings.Split(key, "/")
@@ -207,9 +207,9 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 	for i, doc := range response.Docs {
 		var structPtr interface{}
 		if !doc.Found {
-			structPtr = s.witness.Nil()
+			structPtr = s.witness.nil()
 		} else {
-			structPtr = s.witness.Allocate()
+			structPtr = s.witness.allocate()
 			err = json.Unmarshal(*doc.Source, structPtr)
 			if err != nil {
 				return nil, err
@@ -222,8 +222,8 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*Entry, error) {
 
 // Put updates key in store with serialized value
 func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) error {
-	s.witness.Assert(structPtr)
-	s.putCounter.Inc(s.witness.Name)
+	s.witness.assert(structPtr)
+	s.putCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return fmt.Errorf("invalid key: '%s'", key)
@@ -246,7 +246,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 
 // PutAll bulk executes Put operation for several entries
 func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
-	s.putAllSummary.Observe(float64(len(entries)), s.witness.Name)
+	s.putAllSummary.Observe(float64(len(entries)), s.witness.name)
 	if len(entries) == 0 {
 		return nil
 	}
@@ -260,7 +260,7 @@ func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 		indexType := keyParts[1]
 		valueID := keyParts[2]
 
-		s.witness.Assert(entry.Value)
+		s.witness.assert(entry.Value)
 		s.checkOrCreateIndex(indexName, indexType)
 
 		bulk.Add(elastic.NewBulkIndexRequest().
@@ -276,7 +276,7 @@ func (s *ElasticsearchKeyValueStore) PutAll(entries []*Entry) error {
 
 // Delete removes key from store
 func (s *ElasticsearchKeyValueStore) Delete(key string) error {
-	s.deleteCounter.Inc(s.witness.Name)
+	s.deleteCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
 		return fmt.Errorf("invalid key: '%s'", key)
@@ -302,7 +302,7 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 
 // Flush the Elasticsearch translog to disk
 func (s *ElasticsearchKeyValueStore) Flush() error {
-	s.flushCounter.Inc(s.witness.Name)
+	s.flushCounter.Inc(s.witness.name)
 	log.Println("Flusing ES indexes...")
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).

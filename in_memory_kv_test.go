@@ -11,7 +11,7 @@ type Planet struct {
 
 func newTestInMemoryKV() *InMemoryKeyValueStore {
 	s := &InMemoryKeyValueStore{
-		witness:         NewStructPtrWitness(&Planet{}),
+		witness:         newStructPtrWitness(&Planet{}),
 		m:               make(map[string]interface{}, 10),
 		metricsProvider: &NoopMetricsProvider{},
 	}
