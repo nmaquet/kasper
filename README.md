@@ -8,8 +8,6 @@ kasper
 
 Kafka stream processing library written in Go.
 
-*This project is a pre-alpha stage.*
-
-For stateful processing, checkout the companion library [kv](https://github.com/movio/kasper/tree/master/kv).
+*This project is in pre-alpha*
 
 This library is heavily inspired by [Apache Samza](http://samza.apache.org).
