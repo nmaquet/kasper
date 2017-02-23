@@ -60,16 +60,16 @@ type ElasticsearchKeyValueStore struct {
 	flushCounter      Counter
 }
 
-// NewESKeyValueStore creates new ElasticsearchKeyValueStore instance.
+// NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
-func NewESKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValueStore {
-	return NewESKeyValueStoreWithOpts(url, structPtr, &DefaultElasticsearchOpts, &NoopMetricsProvider{})
+func NewElasticsearchKeyValueStore(url string, structPtr interface{}) *ElasticsearchKeyValueStore {
+	return NewElasticsearchKeyValueStoreWithOpts(url, structPtr, &DefaultElasticsearchOpts, &NoopMetricsProvider{})
 }
 
 // TBD
-func NewESKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider Provider) *ElasticsearchKeyValueStore {
+func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider Provider) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
