@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/movio/kasper/metrics"
 )
 
 // Config describes a configuration for Kasper
@@ -16,10 +17,10 @@ type Config struct {
 	MaxInFlightMessageGroups int
 	// MarkOffsetsHook is called by Kasper prior to marking offsets when automatic offset marking is enabled.
 	// This hook can be used to synchronously flush output buffers or external storage before marking offsets.
-	// Default: a no-op func
+	// Default: a no-op funcMetrics
 	MarkOffsetsHook func()
 	// TBD
-	MetricsProvider MetricsProvider
+	MetricsProvider metrics.Provider
 	// TBD
 	MetricsUpdateInterval time.Duration
 }
@@ -30,7 +31,7 @@ func DefaultConfig() *Config {
 		RequiredAcks:             sarama.WaitForAll,
 		MaxInFlightMessageGroups: 5000,
 		MarkOffsetsHook:          func() {},
-		MetricsProvider:          NoopMetricsProvider{},
+		MetricsProvider:          metrics.NoopMetricsProvider{},
 		MetricsUpdateInterval:    5 * time.Second,
 	}
 }

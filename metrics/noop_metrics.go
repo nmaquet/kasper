@@ -1,4 +1,4 @@
-package kasper
+package metrics
 
 // NoopMetric is dummy metrics
 type NoopMetric struct{}
@@ -12,6 +12,9 @@ func (NoopMetric) Inc(labelValues ...string) {}
 // Add does nothing
 func (NoopMetric) Add(value float64, labelValues ...string) {}
 
+// Observe does nothing
+func (NoopMetric) Observe(value float64, labelValues ...string) {}
+
 // NoopMetricsProvider uses dummy metrics, that are not stored anywhere.
 // Kasper uses it by default, so you can replace in with real metrics provider later.
 type NoopMetricsProvider struct{}
@@ -23,5 +26,10 @@ func (NoopMetricsProvider) NewCounter(name string, help string, labelNames ...st
 
 // NewGauge creates new NoopMetric
 func (NoopMetricsProvider) NewGauge(name string, help string, labelNames ...string) Gauge {
+	return &NoopMetric{}
+}
+
+// NewSummary creates new NoopMetric
+func (NoopMetricsProvider) NewSummary(name string, help string, labelNames ...string) Summary {
 	return &NoopMetric{}
 }

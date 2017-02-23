@@ -2,6 +2,8 @@ package kv
 
 import (
 	"testing"
+
+	"github.com/movio/kasper/metrics"
 	"github.com/movio/kasper/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,15 +13,18 @@ type Planet struct {
 }
 
 func newTestInMemoryKV() *InMemoryKeyValueStore {
-	return &InMemoryKeyValueStore{
-		witness: util.NewStructPtrWitness(&Planet{}),
-		m:       make(map[string]interface{}, 10),
+	s := &InMemoryKeyValueStore{
+		witness:         util.NewStructPtrWitness(&Planet{}),
+		m:               make(map[string]interface{}, 10),
+		metricsProvider: &metrics.NoopMetricsProvider{},
 	}
+	s.createMetrics()
+	return s
 }
 
 func TestInMemoryKeyValueStore_Get_ExistingKey(t *testing.T) {
 	s := newTestInMemoryKV()
-	expected := &Planet{"Mars" }
+	expected := &Planet{"Mars"}
 	s.m["mars"] = expected
 	actual, err := s.Get("mars")
 	assert.Equal(t, nil, err)
@@ -28,7 +33,7 @@ func TestInMemoryKeyValueStore_Get_ExistingKey(t *testing.T) {
 
 func TestInMemoryKeyValueStore_Get_MissingKey(t *testing.T) {
 	s := newTestInMemoryKV()
-	expected := &Planet{"Mars" }
+	expected := &Planet{"Mars"}
 	s.m["mars"] = expected
 	actual, err := s.Get("jupiter")
 	assert.Equal(t, nil, err)
@@ -120,7 +125,7 @@ func BenchmarkInMemoryKeyValueStore_Put(b *testing.B) {
 	}
 	entriesLength := len(entries)
 	for i := 0; i < b.N; i++ {
-		entry := entries[i % entriesLength]
+		entry := entries[i%entriesLength]
 		s.Put(entry.Key, entry.Value)
 	}
 }

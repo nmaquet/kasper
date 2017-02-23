@@ -1,4 +1,4 @@
-package kasper
+package metrics
 
 // Counter is a incremental-only int value metric
 type Counter interface {
@@ -11,8 +11,14 @@ type Gauge interface {
 	Set(value float64, labelValues ...string)
 }
 
-// MetricsProvider is used to create new metrics
-type MetricsProvider interface {
+// Summary is a float value metric
+type Summary interface {
+	Observe(value float64, labelValues ...string)
+}
+
+// Provider is used to create new metrics
+type Provider interface {
 	NewCounter(name string, help string, labelNames ...string) Counter
 	NewGauge(name string, help string, labelNames ...string) Gauge
+	NewSummary(name string, help string, labelNames ...string) Summary
 }
