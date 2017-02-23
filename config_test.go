@@ -9,6 +9,5 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
-	assert.NotNil(t, config.MarkOffsetsHook)
 	assert.Equal(t, sarama.WaitForAll, config.RequiredAcks)
 }
