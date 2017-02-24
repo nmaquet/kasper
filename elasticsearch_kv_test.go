@@ -46,7 +46,7 @@ func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Get key again, should not find it this time
-	item, err := store.Get("kasper/dragon/vorgansharax")
+	item, err := store.Get("kasper/dragon/falkor")
 	assert.Nil(t, err)
 	assert.Nil(t, item)
 }
