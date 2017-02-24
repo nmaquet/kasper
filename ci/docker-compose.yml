@@ -6,7 +6,7 @@ services:
     ports:
       - "9200:9200"
       - "9100:9100"
-  ̛zookeeper:
+  zookeeper:
     image: wurstmeister/zookeeper
     ports:
       - "2181:2181"
