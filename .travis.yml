@@ -35,5 +35,5 @@ script:
  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 after_script:
- - cd integration_tests/kafka
+ - cd ci
  - sudo docker-compose down
