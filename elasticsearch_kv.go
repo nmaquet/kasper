@@ -77,7 +77,7 @@ func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, op
 	if err != nil {
 		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
-	return &ElasticsearchKeyValueStore{
+	s := &ElasticsearchKeyValueStore{
 		elasticSearchOpts: opts,
 		witness:           newStructPtrWitness(structPtr),
 		client:            client,
@@ -85,6 +85,8 @@ func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, op
 		existingIndexes:   nil,
 		metricsProvider:   metricsProvider,
 	}
+	s.createMetrics()
+	return s
 }
 
 func (s *ElasticsearchKeyValueStore) createMetrics() {
