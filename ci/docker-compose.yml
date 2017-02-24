@@ -1,0 +1,21 @@
+# From https://github.com/wurstmeister/kafka-docker
+version: '2'
+services:
+  elasticsearch:
+    image: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9100:9100"
+#  ̛zookeeper:
+#    image: wurstmeister/zookeeper
+#    ports:
+#      - "2181:2181"
+#  kafka:
+#    image: wurstmeister/kafka:0.10.0.1
+#    ports:
+#      - "9092:9092"
+#    environment:
+#      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock

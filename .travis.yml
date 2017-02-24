@@ -22,9 +22,9 @@ install:
  - docker-compose version
 
 before_script:
- - cd integration_tests/kafka
+ - cd ci
  - sudo docker-compose up --build -d
- - echo "Waiting 10 seconds for Kafka / Zookeeper to start up..."
+ - echo "Waiting 10 seconds for Kafka / Zookeeper / Elasticsearch to start up..."
  - sleep 10
  - sudo ./create_topics.sh
  - go run populate_topics.go
