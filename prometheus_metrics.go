@@ -49,6 +49,9 @@ type PrometheusMetricsProvider struct {
 	topicProcessorName string
 	containerID        string
 	Registry           *prometheus.Registry
+	summaries          map[string]*prometheus.SummaryVec
+	counters           map[string]*prometheus.CounterVec
+	gauges             map[string]*prometheus.GaugeVec
 }
 
 // NewPrometheusMetricsProvider creates new PrometheusMetricsProvider
@@ -57,21 +60,28 @@ func NewPrometheusMetricsProvider(topicProcessorName string, containerID int) *P
 		topicProcessorName,
 		strconv.Itoa(containerID),
 		prometheus.NewRegistry(),
+		make(map[string]*prometheus.SummaryVec),
+		make(map[string]*prometheus.CounterVec),
+		make(map[string]*prometheus.GaugeVec),
 	}
 }
 
 // NewCounter creates new prometheus CounterVec
 func (provider *PrometheusMetricsProvider) NewCounter(name string, help string, labelNames ...string) Counter {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
-	counterVec := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "kasper",
-			Name:      name,
-			Help:      help,
-		},
-		labelNames,
-	)
-	provider.Registry.MustRegister(counterVec)
+	counterVec, found := provider.counters[name]
+	if !found {
+		counterVec = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "kasper",
+				Name:      name,
+				Help:      help,
+			},
+			labelNames,
+		)
+		provider.Registry.MustRegister(counterVec)
+		provider.counters[name] = counterVec
+	}
 	return &prometheusCounter{
 		provider,
 		counterVec,
@@ -81,15 +91,19 @@ func (provider *PrometheusMetricsProvider) NewCounter(name string, help string, 
 // NewGauge new prometheus GaugeVec
 func (provider *PrometheusMetricsProvider) NewGauge(name string, help string, labelNames ...string) Gauge {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
-	gaugeVec := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "kasper",
-			Name:      name,
-			Help:      help,
-		},
-		labelNames,
-	)
-	provider.Registry.MustRegister(gaugeVec)
+	gaugeVec, found := provider.gauges[name]
+	if !found {
+		gaugeVec = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: "kasper",
+				Name:      name,
+				Help:      help,
+			},
+			labelNames,
+		)
+		provider.Registry.MustRegister(gaugeVec)
+		provider.gauges[name] = gaugeVec
+	}
 	return &prometheusGauge{
 		provider,
 		gaugeVec,
@@ -98,15 +112,19 @@ func (provider *PrometheusMetricsProvider) NewGauge(name string, help string, la
 
 func (provider *PrometheusMetricsProvider) NewSummary(name string, help string, labelNames ...string) Summary {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
-	summaryVec := prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Namespace: "kasper",
-			Name:      name,
-			Help:      help,
-		},
-		labelNames,
-	)
-	provider.Registry.MustRegister(summaryVec)
+	summaryVec, found := provider.summaries[name]
+	if !found {
+		summaryVec = prometheus.NewSummaryVec(
+			prometheus.SummaryOpts{
+				Namespace: "kasper",
+				Name:      name,
+				Help:      help,
+			},
+			labelNames,
+		)
+		provider.Registry.MustRegister(summaryVec)
+		provider.summaries[name] = summaryVec
+	}
 	return &prometheusSummary{
 		provider,
 		summaryVec,
