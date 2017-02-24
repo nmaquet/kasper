@@ -28,7 +28,7 @@ before_script:
  - sleep 10
  - sudo ./create_topics.sh
  - go run populate_topics.go
- - cd ../../
+ - cd ..
 
 script:
  - go test . -v -covermode=count -coverprofile=coverage.out
