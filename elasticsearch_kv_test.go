@@ -34,6 +34,9 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 }
 
 func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	// Put key
 	err := store.Put("kasper/dragon/falkor", &Dragon{"white", "Falkor"})
 	assert.Nil(t, err)
@@ -44,10 +47,14 @@ func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
 
 	// Get key again, should not find it this time
 	item, err := store.Get("kasper/dragon/vorgansharax")
+	assert.Nil(t, err)
 	assert.Nil(t, item)
 }
 
 func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	// Put 3 keys
 	err := store.Put("kasper/dragon/saphira", &Dragon{"blue", "Saphira"})
 	assert.Nil(t, err)
@@ -90,7 +97,14 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 	assert.Equal(t, &Dragon{"blue", "Saphira"}, kvs["kasper/dragon/saphira"])
 	assert.Equal(t, &Dragon{"red", "Mushu"}, kvs["kasper/dragon/mushu"])
 	assert.Equal(t, &Dragon{"green", "Fin Fang Foom"}, kvs["kasper/dragon/fin-fang-foom"])
+}
 
+func TestElasticsearchKeyValueStore_Flush(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	err := store.Flush()
+	assert.Nil(t, err)
 }
 
 func init() {
