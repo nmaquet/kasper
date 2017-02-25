@@ -147,7 +147,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	s.getCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
-		return nil, fmt.Errorf("invalid key: '%s'", key)
+		log.Panicf("invalid key: '%s'", key)
 	}
 	indexName := keyParts[0]
 	indexType := keyParts[1]
@@ -189,7 +189,7 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) 
 	for _, key := range keys {
 		keyParts := strings.Split(key, "/")
 		if len(keyParts) != 3 {
-			return nil, fmt.Errorf("invalid key: '%s'", key)
+			log.Panicf("invalid key: '%s'", key)
 		}
 		indexName := keyParts[0]
 		indexType := keyParts[1]
@@ -232,7 +232,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 	s.putCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
-		return fmt.Errorf("invalid key: '%s'", key)
+		log.Panicf("invalid key: '%s'", key)
 	}
 	indexName := keyParts[0]
 	indexType := keyParts[1]
@@ -261,7 +261,7 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
 	for _, kv := range kvs {
 		keyParts := strings.Split(kv.Key, "/")
 		if len(keyParts) != 3 {
-			return fmt.Errorf("invalid key: '%s'", kv.Key)
+			log.Panicf("invalid key: '%s'", kv.Key)
 		}
 		indexName := keyParts[0]
 		indexType := keyParts[1]
@@ -287,7 +287,7 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	s.deleteCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
-		return fmt.Errorf("invalid key: '%s'", key)
+		log.Panicf("invalid key: '%s'", key)
 	}
 	indexName := keyParts[0]
 	indexType := keyParts[1]

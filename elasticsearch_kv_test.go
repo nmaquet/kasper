@@ -49,6 +49,10 @@ func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
 	item, err := store.Get("kasper/dragon/falkor")
 	assert.Nil(t, err)
 	assert.Nil(t, item)
+
+	// Delete key again does nothing
+	err = store.Delete("kasper/dragon/falkor")
+	assert.Nil(t, err)
 }
 
 func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
@@ -105,6 +109,27 @@ func TestElasticsearchKeyValueStore_Flush(t *testing.T) {
 	}
 	err := store.Flush()
 	assert.Nil(t, err)
+}
+
+func TestElasticsearchKeyValueStore_InvalidKey(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	assert.Panics(t, func() {
+		store.Get("foo")
+	})
+	assert.Panics(t, func() {
+		store.Put("foo", &Dragon{})
+	})
+	assert.Panics(t, func() {
+		store.GetAll([]string{"foo"})
+	})
+	assert.Panics(t, func() {
+		store.PutAll([]*KeyValue{{"foo", &Dragon{}}})
+	})
+	assert.Panics(t, func() {
+		store.Delete("foo")
+	})
 }
 
 func init() {
