@@ -23,8 +23,8 @@ func TestLogger(t *testing.T) {
 		t.Skip()
 	}
 	testLogger(t, &noopLogger{})
-	testLogger(t, NewBasicLogger(false))
-	testLogger(t, NewTextLogger("test", 0, false))
+	testLogger(t, NewBasicLogger(true))
+	testLogger(t, NewTextLogger("test", 0, true))
 	testLogger(t, NewJSONLogger("test", 0, false))
 }
 
