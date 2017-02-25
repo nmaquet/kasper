@@ -7,16 +7,14 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/movio/kasper"
-	"github.com/movio/kasper/kv"
 )
 
 // WordCountExample is message processor that shows how to use key-value store in processing Kafka messages
 // and outputs results to topic "word-counts"
 type WordCountExample struct {
-	store kv.KeyValueStore
+	store kasper.KeyValueStore
 }
 
 // WordCount describes Kafka outgoing message
@@ -81,24 +79,9 @@ func main() {
 		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
-		AutoMarkOffsetsInterval: 1000 * time.Millisecond,
 		Config:                  kasper.DefaultConfig(),
 	}
-	store := kv.NewInMemoryKeyValueStore(10000, &WordCount{})
-	// store := kv.NewESKeyValueStore("http://localhost:9200", &WordCount{})
-	// store, err := kv.NewCouchbaseKeyValueStore(&kv.CouchbaseConfig{
-	//	Host:          "localhost",
-	//	Bucket:        "default",
-	//	Password:      "",
-	//	DurableWrites: false,
-	//	PersistTo:     0,
-	//	ReplicateTo:   0,
-	// }, &WordCount{})
-	// if err != nil {
-	//	log.Fatal(err)
-	// }
-	// store := kv.NewRiakKeyValueStore("127.0.0.1:8087", &WordCount{})
-
+	store := kasper.NewInMemoryKeyValueStore(10000, &WordCount{})
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
 	topicProcessor.Start()

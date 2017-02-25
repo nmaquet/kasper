@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/movio/kasper"
 )
@@ -44,8 +43,7 @@ func main() {
 		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
-		AutoMarkOffsetsInterval: 5 * time.Second,
-		Config:                  kasper.DefaultConfig(),
+		Config: kasper.DefaultConfig(),
 	}
 	makeProcessor := func() kasper.MessageProcessor { return &MultipleInputTopicsExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, makeProcessor, 0)
