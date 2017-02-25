@@ -6,7 +6,7 @@ kasper
 [![Go Report Card](https://goreportcard.com/badge/github.com/movio/kasper)](https://goreportcard.com/report/github.com/movio/kasper)
 [![Coverage Status](https://coveralls.io/repos/github/movio/kasper/badge.svg?branch=master)](https://coveralls.io/github/movio/kasper?branch=master)
 
-Kafka stream processing library written in Go.
+Kasper is a Go library for Kafka stream processing.
 
 *This project is in pre-alpha*
 
