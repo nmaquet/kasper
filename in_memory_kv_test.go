@@ -19,6 +19,10 @@ func newTestInMemoryKV() *InMemoryKeyValueStore {
 	return s
 }
 
+func TestNewInMemoryKeyValueStore(t *testing.T) {
+	NewInMemoryKeyValueStore(10, &Planet{})
+}
+
 func TestInMemoryKeyValueStore_Get_ExistingKey(t *testing.T) {
 	s := newTestInMemoryKV()
 	expected := &Planet{"Mars"}

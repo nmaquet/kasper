@@ -295,13 +295,13 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 
 	s.checkOrCreateIndex(indexName, indexType)
 
-	response, err := s.client.Delete().
+	_, err := s.client.Delete().
 		Index(indexName).
 		Type(indexType).
 		Id(valueID).
 		Do(s.context)
 
-	if response != nil && !response.Found {
+	if err != nil && err.(*elastic.Error).Status == 404 {
 		return nil
 	}
 

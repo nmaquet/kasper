@@ -58,10 +58,7 @@ func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	kvs := make([]*KeyValue, len(keys))
 	for i, key := range keys {
-		value, err := s.Get(key)
-		if err != nil {
-			return nil, err
-		}
+		value, _ := s.Get(key)
 		kvs[i] = &KeyValue{key, value}
 	}
 	return kvs, nil
@@ -80,10 +77,7 @@ func (s *InMemoryKeyValueStore) Put(key string, value interface{}) error {
 // PutAll bulk executes all Put operations
 func (s *InMemoryKeyValueStore) PutAll(kvs []*KeyValue) error {
 	for _, kv := range kvs {
-		err := s.Put(kv.Key, kv.Value)
-		if err != nil {
-			return err
-		}
+		_ = s.Put(kv.Key, kv.Value)
 	}
 
 	s.putAllSummary.Observe(float64(len(kvs)), s.witness.name)
