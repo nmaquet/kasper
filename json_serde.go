@@ -20,7 +20,7 @@ func (serde *JSONSerde) Serialize(structPtr interface{}) []byte {
 	serde.witness.assert(structPtr)
 	bytes, err := json.Marshal(structPtr)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return bytes
 }
@@ -30,7 +30,7 @@ func (serde *JSONSerde) Deserialize(bytes []byte) interface{} {
 	structPtr := serde.witness.allocate()
 	err := json.Unmarshal(bytes, structPtr)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return structPtr
 }

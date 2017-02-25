@@ -9,7 +9,7 @@ type NoopMetric struct {
 
 func (m *NoopMetric) checkLabelValues(labelValues ...string) {
 	if len(labelValues) != m.labelCount {
-		panic(fmt.Sprintf("Expected %d labels but got %d", m.labelCount, len(labelValues)))
+		log.Panic(fmt.Sprintf("Expected %d labels but got %d", m.labelCount, len(labelValues)))
 	}
 }
 

@@ -10,10 +10,10 @@ type structPtrWitness struct {
 func newStructPtrWitness(structPtr interface{}) *structPtrWitness {
 	value := reflect.ValueOf(structPtr)
 	if value.Kind() != reflect.Ptr {
-		panic("Value must be a pointer type")
+		log.Panic("Value must be a pointer type")
 	}
 	if value.Elem().Kind() != reflect.Struct {
-		panic("Witness must be a struct")
+		log.Panic("Witness must be a struct")
 	}
 	return &structPtrWitness{value.Elem().Type().Name(), value.Elem() }
 }
@@ -21,10 +21,10 @@ func newStructPtrWitness(structPtr interface{}) *structPtrWitness {
 func (w *structPtrWitness) assert(structPtr interface{}) {
 	structPtrValue := reflect.ValueOf(structPtr)
 	if structPtrValue.Kind() != reflect.Ptr {
-		panic("Value must be a pointer type")
+		log.Panic("Value must be a pointer type")
 	}
 	if structPtrValue.Elem().Type() != w.structValue.Type() {
-		panic("Value struct type doesn't match witnessed type")
+		log.Panic("Value struct type doesn't match witnessed type")
 	}
 }
 

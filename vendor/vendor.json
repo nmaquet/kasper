@@ -277,6 +277,12 @@
 			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
+			"checksumSHA1": "JoggIDZyKLxpiA0j9jVseiWZ7pg=",
+			"path": "github.com/sirupsen/logrus",
+			"revision": "7f4b1adc791766938c29457bed0703fb9134421a",
+			"revisionTime": "2017-02-15T16:43:24Z"
+		},
+		{
 			"checksumSHA1": "8rxOh1Vlti1bzoIy6mH5eL0RYsI=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
@@ -299,6 +305,12 @@
 			"path": "golang.org/x/sync/errgroup",
 			"revision": "86ddc858aa39d0f6cccccd733e482ddc52b852e9",
 			"revisionTime": "2017-02-16T18:46:11Z"
+		},
+		{
+			"checksumSHA1": "zKx9UvD5pauFqeLatHXEfVzj1k0=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "e4594059fe4cde2daf423055a596c2cd1e6c9adf",
+			"revisionTime": "2017-02-23T22:36:15Z"
 		},
 		{
 			"checksumSHA1": "EaMNpZM8OAhqq2364ycvqE2YhgY=",

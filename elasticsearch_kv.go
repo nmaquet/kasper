@@ -3,7 +3,6 @@ package kasper
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -74,8 +73,9 @@ func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, op
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
 	)
+	log.Info("Connected to Elasticsearch at ", url)
 	if err != nil {
-		panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
+		log.Panic(fmt.Sprintf("Cannot create ElasticSearch Client to '%s': %s", url, err))
 	}
 	s := &ElasticsearchKeyValueStore{
 		elasticSearchOpts: opts,
@@ -106,15 +106,16 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex(indexName string, indexT
 	}
 	exists, err := s.client.IndexExists(indexName).Do(s.context)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to check if index exists: %s", err))
+		log.Panic(fmt.Sprintf("Failed to check if index exists: %s", err))
 	}
 	if !exists {
+		log.Infof("Creating index %s", indexName)
 		_, err = s.client.
 			CreateIndex(indexName).
 			BodyString(s.elasticSearchOpts.GetIndexSettings(indexName)).
 			Do(s.context)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to create index: %s", err))
+			log.Panic(fmt.Sprintf("Failed to create index: %s", err))
 		}
 		s.putMapping(indexName, indexType)
 	}
@@ -130,18 +131,19 @@ func (s *ElasticsearchKeyValueStore) putMapping(indexName string, indexType stri
 		BodyString(s.elasticSearchOpts.GetIndexMappings(indexName)).
 		Do(s.context)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to put mapping for index: %s/%s: %s", indexName, indexType, err))
+		log.Panic(fmt.Sprintf("Failed to put mapping for index: %s/%s: %s", indexName, indexType, err))
 	}
 	if resp == nil {
-		panic(fmt.Sprintf("Expected put mapping response; got: %v", resp))
+		log.Panic(fmt.Sprintf("Expected put mapping response; got: %v", resp))
 	}
 	if !resp.Acknowledged {
-		panic(fmt.Sprintf("Expected put mapping ack; got: %v", resp.Acknowledged))
+		log.Panic(fmt.Sprintf("Expected put mapping ack; got: %v", resp.Acknowledged))
 	}
 }
 
 // Get gets value by key from store
 func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
+	log.Debug("Elasticsearch Get: ", key)
 	s.getCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
@@ -181,6 +183,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 
 // TBD
 func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
+	log.Debug("Elasticsearch GetAll: ", keys)
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
@@ -224,6 +227,7 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) 
 
 // Put updates key in store with serialized value
 func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) error {
+	log.Debugf("Elasticsearch Put: %s %#v", key, structPtr)
 	s.witness.assert(structPtr)
 	s.putCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
@@ -248,6 +252,7 @@ func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) erro
 
 // PutAll bulk executes Put operation for several kvs
 func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
+	log.Debugf("Elasticsearch PutAll of %d keys", len(kvs))
 	s.putAllSummary.Observe(float64(len(kvs)), s.witness.name)
 	if len(kvs) == 0 {
 		return nil
@@ -278,6 +283,7 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
 
 // Delete removes key from store
 func (s *ElasticsearchKeyValueStore) Delete(key string) error {
+	log.Debug("Elasticsearch Delete: ", key)
 	s.deleteCounter.Inc(s.witness.name)
 	keyParts := strings.Split(key, "/")
 	if len(keyParts) != 3 {
@@ -305,10 +311,10 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 // Flush the Elasticsearch translog to disk
 func (s *ElasticsearchKeyValueStore) Flush() error {
 	s.flushCounter.Inc(s.witness.name)
-	log.Println("Flusing ES indexes...")
+	log.Info("Elasticsearch Flush...")
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
 		Do(s.context)
-	log.Println("Done flusing ES indexes.")
+	log.Info("Elasticsearch Flush complete")
 	return err
 }

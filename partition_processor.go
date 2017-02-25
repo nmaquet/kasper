@@ -1,7 +1,6 @@
 package kasper
 
 import (
-	"log"
 	"strconv"
 
 	"github.com/Shopify/sarama"
@@ -29,22 +28,22 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 
 func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMessageProcessor, partition int) *partitionProcessor {
 	if (mp == nil && bmp == nil) || (mp != nil && bmp != nil) {
-		panic("Exactly one message processor must be provided")
+		log.Panic("Exactly one message processor must be provided")
 	}
 	consumer, err := sarama.NewConsumerFromClient(tp.client)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	partitionConsumers := make([]sarama.PartitionConsumer, len(tp.inputTopics))
 	partitionOffsetManagers := make(map[string]sarama.PartitionOffsetManager)
 	for i, topic := range tp.inputTopics {
 		pom, err := tp.offsetManager.ManagePartition(topic, int32(partition))
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		newestOffset, err := tp.client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		nextOffset, _ := pom.NextOffset()
 		if nextOffset > newestOffset {
@@ -52,7 +51,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMes
 		}
 		c, err := consumer.ConsumePartition(topic, int32(partition), nextOffset)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		partitionConsumers[i] = c
 		partitionOffsetManagers[topic] = pom
@@ -75,7 +74,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMes
 func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
 	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[consumerMessage.Topic]
 	if !ok {
-		log.Fatalf("Could not find Serde for topic '%s'", consumerMessage.Topic)
+		log.Panicf("Could not find Serde for topic '%s'", consumerMessage.Topic)
 	}
 	incomingMessage := IncomingMessage{
 		Topic:     consumerMessage.Topic,
@@ -95,7 +94,7 @@ func (pp *partitionProcessor) processBatch(messages []*sarama.ConsumerMessage) [
 	for i, message := range messages {
 		topicSerde, ok := pp.topicProcessor.config.TopicSerdes[message.Topic]
 		if !ok {
-			log.Fatalf("Could not find Serde for topic '%s'", message.Topic)
+			log.Panicf("Could not find Serde for topic '%s'", message.Topic)
 		}
 		incomingMessages[i] = &IncomingMessage{
 			Topic:     message.Topic,
@@ -132,6 +131,7 @@ func (pp *partitionProcessor) onMetricsTick() {
 }
 
 func (pp *partitionProcessor) markOffsets(message *sarama.ConsumerMessage) {
+	log.Debugf("Marking offset %s:%d", message.Topic, message.Offset+1)
 	pp.offsetManagers[message.Topic].MarkOffset(message.Offset+1, "")
 }
 
@@ -141,6 +141,7 @@ func (pp *partitionProcessor) markOffsetsForBatch(messages []*sarama.ConsumerMes
 		latestOffset[message.Topic] = message.Offset
 	}
 	for topic, offset := range latestOffset {
+		log.Debugf("Marking offset %s:%d", topic, offset+1)
 		pp.offsetManagers[topic].MarkOffset(offset+1, "")
 	}
 }
@@ -150,18 +151,18 @@ func (pp *partitionProcessor) onShutdown() {
 	for _, pom := range pp.offsetManagers {
 		err = pom.Close()
 		if err != nil {
-			log.Printf("Cannot close offset manager: %s", err)
+			log.Panicf("Cannot close offset manager: %s", err)
 		}
 
 	}
 	for _, pc := range pp.partitionConsumers {
 		err = pc.Close()
 		if err != nil {
-			log.Printf("Cannot close partition consumer: %s", err)
+			log.Panicf("Cannot close partition consumer: %s", err)
 		}
 	}
 	err = pp.consumer.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 }

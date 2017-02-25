@@ -26,7 +26,7 @@ func newSender(pp *partitionProcessor) *sender {
 func (sender *sender) Send(msg OutgoingMessage) {
 	topicSerde, ok := sender.pp.topicProcessor.config.TopicSerdes[msg.Topic]
 	if !ok {
-		panic(fmt.Sprintf("Could not find Serde for topic '%s'", msg.Topic))
+		log.Panic(fmt.Sprintf("Could not find Serde for topic '%s'", msg.Topic))
 	}
 	producerMessage := &sarama.ProducerMessage{
 		Topic:     msg.Topic,
