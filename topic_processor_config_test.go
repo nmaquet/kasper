@@ -43,3 +43,14 @@ func TestTopicProcessorConfig_producerClientID(t *testing.T) {
 	}
 	assert.Equal(t, "kasper-topic-processor-ford-prefect-42", c.producerClientID(42))
 }
+
+func TestFairPartitionToContainerID(t *testing.T) {
+	expected := map[int]int(map[int]int{
+		0: 0,
+		1: 1,
+		2: 2,
+		3: 0,
+		4: 1,
+	})
+	assert.Equal(t, expected, FairPartitionToContainerID(5, 3))
+}
