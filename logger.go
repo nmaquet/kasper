@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-var log Logger = NewStandardLogger(false)
+var log Logger = NewBasicLogger(false)
 
 type Logger interface {
 	Debug(...interface{})
@@ -20,11 +20,11 @@ type Logger interface {
 	Panicf(string, ...interface{})
 }
 
-func NewLogrusJSONLogger(topicProcessorName string, containerID int, debug bool) Logger {
+func NewJSONLogger(topicProcessorName string, containerID int, debug bool) Logger {
 	return newLogrus(topicProcessorName, containerID, debug, &logrus.JSONFormatter{})
 }
 
-func NewLogrusTextLogger(topicProcessorName string, containerID int, debug bool) Logger {
+func NewTextLogger(topicProcessorName string, containerID int, debug bool) Logger {
 	return newLogrus(topicProcessorName, containerID, debug, &logrus.TextFormatter{})
 }
 
@@ -75,10 +75,10 @@ func (l *stdlibLogger) Panic(vs ...interface{}) {
 }
 
 func (l *stdlibLogger) Panicf(format string, vs ...interface{}) {
-	l.log.Panicf(fmt.Sprintf("PANIC %s", format), vs)
+	l.log.Panicf(fmt.Sprintf("PANIC %s", format), vs...)
 }
 
-func NewStandardLogger(debug bool) Logger {
+func NewBasicLogger(debug bool) Logger {
 	return &stdlibLogger{stdlibLog.New(os.Stderr, "(KASPER) ", stdlibLog.LstdFlags), debug}
 }
 
