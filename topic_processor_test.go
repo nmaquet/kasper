@@ -315,6 +315,9 @@ const expectedResultJSON string = `
 `
 
 func populateFictionAndCharactersTopic(batchingEnabled bool) int {
+	kasperConfig := DefaultConfig()
+	kasperConfig.MetricsUpdateInterval =  100 * time.Millisecond
+
 	config := TopicProcessorConfig{
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
 		BrokerList:         []string{"localhost:9092"},
@@ -337,7 +340,7 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
-		Config: DefaultConfig(),
+		Config: kasperConfig,
 	}
 
 	characterCount := 0
