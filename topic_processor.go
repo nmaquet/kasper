@@ -47,7 +47,7 @@ type MessageProcessor interface {
 // BatchMessageProcessor processes several messages at once.
 type BatchMessageProcessor interface {
 	// ProcessBatch gets an array of incoming Kafka messages.
-	// Use Sender to send messages to ouput topics.
+	// Use Sender to send messages to output topics.
 	ProcessBatch([]*IncomingMessage, Sender, Coordinator)
 }
 
