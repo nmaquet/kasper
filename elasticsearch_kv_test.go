@@ -173,3 +173,46 @@ func ExampleNewElasticsearchKeyValueStore() {
 	user.age++
 	log.Debug(user)
 }
+
+// This function is named ExampleExamples(), this way godoc knows to associate
+// it with the Examples type.
+func ExampleNewElasticsearchKeyValueStoreWithOpts() {
+	type User struct {
+		name string
+		age  int
+	}
+
+	// use custom settings and mamppins for new indexes
+	customElasticsearchOpts := ElasticsearchOpts{
+		GetIndexSettings: func(indexName string) string {
+			return `{
+				"number_of_replicas": 3
+			}`
+		},
+		GetIndexMappings: func(indexName string) string {
+			return `{
+				"_all" : {
+					"enabled" : false
+				},
+			}`
+		},
+	}
+
+	// use custom metrics provider
+	prometheusMetricsProvider := NewPrometheusMetricsProvider("my-topic-processor", 0)
+
+	// create new ES connection,
+	store := NewElasticsearchKeyValueStoreWithOpts(
+		"http://localhost:9200",
+		&User{},
+		&customElasticsearchOpts,
+		prometheusMetricsProvider,
+	)
+	store.Put("users/user/john", User{
+		name: "John Smith",
+		age:  48,
+	})
+
+	// If index "users" did not exist, it is created with settings nad mappings you specified.
+	// Also, put method call already generated some prometheu metrics.
+}
