@@ -9,12 +9,17 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+// ElasticsearchOpts allow you to set custom mappings and settings depending on index name
 type ElasticsearchOpts struct {
+	// Returns index mappings JSON string
 	GetIndexSettings func(indexName string) string
+	// Returns index settings JSON string
 	GetIndexMappings func(indexName string) string
 }
 
-var DefaultElasticsearchOpts ElasticsearchOpts = ElasticsearchOpts{
+// DefaultElasticsearchOpts allow to create new indexes with
+// unindexed mappings, so ESStore can be ised only as basic key-value store.
+var DefaultElasticsearchOpts = ElasticsearchOpts{
 	GetIndexSettings: func(indexName string) string {
 		return `{
 			"index.translog.durability": "request"
@@ -67,7 +72,12 @@ func NewElasticsearchKeyValueStore(url string, structPtr interface{}) *Elasticse
 	return NewElasticsearchKeyValueStoreWithOpts(url, structPtr, &DefaultElasticsearchOpts, &NoopMetricsProvider{})
 }
 
-// TBD
+// NewElasticsearchKeyValueStoreWithOpts creates new ElasticsearchKeyValueStore instance.
+// Host must of the format hostname:port.
+// StructPtr should be a pointer to struct type that is used.
+// for serialization and deserialization of store values.
+// Opts allow you to set custom settings and mappings on index creatiion.
+// metricsProvider is used for reporting store requests metrics.
 func NewElasticsearchKeyValueStoreWithOpts(url string, structPtr interface{}, opts *ElasticsearchOpts, metricsProvider MetricsProvider) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
@@ -181,7 +191,7 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 	return structPtr, nil
 }
 
-// TBD
+// GetAll gets multiple keys from store using MultiGet.
 func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
 	log.Debug("Elasticsearch GetAll: ", keys)
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
