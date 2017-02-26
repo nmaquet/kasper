@@ -1,6 +1,7 @@
 package kasper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -139,4 +140,36 @@ func init() {
 		store = NewElasticsearchKeyValueStore("http://localhost:9200", &Dragon{})
 		store.client.DeleteIndex("kasper").Do(store.context)
 	}
+}
+
+// This function is named ExampleExamples(), this way godoc knows to associate
+// it with the Examples type.
+func ExampleNewElasticsearchKeyValueStore() {
+	type User struct {
+		name string
+		age  int
+	}
+
+	// create new ES connection,
+	store := NewElasticsearchKeyValueStore("http://localhost:9200", &User{})
+	store.Put("users/user/john", User{
+		name: "John Smith",
+		age:  48,
+	})
+
+	// userItem is an abstract interface
+	userItem, err := store.Get("users/user/john")
+	if err != nil {
+		// handle situation when ES store returns internal error, or value is not a valid JSON string
+		panic(fmt.Sprintf("Something is wrong with your ES store: %s", err))
+	}
+	if userItem == nil {
+		// handle not found key error
+		panic("Key users/user/john not found")
+	}
+
+	// to use userItem as User instance, we should cast it
+	user := userItem.(*User)
+	user.age++
+	log.Debug(user)
 }
