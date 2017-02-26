@@ -142,8 +142,6 @@ func init() {
 	}
 }
 
-// This function is named ExampleExamples(), this way godoc knows to associate
-// it with the Examples type.
 func ExampleNewElasticsearchKeyValueStore() {
 	type User struct {
 		name string
@@ -174,8 +172,6 @@ func ExampleNewElasticsearchKeyValueStore() {
 	log.Debug(user)
 }
 
-// This function is named ExampleExamples(), this way godoc knows to associate
-// it with the Examples type.
 func ExampleNewElasticsearchKeyValueStoreWithOpts() {
 	type User struct {
 		name string
@@ -214,5 +210,5 @@ func ExampleNewElasticsearchKeyValueStoreWithOpts() {
 	})
 
 	// If index "users" did not exist, it is created with settings nad mappings you specified.
-	// Also, put method call already generated some prometheu metrics.
+	// Also, store.Put method call already generated some prometheus metrics.
 }
