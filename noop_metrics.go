@@ -39,15 +39,15 @@ type NoopMetricsProvider struct{}
 
 // NewCounter creates new NoopMetric
 func (m *NoopMetricsProvider) NewCounter(name string, help string, labelNames ...string) Counter {
-	return &NoopMetric{len(labelNames) }
+	return &NoopMetric{len(labelNames)}
 }
 
 // NewGauge creates new NoopMetric
 func (m *NoopMetricsProvider) NewGauge(name string, help string, labelNames ...string) Gauge {
-	return &NoopMetric{len(labelNames) }
+	return &NoopMetric{len(labelNames)}
 }
 
 // NewSummary creates new NoopMetric
 func (m *NoopMetricsProvider) NewSummary(name string, help string, labelNames ...string) Summary {
-	return &NoopMetric{len(labelNames) }
+	return &NoopMetric{len(labelNames)}
 }

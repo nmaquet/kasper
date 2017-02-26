@@ -20,8 +20,8 @@ type Config struct {
 // DefaultConfig creates a config that you can start with
 func DefaultConfig() *Config {
 	return &Config{
-		RequiredAcks:             sarama.WaitForAll,
-		MetricsProvider:          &NoopMetricsProvider{},
-		MetricsUpdateInterval:    5 * time.Second,
+		RequiredAcks:          sarama.WaitForAll,
+		MetricsProvider:       &NoopMetricsProvider{},
+		MetricsUpdateInterval: 5 * time.Second,
 	}
 }

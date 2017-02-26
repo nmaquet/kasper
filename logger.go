@@ -1,13 +1,14 @@
 package kasper
 
 import (
-	"github.com/sirupsen/logrus"
+	"fmt"
 	stdlibLog "log"
 	"os"
-	"fmt"
+
+	"github.com/sirupsen/logrus"
 )
 
-var log Logger = NewBasicLogger(false)
+var log = NewBasicLogger(false)
 
 type Logger interface {
 	Debug(...interface{})
@@ -84,12 +85,12 @@ func NewBasicLogger(debug bool) Logger {
 
 type noopLogger struct{}
 
-func (noopLogger) Debug(...interface{}) {}
+func (noopLogger) Debug(...interface{})          {}
 func (noopLogger) Debugf(string, ...interface{}) {}
-func (noopLogger) Info(...interface{}) {}
-func (noopLogger) Infof(string, ...interface{}) {}
-func (noopLogger) Panic(...interface{}) {panic("panic")}
-func (noopLogger) Panicf(string, ...interface{}) {panic("panic")}
+func (noopLogger) Info(...interface{})           {}
+func (noopLogger) Infof(string, ...interface{})  {}
+func (noopLogger) Panic(...interface{})          { panic("panic") }
+func (noopLogger) Panicf(string, ...interface{}) { panic("panic") }
 
 func SetLogger(logger Logger) {
 	log = logger

@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -134,7 +135,7 @@ func TestElasticsearchKeyValueStore_InvalidKey(t *testing.T) {
 
 func init() {
 	SetLogger(&noopLogger{})
-	if ! testing.Short() {
+	if !testing.Short() {
 		store = NewElasticsearchKeyValueStore("http://localhost:9200", &Dragon{})
 		store.client.DeleteIndex("kasper").Do(store.context)
 	}

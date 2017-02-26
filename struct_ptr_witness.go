@@ -3,7 +3,7 @@ package kasper
 import "reflect"
 
 type structPtrWitness struct {
-	name string
+	name        string
 	structValue reflect.Value
 }
 
@@ -15,7 +15,7 @@ func newStructPtrWitness(structPtr interface{}) *structPtrWitness {
 	if value.Elem().Kind() != reflect.Struct {
 		log.Panic("Witness must be a struct")
 	}
-	return &structPtrWitness{value.Elem().Type().Name(), value.Elem() }
+	return &structPtrWitness{value.Elem().Type().Name(), value.Elem()}
 }
 
 func (w *structPtrWitness) assert(structPtr interface{}) {

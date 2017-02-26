@@ -316,7 +316,7 @@ const expectedResultJSON string = `
 
 func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	config := DefaultConfig()
-	config.MetricsUpdateInterval =  100 * time.Millisecond
+	config.MetricsUpdateInterval = 100 * time.Millisecond
 
 	tpConfig := TopicProcessorConfig{
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),

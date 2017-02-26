@@ -79,7 +79,7 @@ func main() {
 		PartitionToContainerID: map[int]int{
 			0: 0,
 		},
-		Config:                  kasper.DefaultConfig(),
+		Config: kasper.DefaultConfig(),
 	}
 	store := kasper.NewInMemoryKeyValueStore(10000, &WordCount{})
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
