@@ -10,6 +10,7 @@ import (
 
 var log = NewBasicLogger(false)
 
+// Logger is a logging interface for Kasper
 type Logger interface {
 	Debug(...interface{})
 	Debugf(string, ...interface{})
@@ -21,10 +22,12 @@ type Logger interface {
 	Panicf(string, ...interface{})
 }
 
+// NewJSONLogger uses logrus JSON formatter
 func NewJSONLogger(topicProcessorName string, containerID int, debug bool) Logger {
 	return newLogrus(topicProcessorName, containerID, debug, &logrus.JSONFormatter{})
 }
 
+// NewTextLogger uses logrus text formatter
 func NewTextLogger(topicProcessorName string, containerID int, debug bool) Logger {
 	return newLogrus(topicProcessorName, containerID, debug, &logrus.TextFormatter{})
 }
@@ -79,6 +82,7 @@ func (l *stdlibLogger) Panicf(format string, vs ...interface{}) {
 	l.log.Panicf(fmt.Sprintf("PANIC %s", format), vs...)
 }
 
+// NewBasicLogger uses stdlib logger
 func NewBasicLogger(debug bool) Logger {
 	return &stdlibLogger{stdlibLog.New(os.Stderr, "(KASPER) ", stdlibLog.LstdFlags), debug}
 }
@@ -92,6 +96,7 @@ func (noopLogger) Infof(string, ...interface{})  {}
 func (noopLogger) Panic(...interface{})          { panic("panic") }
 func (noopLogger) Panicf(string, ...interface{}) { panic("panic") }
 
+// SetLogger allows you to set custom logging interface for Kasper
 func SetLogger(logger Logger) {
 	log = logger
 }
