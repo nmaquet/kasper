@@ -89,7 +89,7 @@ func (provider *PrometheusMetricsProvider) NewCounter(name string, help string, 
 	}
 }
 
-// NewGauge new prometheus GaugeVec
+// NewGauge creates new prometheus GaugeVec
 func (provider *PrometheusMetricsProvider) NewGauge(name string, help string, labelNames ...string) Gauge {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	gaugeVec, found := provider.gauges[name]
@@ -111,6 +111,7 @@ func (provider *PrometheusMetricsProvider) NewGauge(name string, help string, la
 	}
 }
 
+// NewSummary creates new prometheus SummaryVec
 func (provider *PrometheusMetricsProvider) NewSummary(name string, help string, labelNames ...string) Summary {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	summaryVec, found := provider.summaries[name]

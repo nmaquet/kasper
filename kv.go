@@ -27,6 +27,7 @@ type KeyValueStore interface {
 	Flush() error
 }
 
+// ToMap transforms KeyValue pairs to key-value map
 func ToMap(kvs []*KeyValue, err error) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
@@ -40,6 +41,7 @@ func ToMap(kvs []*KeyValue, err error) (map[string]interface{}, error) {
 	return res, nil
 }
 
+// FromMap key-value map to KeyValue pairs
 func FromMap(m map[string]interface{}) []*KeyValue {
 	res := make([]*KeyValue, len(m))
 	i := 0

@@ -1,5 +1,6 @@
 package kasper
 
+// InMemoryKeyValueStore is im-memory store, that stores keys in map.
 type InMemoryKeyValueStore struct {
 	witness         *structPtrWitness
 	m               map[string]interface{}
@@ -20,7 +21,7 @@ func NewInMemoryKeyValueStore(size int, structPtr interface{}) *InMemoryKeyValue
 	return NewInMemoryKeyValueStoreWithMetrics(size, structPtr, &NoopMetricsProvider{})
 }
 
-// NewInMemoryKeyValueStoreWithMetrics creates new store.
+// NewInMemoryKeyValueStoreWithMetrics creates new store with custom metrics provider.
 // StructPtr should be a pointer to struct type that is used
 // for serialization and deserialization of store values.
 func NewInMemoryKeyValueStoreWithMetrics(size int, structPtr interface{}, metricsProvider MetricsProvider) *InMemoryKeyValueStore {
@@ -43,7 +44,7 @@ func (s *InMemoryKeyValueStore) createMetrics() {
 	s.sizeGauge = s.metricsProvider.NewGauge("InMemoryKeyValueStore_Size", "Gauge of number of keys", "type")
 }
 
-// Get gets value by key from store
+// Get gets value by key from underlying map
 func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 	s.getCounter.Inc(s.witness.name)
 	src, found := s.m[key]
@@ -53,7 +54,7 @@ func (s *InMemoryKeyValueStore) Get(key string) (interface{}, error) {
 	return src, nil
 }
 
-// TBD
+// GetAll gets several keys from underlying map at once. Returns KeyValue pairs.
 func (s *InMemoryKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	kvs := make([]*KeyValue, len(keys))
