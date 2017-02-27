@@ -126,6 +126,21 @@ func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {
 	}
 }
 
+func (pp *partitionProcessor) hasConsumedAllMessages() bool {
+	highWaterMarks := pp.consumer.HighWaterMarks()
+	for _, topic := range pp.topicProcessor.inputTopics {
+		offsetManager := pp.offsetManagers[topic]
+		currentOffset, _ := offsetManager.NextOffset()
+		highWaterMark := highWaterMarks[topic][int32(pp.partition)]
+		if highWaterMark != currentOffset {
+			logger.Debugf("Topic %s partition %d has messages remaining to consume (offset = %d, hight water mark = %d)", topic, pp.partition, currentOffset, highWaterMark)
+			return false
+		}
+	}
+	logger.Debug("Partitions %d of all input topics have been consumed", pp.partition)
+	return true
+}
+
 func (pp *partitionProcessor) onMetricsTick() {
 	pp.countMessagesBehindHighWaterMark()
 }

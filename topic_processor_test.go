@@ -35,8 +35,6 @@ type IDs struct {
 }
 
 type Test struct {
-	characterCount           *int
-	fictionCount             *int
 	sendCount                *int
 	characterStore           map[string]*Character
 	fictionStore             map[string]*Fiction
@@ -52,10 +50,8 @@ func (t *Test) ProcessBatch(msgs []*IncomingMessage, sender Sender, coordinator 
 func (t *Test) Process(msg IncomingMessage, sender Sender, coordinator Coordinator) {
 	topic := msg.Topic
 	if topic == "characters" {
-		*t.characterCount++
 		t.processCharacter(msg, sender, coordinator)
 	} else if topic == "fictions" {
-		*t.fictionCount++
 		t.processFictions(msg, sender, coordinator)
 	} else {
 		logger.Panic(fmt.Sprintf("Unrecoginzed topic: %s", topic))
@@ -343,13 +339,9 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		Config: config,
 	}
 
-	characterCount := 0
-	fictionCount := 0
 	sendCount := 0
 
 	test := &Test{
-		&characterCount,
-		&fictionCount,
 		&sendCount,
 		make(map[string]*Character, 100),
 		make(map[string]*Fiction, 100),
@@ -374,7 +366,7 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	topicProcessor.Start()
 	for {
 		time.Sleep(100 * time.Millisecond)
-		if characterCount >= characterTotal && fictionCount >= fictionTotal {
+		if topicProcessor.HasConsumedAllMessages() {
 			break
 		}
 	}

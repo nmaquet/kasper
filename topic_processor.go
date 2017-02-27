@@ -182,6 +182,18 @@ func (tp *TopicProcessor) Shutdown() {
 	tp.waitGroup.Wait()
 }
 
+// HasConsumedAllMessages returns true when all input topics have been entirely consumed
+func (tp *TopicProcessor) HasConsumedAllMessages() bool {
+	logger.Debugf("Checking wheter we have more messages to consume")
+	for _, partition := range tp.partitions {
+		if ! tp.partitionProcessors[int32(partition)].hasConsumedAllMessages() {
+			return false
+		}
+	}
+	logger.Debug("No more messages to consume")
+	return true
+}
+
 func (tp *TopicProcessor) runLoop() {
 	consumerChan := tp.getConsumerMessagesChan()
 	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
