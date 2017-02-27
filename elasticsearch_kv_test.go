@@ -135,7 +135,7 @@ func TestElasticsearchKeyValueStore_InvalidKey(t *testing.T) {
 }
 
 func init() {
-	SetLogger(&noopLogger{})
+	SetLogger(&NoopLogger{})
 	if !testing.Short() {
 		store = NewElasticsearchKeyValueStore("http://localhost:9200", &Dragon{})
 		store.client.DeleteIndex("kasper").Do(store.context)

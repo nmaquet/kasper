@@ -445,5 +445,5 @@ func validateFictionsAndCharactersTopic(partitionConsumer sarama.PartitionConsum
 }
 
 func init() {
-	SetLogger(&noopLogger{})
+	SetLogger(&NoopLogger{})
 }

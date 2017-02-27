@@ -87,14 +87,26 @@ func NewBasicLogger(debug bool) Logger {
 	return &stdlibLogger{stdlibLog.New(os.Stderr, "(KASPER) ", stdlibLog.LstdFlags), debug}
 }
 
-type noopLogger struct{}
+// NoopLogger does nothing. It is used as a default logger.
+type NoopLogger struct{}
 
-func (noopLogger) Debug(...interface{})          {}
-func (noopLogger) Debugf(string, ...interface{}) {}
-func (noopLogger) Info(...interface{})           {}
-func (noopLogger) Infof(string, ...interface{})  {}
-func (noopLogger) Panic(...interface{})          { panic("panic") }
-func (noopLogger) Panicf(string, ...interface{}) { panic("panic") }
+// Debug does nothing.
+func (NoopLogger) Debug(...interface{}) {}
+
+// Debugf does nothing.
+func (NoopLogger) Debugf(string, ...interface{}) {}
+
+// Info does nothing.
+func (NoopLogger) Info(...interface{}) {}
+
+// Infof does nothing.
+func (NoopLogger) Infof(string, ...interface{}) {}
+
+// Panic calls built-in panic.
+func (NoopLogger) Panic(...interface{}) { panic("panic") }
+
+// Panicf calls built-in panic.
+func (NoopLogger) Panicf(string, ...interface{}) { panic("panic") }
 
 // SetLogger allows you to set custom logging interface for Kasper
 func SetLogger(logger Logger) {
