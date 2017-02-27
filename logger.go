@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = NewBasicLogger(false)
+var logger = NewBasicLogger(false)
 
 // Logger is a logging interface for Kasper
 type Logger interface {
@@ -109,6 +109,6 @@ func (NoopLogger) Panic(...interface{}) { panic("panic") }
 func (NoopLogger) Panicf(string, ...interface{}) { panic("panic") }
 
 // SetLogger allows you to set custom logging interface for Kasper
-func SetLogger(logger Logger) {
-	log = logger
+func SetLogger(newLogger Logger) {
+	logger = newLogger
 }

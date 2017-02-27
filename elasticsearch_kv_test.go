@@ -1,6 +1,7 @@
 package kasper
 
 import (
+	"log"
 	"fmt"
 	"testing"
 
@@ -169,7 +170,7 @@ func ExampleNewElasticsearchKeyValueStore() {
 	// to use userItem as User instance, we should cast it
 	user := userItem.(*User)
 	user.age++
-	log.Debug(user)
+	log.Println(user)
 }
 
 func ExampleNewElasticsearchKeyValueStoreWithOpts() {

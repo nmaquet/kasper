@@ -133,12 +133,12 @@ func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
 
 func mustHaveValidConfig(config *TopicProcessorConfig, containerID int) {
 	if containerID < 0 || containerID >= config.ContainerCount {
-		log.Panicf("ContainerID expected to be between 0 and %d, got: %d", config.ContainerCount-1, containerID)
+		logger.Panicf("ContainerID expected to be between 0 and %d, got: %d", config.ContainerCount-1, containerID)
 	}
 	for _, topic := range config.InputTopics {
 		_, ok := config.TopicSerdes[topic]
 		if !ok {
-			log.Panicf("Could not find Serde for topic '%s'", topic)
+			logger.Panicf("Could not find Serde for topic '%s'", topic)
 		}
 	}
 }
@@ -148,26 +148,26 @@ func mustSetupClient(config *TopicProcessorConfig, containerID int) (sarama.Clie
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // TODO: make this configurable
 	client, err := sarama.NewClient(config.BrokerList, saramaConfig)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
-	log.Info("Connected to Kafka Brokers", config.BrokerList)
+	logger.Info("Connected to Kafka Brokers", config.BrokerList)
 	partitions := config.partitionsForContainer(containerID)
 	for _, partition := range partitions {
 		_, ok := config.PartitionToContainerID[partition]
 		if !ok {
-			log.Panic("Could not find PartitionToContainerID mapping for partition ", partition)
+			logger.Panic("Could not find PartitionToContainerID mapping for partition ", partition)
 		}
 	}
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	return client, partitions, offsetManager
 }
 
 // Start launches a deferred routine for topic processing.
 func (tp *TopicProcessor) Start() {
-	log.Info("Topic processor started")
+	logger.Info("Topic processor started")
 	tp.waitGroup.Add(1)
 	go func() {
 		defer tp.waitGroup.Done()
@@ -177,7 +177,7 @@ func (tp *TopicProcessor) Start() {
 
 // Shutdown safely shuts down topic processing, waiting for unfinished jobs
 func (tp *TopicProcessor) Shutdown() {
-	log.Info("Received shutdown request")
+	logger.Info("Received shutdown request")
 	close(tp.shutdown)
 	tp.waitGroup.Wait()
 }
@@ -203,26 +203,26 @@ func (tp *TopicProcessor) runLoop() {
 		lengths[partition] = 0
 	}
 
-	log.Info("Entering run loop")
+	logger.Info("Entering run loop")
 
 	for {
 		select {
 		case consumerMessage := <-consumerChan:
-			log.Debugf("Received: %s", consumerMessage)
+			logger.Debugf("Received: %s", consumerMessage)
 			if tp.batchingEnabled {
 				partition := int(consumerMessage.Partition)
 				batches[partition][lengths[partition]] = consumerMessage
 				lengths[partition]++
 				if lengths[partition] == tp.batchSize {
-					log.Debugf("Processing batch of %d messages...", tp.batchSize)
+					logger.Debugf("Processing batch of %d messages...", tp.batchSize)
 					tp.processConsumerMessageBatch(batches[partition], partition)
 					lengths[partition] = 0
-					log.Debug("Processing of batch complete")
+					logger.Debug("Processing of batch complete")
 				}
 			} else {
-				log.Debug("Processing message...")
+				logger.Debug("Processing message...")
 				tp.processConsumerMessage(consumerMessage)
-				log.Debug("Processing of message complete")
+				logger.Debug("Processing of message complete")
 			}
 		case <-metricsTicker.C:
 			tp.onMetricsTick()
@@ -231,10 +231,10 @@ func (tp *TopicProcessor) runLoop() {
 				if lengths[partition] == 0 {
 					continue
 				}
-				log.Debugf("Processing batch of %d messages...", lengths[partition])
+				logger.Debugf("Processing batch of %d messages...", lengths[partition])
 				tp.processConsumerMessageBatch(batches[partition][0:lengths[partition]], partition)
 				lengths[partition] = 0
-				log.Debug("Processing of batch complete")
+				logger.Debug("Processing of batch complete")
 			}
 		case <-tp.shutdown:
 			tp.onShutdown(metricsTicker, batchTicker)
@@ -248,9 +248,9 @@ func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.Consume
 	pp := tp.partitionProcessors[consumerMessage.Partition]
 	producerMessages := pp.process(consumerMessage)
 	if len(producerMessages) > 0 {
-		log.Debugf("Producing %d Kafka messages...", len(producerMessages))
+		logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
 		err := tp.producer.SendMessages(producerMessages)
-		log.Debug("Producing of Kafka messages complete")
+		logger.Debug("Producing of Kafka messages complete")
 		if err != nil {
 			tp.onProducerError(err)
 		}
@@ -268,9 +268,9 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 	pp := tp.partitionProcessors[int32(partition)]
 	producerMessages := pp.processBatch(messages)
 	if len(producerMessages) > 0 {
-		log.Debugf("Producing %d Kafka messages...", len(producerMessages))
+		logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
 		err := tp.producer.SendMessages(producerMessages)
-		log.Debug("Producing of Kafka messages complete")
+		logger.Debug("Producing of Kafka messages complete")
 		if err != nil {
 			tp.onProducerError(err)
 		}
@@ -282,7 +282,7 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 }
 
 func (tp *TopicProcessor) onShutdown(tickers ...*time.Ticker) {
-	log.Info("Shutting down topic processor...")
+	logger.Info("Shutting down topic processor...")
 	for _, ticker := range tickers {
 		if ticker != nil {
 			ticker.Stop()
@@ -293,13 +293,13 @@ func (tp *TopicProcessor) onShutdown(tickers ...*time.Ticker) {
 	}
 	err := tp.producer.Close()
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	err = tp.client.Close()
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
-	log.Info("Shutdown complete")
+	logger.Info("Shutdown complete")
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
@@ -323,7 +323,7 @@ func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessa
 }
 
 func (tp *TopicProcessor) onProducerError(err error) {
-	log.Panic(err)
+	logger.Panic(err)
 }
 
 func (tp *TopicProcessor) onMetricsTick() {
@@ -350,7 +350,7 @@ func mustSetupProducer(brokers []string, producerClientID string, requiredAcks s
 
 	producer, err := sarama.NewSyncProducer(brokers, saramaConfig)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 
 	return producer
