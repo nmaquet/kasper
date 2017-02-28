@@ -3,6 +3,7 @@ package kasper
 import (
 	"log"
 	"fmt"
+	"time"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,16 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 	assert.Nil(t, err)
 	dragon := item.(*Dragon)
 	assert.Equal(t, &Dragon{"green", "Vorgansharax"}, dragon)
+
+	// Test failed PUT (400)
+	now := fmt.Sprintf("%d", time.Now().UnixNano())
+	// First trick Elasticsearch into thinking Color is a date field...
+	key := fmt.Sprintf("kasper-%s/dragon-%s/vorgansharax", now, now)
+	err = store.Put(key, &Dragon{"2009-11-15T14:12:12", "Vorgansharax"})
+	assert.Nil(t, err)
+	// Then try to put a regular string in
+	err = store.Put(key, &Dragon{"", "Vorgansharax"})
+	assert.NotNil(t, err)
 }
 
 func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
@@ -104,6 +115,24 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 	assert.Equal(t, &Dragon{"blue", "Saphira"}, kvs["kasper/dragon/saphira"])
 	assert.Equal(t, &Dragon{"red", "Mushu"}, kvs["kasper/dragon/mushu"])
 	assert.Equal(t, &Dragon{"green", "Fin Fang Foom"}, kvs["kasper/dragon/fin-fang-foom"])
+
+	// Test failed PUT (400)
+	now := fmt.Sprintf("%d", time.Now().UnixNano())
+	// First trick Elasticsearch into thinking Color is a date field...
+	keyPrefix := fmt.Sprintf("kasper-%s/dragon-%s/", now, now)
+	err = store.Put(fmt.Sprintf("%s%s", keyPrefix, "vorgansharax"), &Dragon{"2009-11-15T14:12:12", "Vorgansharax"})
+	assert.Nil(t, err)
+	// Then try to put a regular string in
+	err = store.PutAll(FromMap(map[string]interface{}{
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax1"): &Dragon{"blue", "Vorgansharax1"},
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax2"): &Dragon{"blue", "Vorgansharax2"},
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax3"): &Dragon{"blue", "Vorgansharax3"},
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax4"): &Dragon{"blue", "Vorgansharax4"},
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax5"): &Dragon{"blue", "Vorgansharax5"},
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax6"): &Dragon{"blue", "Vorgansharax6"},
+		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax7"): &Dragon{"blue", "Vorgansharax7"},
+	}))
+	assert.NotNil(t, err)
 }
 
 func TestElasticsearchKeyValueStore_Flush(t *testing.T) {

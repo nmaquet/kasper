@@ -3,6 +3,7 @@ package kasper
 import (
 	"encoding/json"
 	"fmt"
+	"errors"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -287,8 +288,27 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
 			Doc(kv.Value),
 		)
 	}
-	_, err := bulk.Do(s.context)
-	return err
+	response, err := bulk.Do(s.context)
+	if err != nil {
+		return err
+	}
+	if response.Errors {
+		reasons := []string{}
+		failed := response.Failed()
+		for i, item := range failed {
+			if item.Error != nil {
+				reason := fmt.Sprintf("id = %s, error = %s\n", item.Id, item.Error.Reason)
+				reasons = append(reasons, reason)
+			}
+			if i == 4 {
+				reason := fmt.Sprintf("(ommited %d more errors)", len(failed) - 5)
+				reasons = append(reasons, reason)
+				break
+			}
+		}
+		return errors.New(fmt.Sprintf("PutAll failed for some requests:\n%s", strings.Join(reasons, "")))
+	}
+	return nil
 }
 
 // Delete removes key from store
