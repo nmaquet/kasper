@@ -10,6 +10,8 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+const maxBulkErrorReasons = 5
+
 // ElasticsearchOpts allow you to set custom mappings and settings depending on index name
 type ElasticsearchOpts struct {
 	// Returns index mappings JSON string
@@ -300,8 +302,8 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
 				reason := fmt.Sprintf("id = %s, error = %s\n", item.Id, item.Error.Reason)
 				reasons = append(reasons, reason)
 			}
-			if i == 4 {
-				reason := fmt.Sprintf("(ommited %d more errors)", len(failed) - 5)
+			if i == maxBulkErrorReasons-1 {
+				reason := fmt.Sprintf("(ommited %d more errors)", len(failed)-maxBulkErrorReasons)
 				reasons = append(reasons, reason)
 				break
 			}
