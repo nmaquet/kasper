@@ -29,6 +29,7 @@ type KeyValueStore interface {
 
 type MultitenantKeyValueStore interface {
 	Tenant(tenant string) KeyValueStore
+	AllTenants() []string
 }
 
 // ToMap transforms KeyValue pairs to key-value map

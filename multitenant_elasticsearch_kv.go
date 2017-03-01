@@ -86,3 +86,14 @@ func (mtkv *MultitenantElasticsearchKVStore) Tenant(tenant string) KeyValueStore
 	}
 	return kv
 }
+
+
+func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
+	tenants := make([]string, len(mtkv.kvs))
+	i := 0
+	for tenant := range mtkv.kvs {
+		tenants[i] = tenant
+		i++
+	}
+	return tenants
+}
