@@ -100,3 +100,7 @@ func (s *InMemoryKeyValueStore) Flush() error {
 	s.flushCounter.Inc(s.witness.name)
 	return nil
 }
+
+func (s *InMemoryKeyValueStore) GetMap() map[string]interface{} {
+	return s.m
+}

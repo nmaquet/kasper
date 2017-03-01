@@ -289,3 +289,7 @@ func (s *ElasticsearchKeyValueStore) Flush() error {
 	logger.Info("Elasticsearch Flush complete")
 	return err
 }
+
+func (s *ElasticsearchKeyValueStore) GetClient() *elastic.Client {
+	return s.client
+}
