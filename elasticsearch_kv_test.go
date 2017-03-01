@@ -133,6 +133,12 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 		fmt.Sprintf("%s%s", keyPrefix, "vorgansharax7"): &Dragon{"blue", "Vorgansharax7"},
 	}))
 	assert.NotNil(t, err)
+
+	// GetAll of empty list should work
+	_, err = store.GetAll(nil)
+	assert.Nil(t, err)
+	_, err = store.GetAll([]string{})
+	assert.Nil(t, err)
 }
 
 func TestElasticsearchKeyValueStore_Flush(t *testing.T) {

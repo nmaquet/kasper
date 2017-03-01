@@ -196,6 +196,9 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 
 // GetAll gets multiple keys from store using MultiGet.
 func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
 	logger.Debug("Elasticsearch GetAll: ", keys)
 	s.getAllSummary.Observe(float64(len(keys)), s.witness.name)
 	multiGet := s.client.MultiGet()

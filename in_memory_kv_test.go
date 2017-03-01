@@ -84,6 +84,14 @@ func TestInMemoryKeyValueStore_GetAll(t *testing.T) {
 	assert.Equal(t, kvs[1].Value, earth)
 }
 
+func TestInMemoryKeyValueStore_GetAll_Empty(t *testing.T) {
+	s := newTestInMemoryKV()
+	_, err := s.GetAll([]string{})
+	assert.Nil(t, err)
+	_, err = s.GetAll(nil)
+	assert.Nil(t, err)
+}
+
 func TestInMemoryKeyValueStore_PutAll(t *testing.T) {
 	s := newTestInMemoryKV()
 	earth := &Planet{"Earth"}
@@ -94,6 +102,15 @@ func TestInMemoryKeyValueStore_PutAll(t *testing.T) {
 	assert.Equal(t, s.m["earth"], earth)
 	assert.Equal(t, s.m["mars"], mars)
 }
+
+func TestInMemoryKeyValueStore_PutAll_Empty(t *testing.T) {
+	s := newTestInMemoryKV()
+	err := s.PutAll([]*KeyValue{})
+	assert.Nil(t, err)
+	err = s.PutAll(nil)
+	assert.Nil(t, err)
+}
+
 
 func TestInMemoryKeyValueStore_Flush(t *testing.T) {
 	s := newTestInMemoryKV()
