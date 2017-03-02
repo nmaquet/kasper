@@ -1,5 +1,7 @@
 package kasper
 
+import "reflect"
+
 type MultitenantInMemoryKVStore struct {
 	structPtrWitness *structPtrWitness
 	initialSize      int
@@ -41,6 +43,9 @@ func (mtkv *MultitenantInMemoryKVStore) Fetch(tenantKeys []*TenantKey) (*Multite
 		structPtr, err := mtkv.Tenant(tenant).Get(key)
 		if err != nil {
 			return nil, err
+		}
+		if reflect.ValueOf(structPtr).IsNil() {
+			continue
 		}
 		err = res.Tenant(tenant).Put(key, structPtr)
 		if err != nil {
