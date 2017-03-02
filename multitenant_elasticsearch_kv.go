@@ -104,7 +104,7 @@ func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 	return tenants
 }
 
-func (mtkv *MultitenantElasticsearchKVStore) GetAll(keys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
+func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
 	res := NewMultitenantInMemoryKVStore(len(keys)/10, mtkv.witness.allocate())
 	if len(keys) == 0 {
 		return res, nil
@@ -144,7 +144,7 @@ func (mtkv *MultitenantElasticsearchKVStore) GetAll(keys []*TenantKey) (*Multite
 	return res, nil
 }
 
-func (mtkv *MultitenantElasticsearchKVStore) PutAll(s *MultitenantInMemoryKVStore) error {
+func (mtkv *MultitenantElasticsearchKVStore) Push(s *MultitenantInMemoryKVStore) error {
 	bulk := mtkv.client.Bulk()
 	i := 0
 	for _, tenant := range s.AllTenants() {

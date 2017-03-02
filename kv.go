@@ -35,6 +35,8 @@ type KeyValueStore interface {
 type MultitenantKeyValueStore interface {
 	Tenant(tenant string) KeyValueStore
 	AllTenants() []string
+	Fetch(keys []*TenantKey) (*MultitenantInMemoryKVStore, error)
+	Push(store *MultitenantInMemoryKVStore) error
 }
 
 // ToMap transforms KeyValue pairs to key-value map

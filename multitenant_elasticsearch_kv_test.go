@@ -30,7 +30,7 @@ func TestMultitenantElasticsearchKVStore_PutAll_GetAll(t *testing.T) {
 	mtkv.Tenant("marvel").Put("spiderman", spiderman)
 	mtkv.Tenant("dc").Put("batman", batman)
 
-	s, err := mtkv.GetAll([]*TenantKey{{"marvel", "spiderman"}, {"dc", "batman"}})
+	s, err := mtkv.Fetch([]*TenantKey{{"marvel", "spiderman"}, {"dc", "batman"}})
 	assert.Nil(t, err)
 
 	hero, _ := s.Tenant("marvel").Get("spiderman")
@@ -42,7 +42,7 @@ func TestMultitenantElasticsearchKVStore_PutAll_GetAll(t *testing.T) {
 	s.Tenant("marvel").Put("ironman", ironman)
 	s.Tenant("dc").Put("superman", superman)
 
-	err = mtkv.PutAll(s)
+	err = mtkv.Push(s)
 	assert.Nil(t, err)
 
 	hero, err = mtkv.Tenant("marvel").Get("ironman")
