@@ -16,6 +16,11 @@ type KeyValue struct {
 	Value interface{}
 }
 
+type TenantKey struct {
+	Tenant string
+	Key    string
+}
+
 // KeyValueStore is universal interface for a key-value store
 // Keys are strings, and values are pointers to structs
 type KeyValueStore interface {

@@ -16,7 +16,7 @@ func (mtkv *MultitenantInMemoryKVStore) AllTenants() []string {
 	return tenants
 }
 
-func NewMultitenantInMemoryKVStore(size int, structPtr interface{}) MultitenantKeyValueStore {
+func NewMultitenantInMemoryKVStore(size int, structPtr interface{}) *MultitenantInMemoryKVStore {
 	return &MultitenantInMemoryKVStore{
 		structPtrWitness: newStructPtrWitness(structPtr),
 		initialSize:      size,

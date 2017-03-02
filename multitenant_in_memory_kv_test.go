@@ -6,8 +6,8 @@ import (
 )
 
 type Hero struct {
-	name  string
-	power string
+	Name  string `json:"name"`
+	Power string `json:"power"`
 }
 
 func TestMultitenantInMemoryKVStore_ForTenant(t *testing.T) {

@@ -243,20 +243,7 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
 		return err
 	}
 	if response.Errors {
-		reasons := []string{}
-		failed := response.Failed()
-		for i, item := range failed {
-			if item.Error != nil {
-				reason := fmt.Sprintf("id = %s, error = %s\n", item.Id, item.Error.Reason)
-				reasons = append(reasons, reason)
-			}
-			if i == maxBulkErrorReasons-1 {
-				reason := fmt.Sprintf("(ommited %d more errors)", len(failed)-maxBulkErrorReasons)
-				reasons = append(reasons, reason)
-				break
-			}
-		}
-		return errors.New(fmt.Sprintf("PutAll failed for some requests:\n%s", strings.Join(reasons, "")))
+		return createBulkError(response)
 	}
 	return nil
 }
@@ -292,4 +279,22 @@ func (s *ElasticsearchKeyValueStore) Flush() error {
 
 func (s *ElasticsearchKeyValueStore) GetClient() *elastic.Client {
 	return s.client
+}
+
+func createBulkError(response *elastic.BulkResponse) error {
+	reasons := []string{}
+	failed := response.Failed()
+	for i, item := range failed {
+		if item.Error != nil {
+			reason := fmt.Sprintf("id = %s, error = %s\n", item.Id, item.Error.Reason)
+			reasons = append(reasons, reason)
+		}
+		if i == maxBulkErrorReasons-1 {
+			reason := fmt.Sprintf("(ommited %d more errors)", len(failed)-maxBulkErrorReasons)
+			reasons = append(reasons, reason)
+			break
+		}
+	}
+	err := errors.New(fmt.Sprintf("PutAll failed for some requests:\n%s", strings.Join(reasons, "")))
+	return err
 }

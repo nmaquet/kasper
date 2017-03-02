@@ -1,6 +1,7 @@
 package kasper
 
 import (
+	"encoding/json"
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
 )
@@ -16,6 +17,9 @@ type MultitenantElasticsearchKVStore struct {
 	typeName        string
 	metricsProvider MetricsProvider
 
+	multiTenantGetAllSummary Summary
+	multiTenantPutAllSummary Summary
+
 	getCounter    Counter
 	getAllSummary Summary
 	putCounter    Counter
@@ -23,6 +27,7 @@ type MultitenantElasticsearchKVStore struct {
 	deleteCounter Counter
 	flushCounter  Counter
 }
+
 func NewMultitenantElasticsearchKVStore(url, typeName string, structPtr interface{}) *MultitenantElasticsearchKVStore {
 	return NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName, structPtr, &NoopMetricsProvider{})
 }
@@ -50,13 +55,15 @@ func NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName string, structP
 	return s
 }
 
-func (s *MultitenantElasticsearchKVStore) createMetrics() {
-	s.getCounter = s.metricsProvider.NewCounter("MultitenantElasticsearchKeyValueStore_Get", "Number of Get() calls", "index", "type")
-	s.getAllSummary = s.metricsProvider.NewSummary("MultitenantElasticsearchKeyValueStore_GetAll", "Summary of GetAll() calls", "index", "type")
-	s.putCounter = s.metricsProvider.NewCounter("MultitenantElasticsearchKeyValueStore_Put", "Number of Put() calls", "index", "type")
-	s.putAllSummary = s.metricsProvider.NewSummary("MultitenantElasticsearchKeyValueStore_PutAll", "Summary of PutAll() calls", "index", "type")
-	s.deleteCounter = s.metricsProvider.NewCounter("MultitenantElasticsearchKeyValueStore_Delete", "Number of Delete() calls", "index", "type")
-	s.flushCounter = s.metricsProvider.NewCounter("MultitenantElasticsearchKeyValueStore_Flush", "Summary of Flush() calls", "index", "type")
+func (mtkv *MultitenantElasticsearchKVStore) createMetrics() {
+	mtkv.multiTenantGetAllSummary = mtkv.metricsProvider.NewSummary("MultitenantElasticsearchKeyValueStore_GetAll", "Summary of GetAll() calls", "type")
+	mtkv.multiTenantPutAllSummary = mtkv.metricsProvider.NewSummary("MultitenantElasticsearchKeyValueStore_PutAll", "Summary of PutAll() calls", "type")
+	mtkv.getCounter = mtkv.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Get", "Number of Get() calls", "index", "type")
+	mtkv.getAllSummary = mtkv.metricsProvider.NewSummary("ElasticsearchKeyValueStore_GetAll", "Summary of GetAll() calls", "index", "type")
+	mtkv.putCounter = mtkv.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Put", "Number of Put() calls", "index", "type")
+	mtkv.putAllSummary = mtkv.metricsProvider.NewSummary("ElasticsearchKeyValueStore_PutAll", "Summary of PutAll() calls", "index", "type")
+	mtkv.deleteCounter = mtkv.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Delete", "Number of Delete() calls", "index", "type")
+	mtkv.flushCounter = mtkv.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Flush", "Summary of Flush() calls", "index", "type")
 }
 
 func (mtkv *MultitenantElasticsearchKVStore) Tenant(tenant string) KeyValueStore {
@@ -87,7 +94,6 @@ func (mtkv *MultitenantElasticsearchKVStore) Tenant(tenant string) KeyValueStore
 	return kv
 }
 
-
 func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 	tenants := make([]string, len(mtkv.kvs))
 	i := 0
@@ -96,4 +102,74 @@ func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 		i++
 	}
 	return tenants
+}
+
+func (mtkv *MultitenantElasticsearchKVStore) GetAll(keys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
+	res := NewMultitenantInMemoryKVStore(len(keys)/10, mtkv.witness.allocate())
+	if len(keys) == 0 {
+		return res, nil
+	}
+	logger.Debugf("Multitenant Elasticsearch GetAll: %#v", keys)
+	mtkv.multiTenantGetAllSummary.Observe(float64(len(keys)), mtkv.typeName)
+	multiGet := mtkv.client.MultiGet()
+	for _, key := range keys {
+
+		logger.Debugf("index = %s, typeName = %s, id = %s", key.Tenant, mtkv.typeName, key.Key)
+		item := elastic.NewMultiGetItem().
+			Index(key.Tenant).
+			Type(mtkv.typeName).
+			Id(key.Key)
+
+		multiGet.Add(item)
+	}
+	response, err := multiGet.Do(mtkv.context)
+	if err != nil {
+		return nil, err
+	}
+	for _, doc := range response.Docs {
+		logger.Debug(doc.Index, doc.Id, string(*doc.Source))
+		var structPtr interface{}
+		if !doc.Found {
+			logger.Debug(doc.Index, doc.Id, " not found")
+			continue
+		}
+		logger.Debug("unmarshalling ", doc.Source)
+		structPtr = mtkv.witness.allocate()
+		err = json.Unmarshal(*doc.Source, structPtr)
+		if err != nil {
+			return nil, err
+		}
+		res.Tenant(doc.Index).Put(doc.Id, structPtr)
+	}
+	return res, nil
+}
+
+func (mtkv *MultitenantElasticsearchKVStore) PutAll(s *MultitenantInMemoryKVStore) error {
+	bulk := mtkv.client.Bulk()
+	i := 0
+	for _, tenant := range s.AllTenants() {
+		for key, value := range s.Tenant(tenant).(*InMemoryKeyValueStore).GetMap() {
+			mtkv.witness.assert(value)
+			bulk.Add(elastic.NewBulkIndexRequest().
+				Index(tenant).
+				Type(mtkv.typeName).
+				Id(key).
+				Doc(value),
+			)
+			i++
+		}
+	}
+	if i == 0 {
+		return nil
+	}
+	logger.Debugf("Multitenant Elasticsearch PutAll of %d keys", i)
+	mtkv.multiTenantPutAllSummary.Observe(float64(i), mtkv.typeName)
+	response, err := bulk.Do(mtkv.context)
+	if err != nil {
+		return err
+	}
+	if response.Errors {
+		return createBulkError(response)
+	}
+	return nil
 }
