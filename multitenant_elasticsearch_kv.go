@@ -113,8 +113,6 @@ func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*Multiten
 	mtkv.multiTenantGetAllSummary.Observe(float64(len(keys)), mtkv.typeName)
 	multiGet := mtkv.client.MultiGet()
 	for _, key := range keys {
-
-		logger.Debugf("index = %s, typeName = %s, id = %s", key.Tenant, mtkv.typeName, key.Key)
 		item := elastic.NewMultiGetItem().
 			Index(key.Tenant).
 			Type(mtkv.typeName).
@@ -127,7 +125,6 @@ func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*Multiten
 		return nil, err
 	}
 	for _, doc := range response.Docs {
-		logger.Debug(doc.Index, doc.Id, string(*doc.Source))
 		var structPtr interface{}
 		if !doc.Found {
 			logger.Debug(doc.Index, doc.Id, " not found")
