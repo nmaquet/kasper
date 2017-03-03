@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"encoding/json"
+	"sort"
 
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
@@ -110,6 +111,7 @@ func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 		tenants[i] = tenant
 		i++
 	}
+	sort.Strings(tenants)
 	return tenants
 }
 

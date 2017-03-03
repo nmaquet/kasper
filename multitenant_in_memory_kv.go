@@ -1,6 +1,7 @@
 package kasper
 
 import "reflect"
+import "sort"
 
 // MultitenantInMemoryKVStore is factory of InMemoryKeyValueStore
 // for multiple tenants
@@ -19,6 +20,7 @@ func (mtkv *MultitenantInMemoryKVStore) AllTenants() []string {
 		tenants[i] = tenant
 		i++
 	}
+	sort.Strings(tenants)
 	return tenants
 }
 
