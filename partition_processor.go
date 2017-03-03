@@ -26,6 +26,30 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 	return chans
 }
 
+func getPartitionOffsetManager(tp *TopicProcessor, topic string, partition int) sarama.PartitionOffsetManager {
+	pom, err := tp.offsetManager.ManagePartition(topic, int32(partition))
+	if err != nil {
+		logger.Panic(err)
+	}
+	return pom
+}
+
+func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sarama.PartitionOffsetManager, topic string, partition int) sarama.PartitionConsumer {
+	newestOffset, err := tp.client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
+	if err != nil {
+		logger.Panic(err)
+	}
+	nextOffset, _ := pom.NextOffset()
+	if nextOffset > newestOffset {
+		nextOffset = sarama.OffsetNewest
+	}
+	c, err := consumer.ConsumePartition(topic, int32(partition), nextOffset)
+	if err != nil {
+		logger.Panic(err)
+	}
+	return c
+}
+
 func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMessageProcessor, partition int) *partitionProcessor {
 	if (mp == nil && bmp == nil) || (mp != nil && bmp != nil) {
 		logger.Panic("Exactly one message processor must be provided")
@@ -37,24 +61,10 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMes
 	partitionConsumers := make([]sarama.PartitionConsumer, len(tp.inputTopics))
 	partitionOffsetManagers := make(map[string]sarama.PartitionOffsetManager)
 	for i, topic := range tp.inputTopics {
-		pom, err := tp.offsetManager.ManagePartition(topic, int32(partition))
-		if err != nil {
-			logger.Panic(err)
-		}
-		newestOffset, err := tp.client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
-		if err != nil {
-			logger.Panic(err)
-		}
-		nextOffset, _ := pom.NextOffset()
-		if nextOffset > newestOffset {
-			nextOffset = sarama.OffsetNewest
-		}
-		c, err := consumer.ConsumePartition(topic, int32(partition), nextOffset)
-		if err != nil {
-			logger.Panic(err)
-		}
-		partitionConsumers[i] = c
-		partitionOffsetManagers[topic] = pom
+		partitionOffsetManager := getPartitionOffsetManager(tp, topic, partition)
+		partitionConsumer := getPartitionConsumer(tp, consumer, partitionOffsetManager, topic, partition)
+		partitionConsumers[i] = partitionConsumer
+		partitionOffsetManagers[topic] = partitionOffsetManager
 	}
 	pp := &partitionProcessor{
 		tp,

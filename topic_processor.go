@@ -194,26 +194,37 @@ func (tp *TopicProcessor) HasConsumedAllMessages() bool {
 	return true
 }
 
-func (tp *TopicProcessor) runLoop() {
-	consumerChan := tp.getConsumerMessagesChan()
-	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
-	var batchTickerChan <-chan time.Time
-	var batchTicker *time.Ticker
-
+func (tp *TopicProcessor) getBatchTickerChan(batchTicker *time.Ticker) <-chan time.Time {
 	if tp.batchingEnabled {
-		batchTicker = time.NewTicker(tp.batchWaitDuration)
-		batchTickerChan = batchTicker.C
-	} else {
-		batchTickerChan = make(<-chan time.Time)
+		return batchTicker.C
 	}
+	return make(<-chan time.Time)
+}
 
+func (tp *TopicProcessor) getBatchTicker() *time.Ticker {
+	if tp.batchingEnabled {
+		return time.NewTicker(tp.batchWaitDuration)
+	}
+	return nil
+}
+func (tp *TopicProcessor) getBatches() map[int][]*sarama.ConsumerMessage {
 	batches := make(map[int][]*sarama.ConsumerMessage)
-	lengths := make(map[int]int)
 
 	for _, partition := range tp.partitions {
 		batches[partition] = make([]*sarama.ConsumerMessage, tp.batchSize)
-		lengths[partition] = 0
 	}
+
+	return batches
+}
+
+func (tp *TopicProcessor) runLoop() {
+	consumerChan := tp.getConsumerMessagesChan()
+	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
+	batchTicker := tp.getBatchTicker()
+	batchTickerChan := tp.getBatchTickerChan(batchTicker)
+
+	batches := tp.getBatches()
+	lengths := make(map[int]int)
 
 	logger.Info("Entering run loop")
 
