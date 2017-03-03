@@ -294,7 +294,7 @@ func createBulkError(response *elastic.BulkResponse) error {
 			reasons = append(reasons, reason)
 		}
 		if i == maxBulkErrorReasons-1 {
-			reason := fmt.Sprintf("(ommited %d more errors)", len(failed)-maxBulkErrorReasons)
+			reason := fmt.Sprintf("(omitted %d more errors)", len(failed)-maxBulkErrorReasons)
 			reasons = append(reasons, reason)
 			break
 		}
