@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,8 +28,10 @@ func TestMultitenantElasticsearchKVStore_PutAll_GetAll(t *testing.T) {
 	batman := &Hero{"Batman", "money and an inflated sense of self"}
 	superman := &Hero{"Superman", "not being recognized by wearing glasses"}
 
-	mtkv.Tenant("marvel").Put("spiderman", spiderman)
-	mtkv.Tenant("dc").Put("batman", batman)
+	err := mtkv.Tenant("marvel").Put("spiderman", spiderman)
+	assert.Nil(t, err)
+	err = mtkv.Tenant("dc").Put("batman", batman)
+	assert.Nil(t, err)
 
 	s, err := mtkv.Fetch([]*TenantKey{{"marvel", "spiderman"}, {"dc", "batman"}})
 	assert.Nil(t, err)
@@ -39,8 +42,10 @@ func TestMultitenantElasticsearchKVStore_PutAll_GetAll(t *testing.T) {
 	hero, _ = s.Tenant("dc").Get("batman")
 	assert.Equal(t, batman, hero)
 
-	s.Tenant("marvel").Put("ironman", ironman)
-	s.Tenant("dc").Put("superman", superman)
+	err = s.Tenant("marvel").Put("ironman", ironman)
+	assert.Nil(t, err)
+	err = s.Tenant("dc").Put("superman", superman)
+	assert.Nil(t, err)
 
 	err = mtkv.Push(s)
 	assert.Nil(t, err)

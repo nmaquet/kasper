@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,10 +22,14 @@ func testMultiTenantKeyValueStore(t *testing.T, mtkv MultitenantKeyValueStore) {
 	batman := &Hero{"Batman", "money and an inflated sense of self"}
 	superman := &Hero{"Superman", "not being recognized by wearing glasses"}
 
-	mtkv.Tenant("marvel").Put("spiderman", spiderman)
-	mtkv.Tenant("marvel").Put("ironman", ironman)
-	mtkv.Tenant("dc").Put("batman", batman)
-	mtkv.Tenant("dc").Put("superman", superman)
+	err := mtkv.Tenant("marvel").Put("spiderman", spiderman)
+	assert.Nil(t, err)
+	err = mtkv.Tenant("marvel").Put("ironman", ironman)
+	assert.Nil(t, err)
+	err = mtkv.Tenant("dc").Put("batman", batman)
+	assert.Nil(t, err)
+	err = mtkv.Tenant("dc").Put("superman", superman)
+	assert.Nil(t, err)
 
 	heroes := []string{"spiderman", "ironman", "batman", "superman"}
 

@@ -45,7 +45,8 @@ func TestInMemoryKeyValueStore_Get_MissingKey(t *testing.T) {
 func TestInMemoryKeyValueStore_Put_Normal(t *testing.T) {
 	s := newTestInMemoryKV()
 	earth := &Planet{"Earth"}
-	s.Put("earth", earth)
+	err := s.Put("earth", earth)
+	assert.Nil(t, err)
 	assert.Equal(t, earth, s.m["earth"])
 }
 
@@ -53,21 +54,24 @@ func TestInMemoryKeyValueStore_Put_Overwrite(t *testing.T) {
 	s := newTestInMemoryKV()
 	s.m["earth"] = &Planet{"Gaia"}
 	earth := &Planet{"Earth"}
-	s.Put("earth", earth)
+	err := s.Put("earth", earth)
+	assert.Nil(t, err)
 	assert.Equal(t, earth, s.m["earth"])
 }
 
 func TestInMemoryKeyValueStore_Delete_Existing(t *testing.T) {
 	s := newTestInMemoryKV()
 	s.m["earth"] = &Planet{"Earth"}
-	s.Delete("earth")
+	err := s.Delete("earth")
+	assert.Nil(t, err)
 	assert.Equal(t, 0, len(s.m))
 }
 
 func TestInMemoryKeyValueStore_Delete_NonExisting(t *testing.T) {
 	s := newTestInMemoryKV()
 	s.m["earth"] = &Planet{"Earth"}
-	s.Delete("mercury")
+	err := s.Delete("mercury")
+	assert.Nil(t, err)
 	assert.Equal(t, 1, len(s.m))
 }
 
@@ -126,7 +130,8 @@ func BenchmarkInMemoryKeyValueStore_Get(b *testing.B) {
 	keys := []string{"earth", "mars", "jupiter", "saturn", "mercury", "venus", "neptune"}
 	keysLength := len(keys)
 	for i := 0; i < b.N; i++ {
-		s.Get(keys[i%keysLength])
+		_, err := s.Get(keys[i%keysLength])
+		assert.Nil(b, err)
 	}
 }
 
@@ -144,6 +149,7 @@ func BenchmarkInMemoryKeyValueStore_Put(b *testing.B) {
 	kvsLength := len(kvs)
 	for i := 0; i < b.N; i++ {
 		kv := kvs[i%kvsLength]
-		s.Put(kv.Key, kv.Value)
+		err := s.Put(kv.Key, kv.Value)
+		assert.Nil(b, err)
 	}
 }

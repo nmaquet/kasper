@@ -2,12 +2,16 @@ package kasper
 
 import "reflect"
 
+// MultitenantInMemoryKVStore is factory of InMemoryKeyValueStore
+// for multiple tenants
 type MultitenantInMemoryKVStore struct {
 	structPtrWitness *structPtrWitness
 	initialSize      int
 	kvs              map[string]*InMemoryKeyValueStore
 }
 
+// AllTenants returns a list of keys for underlyings stores.
+// Stores can be accessed by key using store.Tentant(key).
 func (mtkv *MultitenantInMemoryKVStore) AllTenants() []string {
 	tenants := make([]string, len(mtkv.kvs))
 	i := 0
@@ -18,6 +22,7 @@ func (mtkv *MultitenantInMemoryKVStore) AllTenants() []string {
 	return tenants
 }
 
+// NewMultitenantInMemoryKVStore creates new MultitenantInMemoryKVStore
 func NewMultitenantInMemoryKVStore(size int, structPtr interface{}) *MultitenantInMemoryKVStore {
 	return &MultitenantInMemoryKVStore{
 		structPtrWitness: newStructPtrWitness(structPtr),
@@ -26,6 +31,7 @@ func NewMultitenantInMemoryKVStore(size int, structPtr interface{}) *Multitenant
 	}
 }
 
+// Tenant returns underlying InMemoryKeyValueStore as for given tenant
 func (mtkv *MultitenantInMemoryKVStore) Tenant(tenant string) KeyValueStore {
 	kv, found := mtkv.kvs[tenant]
 	if !found {
@@ -35,6 +41,7 @@ func (mtkv *MultitenantInMemoryKVStore) Tenant(tenant string) KeyValueStore {
 	return kv
 }
 
+// Fetch gets entries from underlying stores using Get
 func (mtkv *MultitenantInMemoryKVStore) Fetch(tenantKeys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
 	res := NewMultitenantInMemoryKVStore(mtkv.initialSize, mtkv.structPtrWitness.allocate())
 	for _, tenantKey := range tenantKeys {
@@ -55,6 +62,7 @@ func (mtkv *MultitenantInMemoryKVStore) Fetch(tenantKeys []*TenantKey) (*Multite
 	return res, nil
 }
 
+// Push puts entries to underlying stores using Put
 func (mtkv *MultitenantInMemoryKVStore) Push(store *MultitenantInMemoryKVStore) error {
 	for _, tenant := range store.AllTenants() {
 		for k, v := range store.Tenant(tenant).(*InMemoryKeyValueStore).GetMap() {

@@ -37,8 +37,11 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 
 	// Test failed PUT (400)
 	_, err = store.client.DeleteIndex("kasper").Do(store.context)
-	defer store.client.DeleteIndex("kasper").Do(store.context)
 	assert.Nil(t, err)
+	defer func() {
+		_, err = store.client.DeleteIndex("kasper").Do(store.context)
+		assert.Nil(t, err)
+	}()
 	// First trick Elasticsearch into thinking Color is a date field...
 	err = store.Put("vorgansharax", &Dragon{"2009-11-15T14:12:12", "Vorgansharax"})
 	assert.Nil(t, err)
@@ -161,7 +164,10 @@ func init() {
 		"dragon",
 		&Dragon{},
 	)
-	store.client.DeleteIndex("kasper").Do(store.context)
+	_, err := store.client.DeleteIndex("kasper").Do(store.context)
+	if err != nil {
+		panic(err)
+	}
 	store.checkOrCreateIndex()
 }
 
@@ -176,10 +182,13 @@ func ExampleNewElasticsearchKeyValueStore() {
 		"user",
 		&User{},
 	)
-	store.Put("john", User{
+	err := store.Put("john", User{
 		name: "John Smith",
 		age:  48,
 	})
+	if err != nil {
+		panic(err)
+	}
 	userItem, err := store.Get("john")
 	if err != nil {
 		panic(fmt.Sprintf("Something is wrong with your ES store: %s", err))
@@ -223,8 +232,11 @@ func ExampleNewElasticsearchKeyValueStoreWithMetrics() {
 			}
 		}
 	}`
-	store.Put("john", User{
+	err := store.Put("john", User{
 		Name: "John Smith",
 		Age:  48,
 	})
+	if err != nil {
+		panic(err)
+	}
 }

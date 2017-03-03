@@ -2,10 +2,13 @@ package kasper
 
 import (
 	"encoding/json"
+
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+// MultitenantElasticsearchKVStore is a factory of NewMultitenantElasticsearchKVStore
+// for multiple tenants
 type MultitenantElasticsearchKVStore struct {
 	IndexSettings string
 	TypeMapping   string
@@ -28,10 +31,13 @@ type MultitenantElasticsearchKVStore struct {
 	flushCounter  Counter
 }
 
+// NewMultitenantElasticsearchKVStore creates new MultitenantElasticsearchKVStore
 func NewMultitenantElasticsearchKVStore(url, typeName string, structPtr interface{}) *MultitenantElasticsearchKVStore {
 	return NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName, structPtr, &NoopMetricsProvider{})
 }
 
+// NewMultitenantElasticsearchKVStoreWithMetrics creates new MultitenantElasticsearchKVStore
+// with specified MetricsProvider
 func NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName string, structPtr interface{}, provider MetricsProvider) *MultitenantElasticsearchKVStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
@@ -66,6 +72,7 @@ func (mtkv *MultitenantElasticsearchKVStore) createMetrics() {
 	mtkv.flushCounter = mtkv.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Flush", "Summary of Flush() calls", "index", "type")
 }
 
+// Tenant returns underlying ElasticsearchKeyValueStore as for given tenant
 func (mtkv *MultitenantElasticsearchKVStore) Tenant(tenant string) KeyValueStore {
 	kv, found := mtkv.kvs[tenant]
 	if !found {
@@ -94,6 +101,8 @@ func (mtkv *MultitenantElasticsearchKVStore) Tenant(tenant string) KeyValueStore
 	return kv
 }
 
+// AllTenants returns a list of keys for underlyings stores.
+// Stores can be accessed by key using store.Tentant(key).
 func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 	tenants := make([]string, len(mtkv.kvs))
 	i := 0
@@ -104,6 +113,7 @@ func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 	return tenants
 }
 
+// Fetch gets entries from underlying stores using GetAll
 func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
 	res := NewMultitenantInMemoryKVStore(len(keys)/10, mtkv.witness.allocate())
 	if len(keys) == 0 {
@@ -136,11 +146,15 @@ func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*Multiten
 		if err != nil {
 			return nil, err
 		}
-		res.Tenant(doc.Index).Put(doc.Id, structPtr)
+		err := res.Tenant(doc.Index).Put(doc.Id, structPtr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
 }
 
+// Push puts entries to underlying stores using PutAll
 func (mtkv *MultitenantElasticsearchKVStore) Push(s *MultitenantInMemoryKVStore) error {
 	bulk := mtkv.client.Bulk()
 	i := 0
