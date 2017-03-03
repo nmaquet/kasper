@@ -47,5 +47,5 @@ func testMultiTenantKeyValueStore(t *testing.T, mtkv MultitenantKeyValueStore) {
 	assert.NotNil(t, dc["batman"])
 	assert.NotNil(t, dc["superman"])
 
-	assert.Equal(t, mtkv.AllTenants(), []string{"marvel", "dc"})
+	assert.Equal(t, []string{"dc", "marvel"}, mtkv.AllTenants())
 }
