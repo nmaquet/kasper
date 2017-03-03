@@ -186,7 +186,7 @@ func (tp *TopicProcessor) Shutdown() {
 func (tp *TopicProcessor) HasConsumedAllMessages() bool {
 	logger.Debugf("Checking wheter we have more messages to consume")
 	for _, partition := range tp.partitions {
-		if ! tp.partitionProcessors[int32(partition)].hasConsumedAllMessages() {
+		if !tp.partitionProcessors[int32(partition)].hasConsumedAllMessages() {
 			return false
 		}
 	}

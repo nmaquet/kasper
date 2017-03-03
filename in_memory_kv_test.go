@@ -111,7 +111,6 @@ func TestInMemoryKeyValueStore_PutAll_Empty(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-
 func TestInMemoryKeyValueStore_Flush(t *testing.T) {
 	s := newTestInMemoryKV()
 	err := s.Flush()

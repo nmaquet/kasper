@@ -16,6 +16,8 @@ type KeyValue struct {
 	Value interface{}
 }
 
+// TenantKey is a pair of tenant and key. Use it to get multiple entries from
+// MultitenantKeyValueStore.GetAll
 type TenantKey struct {
 	Tenant string
 	Key    string
@@ -32,6 +34,8 @@ type KeyValueStore interface {
 	Flush() error
 }
 
+// MultitenantKeyValueStore allows to store entities of the same type Interface
+// different databases (tenants). Instead of Key it operates TenantKey to access values
 type MultitenantKeyValueStore interface {
 	Tenant(tenant string) KeyValueStore
 	AllTenants() []string

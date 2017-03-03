@@ -1,8 +1,8 @@
 package kasper
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -192,10 +192,10 @@ func ExampleNewElasticsearchKeyValueStore() {
 	log.Println(user)
 }
 
-func ExampleNewElasticsearchKeyValueStoreWithOptions() {
+func ExampleNewElasticsearchKeyValueStoreWithMetrics() {
 	type User struct {
 		Name string `json:"name"`
-		Age  int `json:"age"`
+		Age  int    `json:"age"`
 	}
 	prometheusMetricsProvider := NewPrometheusMetricsProvider(
 		"my-topic-processor",

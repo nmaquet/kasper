@@ -119,8 +119,6 @@ func (t *Test) createOutgoingMessage(fiction *Fiction) *OutgoingMessage {
 	}
 }
 
-const fictionTotal = 12
-const characterTotal = 20
 const expectedResultJSON string = `
  {
   "FICTION_001": {

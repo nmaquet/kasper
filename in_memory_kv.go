@@ -101,6 +101,7 @@ func (s *InMemoryKeyValueStore) Flush() error {
 	return nil
 }
 
+// GetMap returns underlying map
 func (s *InMemoryKeyValueStore) GetMap() map[string]interface{} {
 	return s.m
 }

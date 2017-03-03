@@ -3,7 +3,6 @@ package kasper
 import (
 	"encoding/json"
 	"fmt"
-	"errors"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -47,11 +46,15 @@ type ElasticsearchKeyValueStore struct {
 	flushCounter  Counter
 }
 
+// NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
+// Host must of the format hostname:port.
+// StructPtr should be a pointer to struct type that is used.
+// for serialization and deserialization of store values.
 func NewElasticsearchKeyValueStore(url, indexName, typeName string, structPtr interface{}) *ElasticsearchKeyValueStore {
 	return NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName, structPtr, &NoopMetricsProvider{})
 }
 
-// NewElasticsearchKeyValueStoreWithOpts creates new ElasticsearchKeyValueStore instance.
+// NewElasticsearchKeyValueStoreWithMetrics creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
@@ -277,6 +280,7 @@ func (s *ElasticsearchKeyValueStore) Flush() error {
 	return err
 }
 
+// GetClient return underlying elastic.Client
 func (s *ElasticsearchKeyValueStore) GetClient() *elastic.Client {
 	return s.client
 }
@@ -295,6 +299,6 @@ func createBulkError(response *elastic.BulkResponse) error {
 			break
 		}
 	}
-	err := errors.New(fmt.Sprintf("PutAll failed for some requests:\n%s", strings.Join(reasons, "")))
+	err := fmt.Errorf("PutAll failed for some requests:\n%s", strings.Join(reasons, ""))
 	return err
 }
