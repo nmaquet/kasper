@@ -158,6 +158,9 @@ func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*Multiten
 
 // Push puts entries to underlying stores using PutAll
 func (mtkv *MultitenantElasticsearchKVStore) Push(s *MultitenantInMemoryKVStore) error {
+	for _, tenant := range s.AllTenants() {
+		mtkv.Tenant(tenant) // force creation of index & mappings if they don't exist
+	}
 	bulk := mtkv.client.Bulk()
 	i := 0
 	for _, tenant := range s.AllTenants() {
