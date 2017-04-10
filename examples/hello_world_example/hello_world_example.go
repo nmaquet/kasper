@@ -15,8 +15,8 @@ type HelloWorldExample struct{}
 
 // Process processes Kafka messages from topic "hello" and prints info to console
 func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
-	key := msg.Key.(string)
-	value := msg.Value.(string)
+	key := string(msg.Key)
+	value := string(msg.Value)
 	offset := msg.Offset
 	topic := msg.Topic
 	partition := msg.Partition
@@ -26,15 +26,9 @@ func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Send
 
 func main() {
 	config := kasper.TopicProcessorConfig{
-		TopicProcessorName: "hello-world-example",
-		BrokerList:         []string{"localhost:9092"},
-		InputTopics:        []string{"hello"},
-		TopicSerdes: map[string]kasper.TopicSerde{
-			"hello": {
-				KeySerde:   kasper.NewStringSerde(),
-				ValueSerde: kasper.NewStringSerde(),
-			},
-		},
+		TopicProcessorName:     "hello-world-example",
+		BrokerList:             []string{"localhost:9092"},
+		InputTopics:            []string{"hello"},
 		ContainerCount:         1,
 		PartitionToContainerID: kasper.FairPartitionToContainerID(1, 1),
 		Config:                 kasper.DefaultConfig(),

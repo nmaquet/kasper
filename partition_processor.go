@@ -82,16 +82,12 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMes
 }
 
 func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
-	topicSerde, ok := pp.topicProcessor.config.TopicSerdes[consumerMessage.Topic]
-	if !ok {
-		logger.Panicf("Could not find Serde for topic '%s'", consumerMessage.Topic)
-	}
 	incomingMessage := IncomingMessage{
 		Topic:     consumerMessage.Topic,
 		Partition: int(consumerMessage.Partition),
 		Offset:    consumerMessage.Offset,
-		Key:       topicSerde.KeySerde.Deserialize(consumerMessage.Key),
-		Value:     topicSerde.ValueSerde.Deserialize(consumerMessage.Value),
+		Key:       consumerMessage.Key,
+		Value:     consumerMessage.Value,
 		Timestamp: consumerMessage.Timestamp,
 	}
 	sender := newSender(pp)
@@ -102,16 +98,12 @@ func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) [
 func (pp *partitionProcessor) processBatch(messages []*sarama.ConsumerMessage) []*sarama.ProducerMessage {
 	incomingMessages := make([]*IncomingMessage, len(messages))
 	for i, message := range messages {
-		topicSerde, ok := pp.topicProcessor.config.TopicSerdes[message.Topic]
-		if !ok {
-			logger.Panicf("Could not find Serde for topic '%s'", message.Topic)
-		}
 		incomingMessages[i] = &IncomingMessage{
 			Topic:     message.Topic,
 			Partition: int(message.Partition),
 			Offset:    message.Offset,
-			Key:       topicSerde.KeySerde.Deserialize(message.Key),
-			Value:     topicSerde.ValueSerde.Deserialize(message.Value),
+			Key:       message.Key,
+			Value:     message.Value,
 			Timestamp: message.Timestamp,
 		}
 	}

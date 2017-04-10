@@ -6,21 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type Hero struct {
-	Name  string `json:"name"`
-	Power string `json:"power"`
-}
-
 func TestMultitenantInMemoryKVStore_ForTenant(t *testing.T) {
-	mtkv := NewMultitenantInMemoryKVStore(10, &Hero{})
+	mtkv := NewMultitenantInMemoryKVStore(10)
 	testMultiTenantKeyValueStore(t, mtkv)
 }
 
 func testMultiTenantKeyValueStore(t *testing.T, mtkv MultitenantKeyValueStore) {
-	spiderman := &Hero{"Spiderman", "webs"}
-	ironman := &Hero{"Ironman", "a kickass powered armor"}
-	batman := &Hero{"Batman", "money and an inflated sense of self"}
-	superman := &Hero{"Superman", "not being recognized by wearing glasses"}
+	spiderman := []byte(`{"name":"Spiderman","power":"webs"}`)
+	ironman := []byte(`{"name":"Ironman","power":"a kickass powered armor"}`)
+	batman := []byte(`{"name":"Batman","power":"money and an inflated sense of self"}`)
+	superman := []byte(`{"name":"Superman","power":"not being recognized by wearing glasses"}`)
 
 	err := mtkv.Tenant("marvel").Put("spiderman", spiderman)
 	assert.Nil(t, err)

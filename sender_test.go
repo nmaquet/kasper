@@ -17,12 +17,7 @@ func newFixture() *fixture {
 		&partitionProcessor{
 			topicProcessor: &TopicProcessor{
 				config: &TopicProcessorConfig{
-					TopicSerdes: map[string]TopicSerde{
-						"hello": {
-							KeySerde:   NewStringSerde(),
-							ValueSerde: NewStringSerde(),
-						},
-					},
+
 				},
 			},
 		},
@@ -36,8 +31,8 @@ func TestSender_Send_OneMessage(t *testing.T) {
 	out := OutgoingMessage{
 		Topic:     "hello",
 		Partition: 6,
-		Key:       "AAA",
-		Value:     "BBB",
+		Key:       []byte("AAA"),
+		Value:     []byte("BBB"),
 	}
 	sender.Send(out)
 	if len(sender.producerMessages) != 1 {
@@ -60,14 +55,14 @@ func TestSender_Send_TwoMessages(t *testing.T) {
 	sender.Send(OutgoingMessage{
 		Topic:     "hello",
 		Partition: 6,
-		Key:       "AAA",
-		Value:     "BBB",
+		Key:       []byte("AAA"),
+		Value:     []byte("BBB"),
 	})
 	sender.Send(OutgoingMessage{
 		Topic:     "hello",
 		Partition: 7,
-		Key:       "CCC",
-		Value:     "DDD",
+		Key:       []byte("CCC"),
+		Value:     []byte("DDD"),
 	})
 	if len(sender.producerMessages) != 2 {
 		t.Fail()
@@ -92,20 +87,6 @@ func TestSender_Send_TwoMessages(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestSender_Send_MissingSerde(t *testing.T) {
-	f := newFixture()
-	sender := newSender(f.pp)
-	out := OutgoingMessage{
-		Topic:     "unknown",
-		Partition: 6,
-		Key:       "AAA",
-		Value:     "BBB",
-	}
-	assert.Panics(t, func() {
-		sender.Send(out)
-	})
-}
-
 func BenchmarkSender_Send(b *testing.B) {
 	f := newFixture()
 	sender := newSender(f.pp)
@@ -113,8 +94,8 @@ func BenchmarkSender_Send(b *testing.B) {
 		out := OutgoingMessage{
 			Topic:     "hello",
 			Partition: 6,
-			Key:       "AAA",
-			Value:     "BBB",
+			Key:       []byte("AAA"),
+			Value:     []byte("BBB"),
 		}
 		sender.Send(out)
 	}

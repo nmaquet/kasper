@@ -1,7 +1,6 @@
 package kasper
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -31,7 +30,6 @@ type ElasticsearchKeyValueStore struct {
 	IndexSettings string
 	TypeMapping   string
 
-	witness         *structPtrWitness
 	client          *elastic.Client
 	context         context.Context
 	indexName       string
@@ -50,15 +48,15 @@ type ElasticsearchKeyValueStore struct {
 // Host must of the format hostname:port.
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
-func NewElasticsearchKeyValueStore(url, indexName, typeName string, structPtr interface{}) *ElasticsearchKeyValueStore {
-	return NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName, structPtr, &NoopMetricsProvider{})
+func NewElasticsearchKeyValueStore(url, indexName, typeName string) *ElasticsearchKeyValueStore {
+	return NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName, &NoopMetricsProvider{})
 }
 
 // NewElasticsearchKeyValueStoreWithMetrics creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
-func NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName string, structPtr interface{}, provider MetricsProvider) *ElasticsearchKeyValueStore {
+func NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName string, provider MetricsProvider) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -68,7 +66,6 @@ func NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName string, s
 	}
 	logger.Info("Connected to Elasticsearch at ", url)
 	s := &ElasticsearchKeyValueStore{
-		witness:         newStructPtrWitness(structPtr),
 		client:          client,
 		context:         context.Background(),
 		indexName:       indexName,
@@ -141,7 +138,7 @@ func (s *ElasticsearchKeyValueStore) checkOrPutMapping() {
 }
 
 // Get gets value by key from store
-func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
+func (s *ElasticsearchKeyValueStore) Get(key string) ([]byte, error) {
 	logger.Debug("Elasticsearch Get: ", key)
 	s.getCounter.Inc(s.indexName, s.typeName)
 	rawValue, err := s.client.Get().
@@ -151,27 +148,22 @@ func (s *ElasticsearchKeyValueStore) Get(key string) (interface{}, error) {
 		Do(s.context)
 
 	if fmt.Sprintf("%s", err) == "elastic: Error 404 (Not Found)" {
-		return s.witness.nil(), nil
+		return nil, nil
 	}
 
 	if err != nil {
-		return s.witness.nil(), err
+		return nil, err
 	}
 
 	if !rawValue.Found {
-		return s.witness.nil(), nil
+		return nil, nil
 	}
 
-	structPtr := s.witness.allocate()
-	err = json.Unmarshal(*rawValue.Source, structPtr)
-	if err != nil {
-		return s.witness.nil(), err
-	}
-	return structPtr, nil
+	return *rawValue.Source, nil
 }
 
 // GetAll gets multiple keys from store using MultiGet.
-func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) {
+func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]KeyValue, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
@@ -191,41 +183,32 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]*KeyValue, error) 
 	if err != nil {
 		return nil, err
 	}
-	kvs := make([]*KeyValue, len(keys))
+	kvs := make([]KeyValue, len(keys))
 	for i, doc := range response.Docs {
-		var structPtr interface{}
-		if !doc.Found {
-			structPtr = s.witness.nil()
-		} else {
-			structPtr = s.witness.allocate()
-			err = json.Unmarshal(*doc.Source, structPtr)
-			if err != nil {
-				return nil, err
-			}
+		if doc.Found {
+			kvs[i] = KeyValue{keys[i], *doc.Source}
 		}
-		kvs[i] = &KeyValue{keys[i], structPtr}
 	}
 	return kvs, nil
 }
 
 // Put updates key in store with serialized value
-func (s *ElasticsearchKeyValueStore) Put(key string, structPtr interface{}) error {
-	logger.Debug(fmt.Sprintf("Elasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, structPtr))
-	s.witness.assert(structPtr)
+func (s *ElasticsearchKeyValueStore) Put(key string, value []byte) error {
+	logger.Debug(fmt.Sprintf("Elasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
 	s.putCounter.Inc(s.indexName, s.typeName)
 
 	_, err := s.client.Index().
 		Index(s.indexName).
 		Type(s.typeName).
 		Id(key).
-		BodyJson(structPtr).
+		BodyString(string(value)).
 		Do(s.context)
 
 	return err
 }
 
 // PutAll bulk executes Put operation for several kvs
-func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
+func (s *ElasticsearchKeyValueStore) PutAll(kvs []KeyValue) error {
 	logger.Debugf("Elasticsearch PutAll of %d keys", len(kvs))
 	s.putAllSummary.Observe(float64(len(kvs)), s.indexName, s.typeName)
 	if len(kvs) == 0 {
@@ -233,12 +216,11 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []*KeyValue) error {
 	}
 	bulk := s.client.Bulk()
 	for _, kv := range kvs {
-		s.witness.assert(kv.Value)
 		bulk.Add(elastic.NewBulkIndexRequest().
 			Index(s.indexName).
 			Type(s.typeName).
 			Id(kv.Key).
-			Doc(kv.Value),
+			Doc(string(kv.Value)),
 		)
 	}
 	response, err := bulk.Do(s.context)

@@ -12,8 +12,6 @@ type TopicProcessorConfig struct {
 	BrokerList []string
 	// List of Kafka topics to process messages from
 	InputTopics []string
-	// Mapping of topic name to key/value serdes for that topic
-	TopicSerdes map[string]TopicSerde
 	// Number of containers to create
 	ContainerCount int
 	// Mapping of partition to container to use

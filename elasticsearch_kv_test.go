@@ -1,19 +1,18 @@
 package kasper
 
 import (
-	"fmt"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type Dragon struct {
-	Color string `json:"color"`
-	Name  string `json:"name"`
-}
-
 var store *ElasticsearchKeyValueStore
+
+var vorgansharax = []byte(`{"color": "green", "name": "Vorgansharax"}`)
+var falkor = []byte(`{"color": "white", "name": "Falkor"}`)
+var saphira = []byte(`{"color": "blue", "name": "Saphira"}`)
+var mushu = []byte(`{"color": "red", "name": "Mushu"}`)
+var finFangFoom = []byte(`{"color": "green", "name": "Fin Fang Foom"}`)
 
 func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 	if testing.Short() {
@@ -25,15 +24,12 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Put key
-	err = store.Put("vorgansharax", &Dragon{"green", "Vorgansharax"})
+	err = store.Put("vorgansharax", vorgansharax)
 	assert.Nil(t, err)
 
 	// Get key again, should find it this time
-	item, err = store.Get("vorgansharax")
-	assert.NotNil(t, item)
-	assert.Nil(t, err)
-	dragon := item.(*Dragon)
-	assert.Equal(t, &Dragon{"green", "Vorgansharax"}, dragon)
+	dragon, err := store.Get("vorgansharax")
+	assert.Equal(t, vorgansharax, dragon)
 
 	// Test failed PUT (400)
 	_, err = store.client.DeleteIndex("kasper").Do(store.context)
@@ -43,10 +39,10 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 	// First trick Elasticsearch into thinking Color is a date field...
-	err = store.Put("vorgansharax", &Dragon{"2009-11-15T14:12:12", "Vorgansharax"})
+	err = store.Put("vorgansharax", []byte(`{"color": "2009-11-15T14:12:12", "name": "Vorgansharax"}`))
 	assert.Nil(t, err)
 	// Then try to put a regular string in
-	err = store.Put("vorgansharax", &Dragon{"", "Vorgansharax"})
+	err = store.Put("vorgansharax", []byte(`{"color": "", "name": "Vorgansharax"}`))
 	assert.NotNil(t, err)
 
 }
@@ -56,7 +52,7 @@ func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
 		t.Skip()
 	}
 	// Put key
-	err := store.Put("falkor", &Dragon{"white", "Falkor"})
+	err := store.Put("falkor", falkor)
 	assert.Nil(t, err)
 
 	// Delete key
@@ -78,11 +74,11 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 		t.Skip()
 	}
 	// Put 3 keys
-	err := store.Put("saphira", &Dragon{"blue", "Saphira"})
+	err := store.Put("saphira", saphira)
 	assert.Nil(t, err)
-	err = store.Put("mushu", &Dragon{"red", "Mushu"})
+	err = store.Put("mushu", mushu)
 	assert.Nil(t, err)
-	err = store.Put("fin-fang-foom", &Dragon{"green", "Fin Fang Foom"})
+	err = store.Put("fin-fang-foom", finFangFoom)
 	assert.Nil(t, err)
 
 	// GetAll on 4 keys, one non existing
@@ -96,9 +92,9 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 
 	// Check the 3 keys
 	assert.Equal(t, 3, len(kvs))
-	assert.Equal(t, &Dragon{"blue", "Saphira"}, kvs["saphira"])
-	assert.Equal(t, &Dragon{"red", "Mushu"}, kvs["mushu"])
-	assert.Equal(t, &Dragon{"green", "Fin Fang Foom"}, kvs["fin-fang-foom"])
+	assert.Equal(t, saphira, kvs["saphira"])
+	assert.Equal(t, mushu, kvs["mushu"])
+	assert.Equal(t, finFangFoom, kvs["fin-fang-foom"])
 
 	// Delete everything
 	_, err = store.client.DeleteIndex("kasper").Do(store.context)
@@ -116,26 +112,26 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 	}))
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(kvs))
-	assert.Equal(t, &Dragon{"blue", "Saphira"}, kvs["saphira"])
-	assert.Equal(t, &Dragon{"red", "Mushu"}, kvs["mushu"])
-	assert.Equal(t, &Dragon{"green", "Fin Fang Foom"}, kvs["fin-fang-foom"])
+	assert.Equal(t, saphira, kvs["saphira"])
+	assert.Equal(t, mushu, kvs["mushu"])
+	assert.Equal(t, finFangFoom, kvs["fin-fang-foom"])
 
 	// Test failed PUT (400)
 	_, err = store.client.DeleteIndex("kasper").Do(store.context)
 	assert.Nil(t, err)
 	// First trick Elasticsearch into thinking Color is a date field...
-	err = store.Put("vorgansharax", &Dragon{"2009-11-15T14:12:12", "Vorgansharax"})
+	err = store.Put("vorgansharax", []byte(`{"color": "2009-11-15T14:12:12", "name": "Vorgansharax"}`))
 	assert.Nil(t, err)
 	// Then try to put a regular string in
-	err = store.PutAll(FromMap(map[string]interface{}{
-		"vorgansharax1": &Dragon{"blue", "Vorgansharax1"},
-		"vorgansharax2": &Dragon{"blue", "Vorgansharax2"},
-		"vorgansharax3": &Dragon{"blue", "Vorgansharax3"},
-		"vorgansharax4": &Dragon{"blue", "Vorgansharax4"},
-		"vorgansharax5": &Dragon{"blue", "Vorgansharax5"},
-		"vorgansharax6": &Dragon{"blue", "Vorgansharax6"},
-		"vorgansharax7": &Dragon{"blue", "Vorgansharax7"},
-	}))
+	err = store.PutAll([]KeyValue{
+		{"vorgansharax1", vorgansharax},
+		{"vorgansharax2", vorgansharax},
+		{"vorgansharax3", vorgansharax},
+		{"vorgansharax4", vorgansharax},
+		{"vorgansharax5", vorgansharax},
+		{"vorgansharax6", vorgansharax},
+		{"vorgansharax7", vorgansharax},
+	})
 	assert.NotNil(t, err)
 
 	// GetAll of empty list should work
@@ -162,81 +158,10 @@ func init() {
 		"http://localhost:9200",
 		"kasper",
 		"dragon",
-		&Dragon{},
 	)
 	_, err := store.client.DeleteIndex("kasper").Do(store.context)
 	if err != nil {
 		panic(err)
 	}
 	store.checkOrCreateIndex()
-}
-
-func ExampleNewElasticsearchKeyValueStore() {
-	type User struct {
-		name string
-		age  int
-	}
-	store := NewElasticsearchKeyValueStore(
-		"http://localhost:9200",
-		"users",
-		"user",
-		&User{},
-	)
-	err := store.Put("john", User{
-		name: "John Smith",
-		age:  48,
-	})
-	if err != nil {
-		panic(err)
-	}
-	userItem, err := store.Get("john")
-	if err != nil {
-		panic(fmt.Sprintf("Something is wrong with your ES store: %s", err))
-	}
-	if userItem == nil {
-		panic("Key john not found")
-	}
-	user := userItem.(*User)
-	user.age++
-	log.Println(user)
-}
-
-func ExampleNewElasticsearchKeyValueStoreWithMetrics() {
-	type User struct {
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
-	prometheusMetricsProvider := NewPrometheusMetricsProvider(
-		"my-topic-processor",
-		0,
-	)
-	store := NewElasticsearchKeyValueStoreWithMetrics(
-		"http://localhost:9200",
-		"users",
-		"user",
-		&User{},
-		prometheusMetricsProvider,
-	)
-	store.IndexSettings = `{
-		"number_of_replicas": 3
-	}`
-	store.TypeMapping = `{
-		"user" : {
-			"properties" : {
-				"name": {
-					"type": "string"
-				},
-				"age": {
-					"type": "long"
-				}
-			}
-		}
-	}`
-	err := store.Put("john", User{
-		Name: "John Smith",
-		Age:  48,
-	})
-	if err != nil {
-		panic(err)
-	}
 }

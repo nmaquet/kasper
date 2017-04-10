@@ -6,7 +6,6 @@ import "sort"
 // MultitenantInMemoryKVStore is factory of InMemoryKeyValueStore
 // for multiple tenants
 type MultitenantInMemoryKVStore struct {
-	structPtrWitness *structPtrWitness
 	initialSize      int
 	kvs              map[string]*InMemoryKeyValueStore
 }
@@ -25,9 +24,8 @@ func (mtkv *MultitenantInMemoryKVStore) AllTenants() []string {
 }
 
 // NewMultitenantInMemoryKVStore creates new MultitenantInMemoryKVStore
-func NewMultitenantInMemoryKVStore(size int, structPtr interface{}) *MultitenantInMemoryKVStore {
+func NewMultitenantInMemoryKVStore(size int) *MultitenantInMemoryKVStore {
 	return &MultitenantInMemoryKVStore{
-		structPtrWitness: newStructPtrWitness(structPtr),
 		initialSize:      size,
 		kvs:              make(map[string]*InMemoryKeyValueStore),
 	}
@@ -37,15 +35,15 @@ func NewMultitenantInMemoryKVStore(size int, structPtr interface{}) *Multitenant
 func (mtkv *MultitenantInMemoryKVStore) Tenant(tenant string) KeyValueStore {
 	kv, found := mtkv.kvs[tenant]
 	if !found {
-		kv = NewInMemoryKeyValueStore(mtkv.initialSize, mtkv.structPtrWitness.allocate())
+		kv = NewInMemoryKeyValueStore(mtkv.initialSize)
 		mtkv.kvs[tenant] = kv
 	}
 	return kv
 }
 
 // Fetch gets entries from underlying stores using Get
-func (mtkv *MultitenantInMemoryKVStore) Fetch(tenantKeys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
-	res := NewMultitenantInMemoryKVStore(mtkv.initialSize, mtkv.structPtrWitness.allocate())
+func (mtkv *MultitenantInMemoryKVStore) Fetch(tenantKeys []TenantKey) (*MultitenantInMemoryKVStore, error) {
+	res := NewMultitenantInMemoryKVStore(mtkv.initialSize)
 	for _, tenantKey := range tenantKeys {
 		tenant := tenantKey.Tenant
 		key := tenantKey.Key

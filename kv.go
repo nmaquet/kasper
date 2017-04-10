@@ -6,14 +6,10 @@ Kasper companion library for stateful stream processing.
 
 package kasper
 
-import (
-	"reflect"
-)
-
 // KeyValue is a key-value pair for KeyValueStore
 type KeyValue struct {
 	Key   string
-	Value interface{}
+	Value []byte
 }
 
 // TenantKey is a pair of tenant and key. Use it to get multiple entries from
@@ -27,12 +23,12 @@ type TenantKey struct {
 // Keys are strings, and values are pointers to structs
 type KeyValueStore interface {
 	// get value by key
-	Get(key string) (interface{}, error)
-	// get multiple valus for keys as bulk
-	GetAll(keys []string) ([]*KeyValue, error)
-	Put(key string, value interface{}) error
+	Get(key string) ([]byte, error)
+	// get multiple values for keys as bulk
+	GetAll(keys []string) ([]KeyValue, error)
+	Put(key string, value []byte) error
 	// put multiple key -value pairs as bulk
-	PutAll(kvs []*KeyValue) error
+	PutAll(kvs []KeyValue) error
 	// deletes key from store
 	Delete(key string) error
 	// flush store contents to DB/drive/anything
@@ -47,19 +43,19 @@ type MultitenantKeyValueStore interface {
 	// returns a list of tenants that were selected from parent store
 	AllTenants() []string
 	// get items by list of TenantKeys, uses GetAll method of underlying stores
-	Fetch(keys []*TenantKey) (*MultitenantInMemoryKVStore, error)
+	Fetch(keys []TenantKey) (*MultitenantInMemoryKVStore, error)
 	// put items to underlying stores for all tenants
 	Push(store *MultitenantInMemoryKVStore) error
 }
 
 // ToMap transforms KeyValue pairs to key-value map
-func ToMap(kvs []*KeyValue, err error) (map[string]interface{}, error) {
+func ToMap(kvs []KeyValue, err error) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := make(map[string]interface{}, len(kvs))
+	res := make(map[string][]byte, len(kvs))
 	for _, kv := range kvs {
-		if kv.Value != reflect.Zero(reflect.TypeOf(kv.Value)).Interface() {
+		if kv.Value != nil {
 			res[kv.Key] = kv.Value
 		}
 	}
@@ -67,14 +63,14 @@ func ToMap(kvs []*KeyValue, err error) (map[string]interface{}, error) {
 }
 
 // FromMap key-value map to KeyValue pairs
-func FromMap(m map[string]interface{}) []*KeyValue {
-	res := make([]*KeyValue, len(m))
+func FromMap(m map[string][]byte) []KeyValue {
+	res := make([]KeyValue, len(m))
 	i := 0
 	for key, value := range m {
-		if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
+		if value == nil {
 			continue
 		}
-		res[i] = &KeyValue{key, value}
+		res[i] = KeyValue{key, value}
 		i++
 	}
 	return res[0:i]

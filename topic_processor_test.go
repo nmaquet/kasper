@@ -30,6 +30,28 @@ type FictionAndCharacters struct {
 	Characters  []Character `json:"characters"`
 }
 
+func (c *Character) fromBytes(data []byte) {
+	err := json.Unmarshal(data, c)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (f *Fiction) fromBytes(data []byte) {
+	err := json.Unmarshal(data, f)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (fac FictionAndCharacters) toBytes() []byte {
+	data, err := json.Marshal(&fac)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
 type IDs struct {
 	IDs []string
 }
@@ -59,7 +81,8 @@ func (t *Test) Process(msg IncomingMessage, sender Sender, coordinator Coordinat
 }
 
 func (t *Test) processCharacter(msg IncomingMessage, sender Sender, coordinator Coordinator) {
-	character := msg.Value.(*Character)
+	character := &Character{}
+	character.fromBytes(msg.Value)
 	t.characterStore[character.ID] = character
 	fictionIDs := t.characterToFictionsStore[character.ID]
 	if fictionIDs == nil {
@@ -79,7 +102,8 @@ func (t *Test) processCharacter(msg IncomingMessage, sender Sender, coordinator 
 }
 
 func (t *Test) processFictions(msg IncomingMessage, sender Sender, coordinator Coordinator) {
-	fiction := msg.Value.(*Fiction)
+	fiction := &Fiction{}
+	fiction.fromBytes(msg.Value)
 	t.fictionStore[fiction.ID] = fiction
 	for _, characterID := range fiction.CharacterIDs {
 		fictionIDs := t.characterToFictionsStore[characterID]
@@ -114,8 +138,8 @@ func (t *Test) createOutgoingMessage(fiction *Fiction) *OutgoingMessage {
 	return &OutgoingMessage{
 		Topic:     "fictions-and-characters",
 		Partition: 0,
-		Key:       fiction.ID,
-		Value:     &output,
+		Key:       []byte(fiction.ID),
+		Value:     output.toBytes(),
 	}
 }
 
@@ -316,20 +340,6 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"characters", "fictions"},
-		TopicSerdes: map[string]TopicSerde{
-			"characters": {
-				KeySerde:   NewStringSerde(),
-				ValueSerde: NewJSONSerde(&Character{}),
-			},
-			"fictions": {
-				KeySerde:   NewStringSerde(),
-				ValueSerde: NewJSONSerde(&Fiction{}),
-			},
-			"fictions-and-characters": {
-				KeySerde:   NewStringSerde(),
-				ValueSerde: NewJSONSerde(&FictionAndCharacters{}),
-			},
-		},
 		ContainerCount: 1,
 		PartitionToContainerID: map[int]int{
 			0: 0,

@@ -1,7 +1,6 @@
 package kasper
 
 import (
-	"encoding/json"
 	"sort"
 
 	"golang.org/x/net/context"
@@ -14,7 +13,6 @@ type MultitenantElasticsearchKVStore struct {
 	IndexSettings string
 	TypeMapping   string
 
-	witness         *structPtrWitness
 	client          *elastic.Client
 	context         context.Context
 	kvs             map[string]*ElasticsearchKeyValueStore
@@ -33,13 +31,13 @@ type MultitenantElasticsearchKVStore struct {
 }
 
 // NewMultitenantElasticsearchKVStore creates new MultitenantElasticsearchKVStore
-func NewMultitenantElasticsearchKVStore(url, typeName string, structPtr interface{}) *MultitenantElasticsearchKVStore {
-	return NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName, structPtr, &NoopMetricsProvider{})
+func NewMultitenantElasticsearchKVStore(url, typeName string) *MultitenantElasticsearchKVStore {
+	return NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName, &NoopMetricsProvider{})
 }
 
 // NewMultitenantElasticsearchKVStoreWithMetrics creates new MultitenantElasticsearchKVStore
 // with specified MetricsProvider
-func NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName string, structPtr interface{}, provider MetricsProvider) *MultitenantElasticsearchKVStore {
+func NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName string, provider MetricsProvider) *MultitenantElasticsearchKVStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -51,7 +49,6 @@ func NewMultitenantElasticsearchKVStoreWithMetrics(url, typeName string, structP
 	s := &MultitenantElasticsearchKVStore{
 		IndexSettings:   defaultIndexSettings,
 		TypeMapping:     defaultTypeMapping,
-		witness:         newStructPtrWitness(structPtr),
 		client:          client,
 		context:         context.Background(),
 		kvs:             make(map[string]*ElasticsearchKeyValueStore),
@@ -81,7 +78,6 @@ func (mtkv *MultitenantElasticsearchKVStore) Tenant(tenant string) KeyValueStore
 			IndexSettings: mtkv.IndexSettings,
 			TypeMapping:   mtkv.TypeMapping,
 
-			witness:         mtkv.witness,
 			client:          mtkv.client,
 			context:         mtkv.context,
 			indexName:       tenant,
@@ -116,8 +112,8 @@ func (mtkv *MultitenantElasticsearchKVStore) AllTenants() []string {
 }
 
 // Fetch gets entries from underlying stores using GetAll
-func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*MultitenantInMemoryKVStore, error) {
-	res := NewMultitenantInMemoryKVStore(len(keys)/10, mtkv.witness.allocate())
+func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []TenantKey) (*MultitenantInMemoryKVStore, error) {
+	res := NewMultitenantInMemoryKVStore(len(keys)/10)
 	if len(keys) == 0 {
 		return res, nil
 	}
@@ -137,18 +133,12 @@ func (mtkv *MultitenantElasticsearchKVStore) Fetch(keys []*TenantKey) (*Multiten
 		return nil, err
 	}
 	for _, doc := range response.Docs {
-		var structPtr interface{}
 		if !doc.Found {
 			logger.Debug(doc.Index, doc.Id, " not found")
 			continue
 		}
 		logger.Debug("unmarshalling ", doc.Source)
-		structPtr = mtkv.witness.allocate()
-		err = json.Unmarshal(*doc.Source, structPtr)
-		if err != nil {
-			return nil, err
-		}
-		err := res.Tenant(doc.Index).Put(doc.Id, structPtr)
+		err := res.Tenant(doc.Index).Put(doc.Id, *doc.Source)
 		if err != nil {
 			return nil, err
 		}
@@ -165,12 +155,11 @@ func (mtkv *MultitenantElasticsearchKVStore) Push(s *MultitenantInMemoryKVStore)
 	i := 0
 	for _, tenant := range s.AllTenants() {
 		for key, value := range s.Tenant(tenant).(*InMemoryKeyValueStore).GetMap() {
-			mtkv.witness.assert(value)
 			bulk.Add(elastic.NewBulkIndexRequest().
 				Index(tenant).
 				Type(mtkv.typeName).
 				Id(key).
-				Doc(value),
+				Doc(string(value)),
 			)
 			i++
 		}

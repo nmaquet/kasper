@@ -15,8 +15,8 @@ type MultipleInputTopicsExample struct{}
 
 // Process processes Kafka messages from topics "hello" and "world" and prints info to console
 func (*MultipleInputTopicsExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
-	key := msg.Key.(string)
-	value := msg.Value.(string)
+	key := string(msg.Key)
+	value := string(msg.Value)
 	offset := msg.Offset
 	topic := msg.Topic
 	partition := msg.Partition
@@ -29,16 +29,6 @@ func main() {
 		TopicProcessorName: "multiple-input-topics-example",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"hello", "world"},
-		TopicSerdes: map[string]kasper.TopicSerde{
-			"hello": {
-				KeySerde:   kasper.NewStringSerde(),
-				ValueSerde: kasper.NewStringSerde(),
-			},
-			"world": {
-				KeySerde:   kasper.NewStringSerde(),
-				ValueSerde: kasper.NewStringSerde(),
-			},
-		},
 		ContainerCount: 1,
 		PartitionToContainerID: map[int]int{
 			0: 0,

@@ -135,12 +135,6 @@ func mustHaveValidConfig(config *TopicProcessorConfig, containerID int) {
 	if containerID < 0 || containerID >= config.ContainerCount {
 		logger.Panicf("ContainerID expected to be between 0 and %d, got: %d", config.ContainerCount-1, containerID)
 	}
-	for _, topic := range config.InputTopics {
-		_, ok := config.TopicSerdes[topic]
-		if !ok {
-			logger.Panicf("Could not find Serde for topic '%s'", topic)
-		}
-	}
 }
 
 func mustSetupClient(config *TopicProcessorConfig, containerID int) (sarama.Client, []int, sarama.OffsetManager) {
