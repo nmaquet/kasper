@@ -378,7 +378,7 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 			break
 		}
 	}
-	topicProcessor.Shutdown()
+	topicProcessor.Close()
 	return sendCount
 }
 

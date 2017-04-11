@@ -76,8 +76,8 @@ func main() {
 	log.Println("Topic processor is running...")
 	for range signals {
 		signal.Stop(signals)
-		topicProcessor.Shutdown()
+		topicProcessor.Close()
 		break
 	}
-	log.Println("Topic processor shutdown complete.")
+	log.Println("Topic processor closed.")
 }

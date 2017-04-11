@@ -4,18 +4,18 @@ import (
 	"testing"
 )
 
-func TestPartitionProcessorCoordinator_ShutdownTopicProcessor(t *testing.T) {
-	shutdown := make(chan struct{})
+func TestPartitionProcessorCoordinator_CloseTopicProcessor(t *testing.T) {
+	close := make(chan struct{})
 	c := partitionProcessorCoordinator{
 		&partitionProcessor{
 			topicProcessor: &TopicProcessor{
-				shutdown: shutdown,
+				close: close,
 			},
 		},
 	}
-	c.ShutdownTopicProcessor()
+	c.CloseTopicProcessor()
 	select {
-	case <-shutdown:
+	case <-close:
 		break
 	default:
 		t.Error("did not get a value")

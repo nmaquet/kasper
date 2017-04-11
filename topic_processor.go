@@ -22,7 +22,7 @@ type TopicProcessor struct {
 	partitionProcessors map[int32]*partitionProcessor
 	inputTopics         []string
 	partitions          []int
-	shutdown            chan struct{}
+	close               chan struct{}
 	waitGroup           sync.WaitGroup
 	batchingEnabled     bool
 	batchSize           int
@@ -66,7 +66,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitionProcessors: partitionProcessors,
 		inputTopics:         inputTopics,
 		partitions:          partitions,
-		shutdown:            make(chan struct{}),
+		close:               make(chan struct{}),
 		waitGroup:           sync.WaitGroup{},
 		batchingEnabled:     false,
 	}
@@ -106,7 +106,7 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts) *To
 		partitionProcessors: partitionProcessors,
 		inputTopics:         inputTopics,
 		partitions:          partitions,
-		shutdown:            make(chan struct{}),
+		close:               make(chan struct{}),
 		waitGroup:           sync.WaitGroup{},
 		batchingEnabled:     true,
 		batchSize:           opts.BatchSize,
@@ -144,10 +144,10 @@ func (tp *TopicProcessor) Start() {
 	}()
 }
 
-// Shutdown safely shuts down topic processing, waiting for unfinished jobs
-func (tp *TopicProcessor) Shutdown() {
-	logger.Info("Received shutdown request")
-	close(tp.shutdown)
+// Close safely shuts down topic processing, waiting for unfinished jobs
+func (tp *TopicProcessor) Close() {
+	logger.Info("Received close request")
+	close(tp.close)
 	tp.waitGroup.Wait()
 }
 
@@ -228,8 +228,8 @@ func (tp *TopicProcessor) runLoop() {
 				lengths[partition] = 0
 				logger.Debug("Processing of batch complete")
 			}
-		case <-tp.shutdown:
-			tp.onShutdown(metricsTicker, batchTicker)
+		case <-tp.close:
+			tp.onClose(metricsTicker, batchTicker)
 			return
 		}
 	}
@@ -273,21 +273,21 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 	}
 }
 
-func (tp *TopicProcessor) onShutdown(tickers ...*time.Ticker) {
-	logger.Info("Shutting down topic processor...")
+func (tp *TopicProcessor) onClose(tickers ...*time.Ticker) {
+	logger.Info("Closing topic processor...")
 	for _, ticker := range tickers {
 		if ticker != nil {
 			ticker.Stop()
 		}
 	}
 	for _, pp := range tp.partitionProcessors {
-		pp.onShutdown()
+		pp.onClose()
 	}
 	err := tp.producer.Close()
 	if err != nil {
 		logger.Panic(err)
 	}
-	logger.Info("Shutdown complete")
+	logger.Info("Close complete")
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
@@ -300,7 +300,7 @@ func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessa
 				select {
 				case consumerMessagesChan <- msg:
 					continue
-				case <-tp.shutdown:
+				case <-tp.close:
 					return
 				}
 

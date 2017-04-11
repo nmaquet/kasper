@@ -144,7 +144,7 @@ func (pp *partitionProcessor) markOffsetsForBatch(messages []*sarama.ConsumerMes
 	}
 }
 
-func (pp *partitionProcessor) onShutdown() {
+func (pp *partitionProcessor) onClose() {
 	var err error
 	for _, pom := range pp.offsetManagers {
 		err = pom.Close()
