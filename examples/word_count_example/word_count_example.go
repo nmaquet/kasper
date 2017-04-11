@@ -66,7 +66,6 @@ func main() {
 		Client:             client,
 		InputTopics:        []string{"words"},
 		InputPartitions:    []int{0},
-		Config:             kasper.DefaultConfig(),
 	}
 	store := kasper.NewMap(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }

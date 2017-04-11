@@ -333,8 +333,6 @@ const expectedResultJSON string = `
 `
 
 func populateFictionAndCharactersTopic(batchingEnabled bool) int {
-	config := DefaultConfig()
-	config.MetricsUpdateInterval = 100 * time.Millisecond
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaConfig.Producer.Return.Successes = true
@@ -347,7 +345,6 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		Client:             client,
 		InputTopics:        []string{"characters", "fictions"},
 		InputPartitions:    []int{0},
-		Config:             config,
 	}
 
 	sendCount := 0

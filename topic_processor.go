@@ -53,6 +53,7 @@ type BatchMessageProcessor interface {
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
+	config.SetDefaults()
 	inputTopics := config.InputTopics
 	partitions := config.InputPartitions
 	offsetManager := mustSetupOffsetManager(config)
@@ -69,7 +70,7 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		waitGroup:           sync.WaitGroup{},
 		batchingEnabled:     false,
 	}
-	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
+	setupMetrics(&topicProcessor, config.MetricsProvider)
 	for _, partition := range partitions {
 		processor := makeProcessor()
 		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, nil, partition)
@@ -92,6 +93,7 @@ type BatchingOpts struct {
 
 // NewBatchTopicProcessor creates a new instance of BatchMessageProcessor
 func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts) *TopicProcessor {
+	config.SetDefaults()
 	inputTopics := config.InputTopics
 	partitions := config.InputPartitions
 	offsetManager := mustSetupOffsetManager(config)
@@ -110,7 +112,7 @@ func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts) *To
 		batchSize:           opts.BatchSize,
 		batchWaitDuration:   opts.BatchWaitDuration,
 	}
-	setupMetrics(&topicProcessor, config.Config.MetricsProvider)
+	setupMetrics(&topicProcessor, config.MetricsProvider)
 	for _, partition := range partitions {
 		processor := opts.MakeProcessor()
 		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, nil, processor, partition)
@@ -186,7 +188,7 @@ func (tp *TopicProcessor) getBatches() map[int][]*sarama.ConsumerMessage {
 
 func (tp *TopicProcessor) runLoop() {
 	consumerChan := tp.getConsumerMessagesChan()
-	metricsTicker := time.NewTicker(tp.config.Config.MetricsUpdateInterval)
+	metricsTicker := time.NewTicker(tp.config.MetricsUpdateInterval)
 	batchTicker := tp.getBatchTicker()
 	batchTickerChan := tp.getBatchTickerChan(batchTicker)
 

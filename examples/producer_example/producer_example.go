@@ -39,7 +39,6 @@ func main() {
 		Client:             client,
 		InputTopics:        []string{"hello", "world"},
 		InputPartitions:    []int{0},
-		Config:             kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &ProducerExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
