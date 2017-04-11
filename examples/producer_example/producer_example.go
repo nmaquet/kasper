@@ -36,14 +36,11 @@ func main() {
 		TopicProcessorName: "producer-example",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"hello", "world"},
-		ContainerCount: 1,
-		PartitionToContainerID: map[int]int{
-			0: 0,
-		},
+		InputPartitions:    []int{0},
 		Config: kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &ProducerExample{} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
 	topicProcessor.Start()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

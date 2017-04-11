@@ -2,7 +2,6 @@ NB: interfaces should have abstract names
     structs should have concrete names
 
 ### CHANGES ###
-# remove the container abstraction
 # don't wrap shopify.Sarama, take Clients as input
 # don't wrap olivere.Elastic, take Clients as input
 # use decorator pattern on KeyValueStore for metrics

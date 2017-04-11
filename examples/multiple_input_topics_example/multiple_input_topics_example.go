@@ -29,14 +29,11 @@ func main() {
 		TopicProcessorName: "multiple-input-topics-example",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"hello", "world"},
-		ContainerCount: 1,
-		PartitionToContainerID: map[int]int{
-			0: 0,
-		},
-		Config: kasper.DefaultConfig(),
+		InputPartitions:    []int{0},
+		Config:             kasper.DefaultConfig(),
 	}
 	makeProcessor := func() kasper.MessageProcessor { return &MultipleInputTopicsExample{} }
-	topicProcessor := kasper.NewTopicProcessor(&config, makeProcessor, 0)
+	topicProcessor := kasper.NewTopicProcessor(&config, makeProcessor)
 	topicProcessor.Start()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

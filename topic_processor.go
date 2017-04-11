@@ -17,7 +17,6 @@ import (
 // TopicProcessor describes kafka topic processor
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
-	containerID         int
 	client              sarama.Client
 	producer            sarama.SyncProducer
 	offsetManager       sarama.OffsetManager
@@ -54,16 +53,15 @@ type BatchMessageProcessor interface {
 // NewTopicProcessor creates a new TopicProcessor with the given config.
 // It requires a factory function that creates MessageProcessor instances and a container id.
 // The container id must be a number between 0 and config.ContainerCount - 1.
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor, containerID int) *TopicProcessor {
-	mustHaveValidConfig(config, containerID)
+func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
 	inputTopics := config.InputTopics
-	client, partitions, offsetManager := mustSetupClient(config, containerID)
+	partitions := config.InputPartitions
+	client, offsetManager := mustSetupClient(config)
 	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
 	requiredAcks := config.Config.RequiredAcks
-	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), requiredAcks)
+	producer := mustSetupProducer(config.BrokerList, config.producerClientID(), requiredAcks)
 	topicProcessor := TopicProcessor{
 		config:              config,
-		containerID:         containerID,
 		client:              client,
 		producer:            producer,
 		offsetManager:       offsetManager,
@@ -96,15 +94,14 @@ type BatchingOpts struct {
 }
 
 // NewBatchTopicProcessor creates a new instance of BatchMessageProcessor
-func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts, containerID int) *TopicProcessor {
-	mustHaveValidConfig(config, containerID)
+func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts) *TopicProcessor {
 	inputTopics := config.InputTopics
-	client, partitions, offsetManager := mustSetupClient(config, containerID)
+	partitions := config.InputPartitions
+	client, offsetManager := mustSetupClient(config)
 	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
-	producer := mustSetupProducer(config.BrokerList, config.producerClientID(containerID), config.Config.RequiredAcks)
+	producer := mustSetupProducer(config.BrokerList, config.producerClientID(), config.Config.RequiredAcks)
 	topicProcessor := TopicProcessor{
 		config:              config,
-		containerID:         containerID,
 		client:              client,
 		producer:            producer,
 		offsetManager:       offsetManager,
@@ -131,13 +128,7 @@ func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
 	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
 }
 
-func mustHaveValidConfig(config *TopicProcessorConfig, containerID int) {
-	if containerID < 0 || containerID >= config.ContainerCount {
-		logger.Panicf("ContainerID expected to be between 0 and %d, got: %d", config.ContainerCount-1, containerID)
-	}
-}
-
-func mustSetupClient(config *TopicProcessorConfig, containerID int) (sarama.Client, []int, sarama.OffsetManager) {
+func mustSetupClient(config *TopicProcessorConfig) (sarama.Client, sarama.OffsetManager) {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // TODO: make this configurable
 	client, err := sarama.NewClient(config.BrokerList, saramaConfig)
@@ -145,18 +136,11 @@ func mustSetupClient(config *TopicProcessorConfig, containerID int) (sarama.Clie
 		logger.Panic(err)
 	}
 	logger.Info("Connected to Kafka Brokers", config.BrokerList)
-	partitions := config.partitionsForContainer(containerID)
-	for _, partition := range partitions {
-		_, ok := config.PartitionToContainerID[partition]
-		if !ok {
-			logger.Panic("Could not find PartitionToContainerID mapping for partition ", partition)
-		}
-	}
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
 	if err != nil {
 		logger.Panic(err)
 	}
-	return client, partitions, offsetManager
+	return client, offsetManager
 }
 
 // Start launches a deferred routine for topic processing.

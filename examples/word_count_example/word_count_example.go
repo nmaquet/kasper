@@ -63,15 +63,12 @@ func main() {
 		TopicProcessorName: "key-value-store-example",
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"words"},
-		ContainerCount: 1,
-		PartitionToContainerID: map[int]int{
-			0: 0,
-		},
+		InputPartitions:    []int{0},
 		Config: kasper.DefaultConfig(),
 	}
 	store := kasper.NewInMemoryKeyValueStore(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor, 0)
+	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
 	topicProcessor.Start()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

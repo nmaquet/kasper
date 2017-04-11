@@ -340,11 +340,8 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"characters", "fictions"},
-		ContainerCount: 1,
-		PartitionToContainerID: map[int]int{
-			0: 0,
-		},
-		Config: config,
+		InputPartitions:    []int{0},
+		Config:             config,
 	}
 
 	sendCount := 0
@@ -366,9 +363,9 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 
 	var topicProcessor *TopicProcessor
 	if batchingEnabled {
-		topicProcessor = NewBatchTopicProcessor(&tpConfig, batchingOpts, 0)
+		topicProcessor = NewBatchTopicProcessor(&tpConfig, batchingOpts)
 	} else {
-		topicProcessor = NewTopicProcessor(&tpConfig, mkMessageProcessor, 0)
+		topicProcessor = NewTopicProcessor(&tpConfig, mkMessageProcessor)
 	}
 
 	topicProcessor.Start()
