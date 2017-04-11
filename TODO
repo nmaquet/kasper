@@ -6,11 +6,3 @@ NB: interfaces should have abstract names
 # don't wrap olivere.Elastic, take Clients as input
 # remove KeyValue / FromMap / ToMap
 # remove TenantKey
-
-### QUESTIONS ###
-# what to do about multi tenanting ???
-
-### RENAMINGS ###
-# KeyValueStore -> Store
-# InMemoryKeyValueStore -> Map
-# ElasticSearchKeyValueStore -> Elasticsearch

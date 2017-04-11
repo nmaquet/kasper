@@ -6,22 +6,22 @@ Kasper companion library for stateful stream processing.
 
 package kasper
 
-// KeyValue is a key-value pair for KeyValueStore
+// KeyValue is a key-value pair for Store
 type KeyValue struct {
 	Key   string
 	Value []byte
 }
 
 // TenantKey is a pair of tenant and key. Use it to get multiple entries from
-// MultitenantKeyValueStore.GetAll
+// MultiStore.GetAll
 type TenantKey struct {
 	Tenant string
 	Key    string
 }
 
-// KeyValueStore is universal interface for a key-value store
+// Store is universal interface for a key-value store
 // Keys are strings, and values are pointers to structs
-type KeyValueStore interface {
+type Store interface {
 	// get value by key
 	Get(key string) ([]byte, error)
 	// get multiple values for keys as bulk
@@ -35,17 +35,17 @@ type KeyValueStore interface {
 	Flush() error
 }
 
-// MultitenantKeyValueStore allows to store entities of the same type Interface
+// MultiStore allows to store entities of the same type Interface
 // different databases (tenants). Instead of Key it operates TenantKey to access values
-type MultitenantKeyValueStore interface {
+type MultiStore interface {
 	// returns underlying store for current tenant
-	Tenant(tenant string) KeyValueStore
+	Tenant(tenant string) Store
 	// returns a list of tenants that were selected from parent store
 	AllTenants() []string
 	// get items by list of TenantKeys, uses GetAll method of underlying stores
-	Fetch(keys []TenantKey) (*MultitenantInMemoryKVStore, error)
+	Fetch(keys []TenantKey) (*MultiMap, error)
 	// put items to underlying stores for all tenants
-	Push(store *MultitenantInMemoryKVStore) error
+	Push(store *MultiMap) error
 }
 
 // ToMap transforms KeyValue pairs to key-value map

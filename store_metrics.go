@@ -1,8 +1,8 @@
 package kasper
 
-// StoreMetrics is a KeyValueStore decorator that collects metrics.
+// StoreMetrics is a Store decorator that collects metrics.
 type StoreMetrics struct {
-	store         KeyValueStore
+	store         Store
 	label         string
 	provider      MetricsProvider
 	getCounter    Counter
@@ -14,23 +14,23 @@ type StoreMetrics struct {
 }
 
 // TBD
-func NewStoreMetrics(store KeyValueStore, provider MetricsProvider, label string) *StoreMetrics {
-	inMemoryKeyValueStore := &StoreMetrics{
+func NewStoreMetrics(store Store, provider MetricsProvider, label string) *StoreMetrics {
+	storeMetrics := &StoreMetrics{
 		store: store,
 		label: label,
 		provider: provider,
 	}
-	inMemoryKeyValueStore.createMetrics()
-	return inMemoryKeyValueStore
+	storeMetrics.createMetrics()
+	return storeMetrics
 }
 
 func (s *StoreMetrics) createMetrics() {
-	s.getCounter = s.provider.NewCounter("KeyValueStoreMetrics_Get", "Number of Get() calls", "label")
-	s.getAllSummary = s.provider.NewSummary("KeyValueStoreMetrics_GetAll", "Summary of GetAll() calls", "label")
-	s.putCounter = s.provider.NewCounter("KeyValueStoreMetrics_Put", "Number of Put() calls", "label")
-	s.putAllSummary = s.provider.NewSummary("KeyValueStoreMetrics_PutAll", "Summary of PutAll() calls", "label")
-	s.deleteCounter = s.provider.NewCounter("KeyValueStoreMetrics_Delete", "Number of Delete() calls", "label")
-	s.flushCounter = s.provider.NewCounter("KeyValueStoreMetrics_Flush", "Summary of Flush() calls", "label")
+	s.getCounter = s.provider.NewCounter("Store_Get", "Number of Get() calls", "label")
+	s.getAllSummary = s.provider.NewSummary("Store_GetAll", "Summary of GetAll() calls", "label")
+	s.putCounter = s.provider.NewCounter("Store_Put", "Number of Put() calls", "label")
+	s.putAllSummary = s.provider.NewSummary("Store_PutAll", "Summary of PutAll() calls", "label")
+	s.deleteCounter = s.provider.NewCounter("Store_Delete", "Number of Delete() calls", "label")
+	s.flushCounter = s.provider.NewCounter("Store_Flush", "Summary of Flush() calls", "label")
 }
 
 // Get gets value by key from underlying map

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var store *ElasticsearchKeyValueStore
+var store *Elasticsearch
 
 var vorgansharax = []byte(`{"color": "green", "name": "Vorgansharax"}`)
 var falkor = []byte(`{"color": "white", "name": "Falkor"}`)
@@ -14,7 +14,7 @@ var saphira = []byte(`{"color": "blue", "name": "Saphira"}`)
 var mushu = []byte(`{"color": "red", "name": "Mushu"}`)
 var finFangFoom = []byte(`{"color": "green", "name": "Fin Fang Foom"}`)
 
-func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
+func TestElasticsearch_Get_Put(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -38,7 +38,7 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 		_, err = store.client.DeleteIndex("kasper").Do(store.context)
 		assert.Nil(t, err)
 	}()
-	// First trick Elasticsearch into thinking Color is a date field...
+	// First trick MultiElasticsearch into thinking Color is a date field...
 	err = store.Put("vorgansharax", []byte(`{"color": "2009-11-15T14:12:12", "name": "Vorgansharax"}`))
 	assert.Nil(t, err)
 	// Then try to put a regular string in
@@ -47,7 +47,7 @@ func TestElasticsearchKeyValue_Get_Put(t *testing.T) {
 
 }
 
-func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
+func TestElasticsearch_Delete(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -69,7 +69,7 @@ func TestElasticsearchKeyValueStore_Delete(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
+func TestElasticsearch_GetAll_PutAll(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -119,7 +119,7 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 	// Test failed PUT (400)
 	_, err = store.client.DeleteIndex("kasper").Do(store.context)
 	assert.Nil(t, err)
-	// First trick Elasticsearch into thinking Color is a date field...
+	// First trick MultiElasticsearch into thinking Color is a date field...
 	err = store.Put("vorgansharax", []byte(`{"color": "2009-11-15T14:12:12", "name": "Vorgansharax"}`))
 	assert.Nil(t, err)
 	// Then try to put a regular string in
@@ -141,7 +141,7 @@ func TestElasticsearchKeyValueStore_GetAll_PutAll(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestElasticsearchKeyValueStore_Flush(t *testing.T) {
+func TestElasticsearch_Flush(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -154,7 +154,7 @@ func init() {
 		return
 	}
 	SetLogger(&NoopLogger{})
-	store = NewElasticsearchKeyValueStore(
+	store = NewElasticsearch(
 		"http://localhost:9200",
 		"kasper",
 		"dragon",

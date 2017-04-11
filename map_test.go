@@ -15,66 +15,66 @@ var saturn = []byte("saturn")
 var uranus = []byte("uranus")
 var neptune = []byte("neptune")
 
-func newTestInMemoryKV() *InMemoryKeyValueStore {
-	s := &InMemoryKeyValueStore{
+func newTestMap() *Map {
+	s := &Map{
 		m: make(map[string][]byte, 10),
 	}
 	return s
 }
 
-func TestNewInMemoryKeyValueStore(t *testing.T) {
-	NewInMemoryKeyValueStore(10)
+func TestMap(t *testing.T) {
+	NewMap(10)
 }
 
-func TestInMemoryKeyValueStore_Get_ExistingKey(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Get_ExistingKey(t *testing.T) {
+	s := newTestMap()
 	s.Put("mercury", mercury)
 	actual, err := s.Get("mercury")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, mercury, actual)
 }
 
-func TestInMemoryKeyValueStore_Get_MissingKey(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Get_MissingKey(t *testing.T) {
+	s := newTestMap()
 	s.Put("earth", earth)
 	actual, err := s.Get("venus")
 	assert.Nil(t, err)
 	assert.Nil(t, actual)
 }
 
-func TestInMemoryKeyValueStore_Put_Normal(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Put_Normal(t *testing.T) {
+	s := newTestMap()
 	err := s.Put("venus", venus)
 	assert.Nil(t, err)
 	assert.Equal(t, venus, s.m["venus"])
 }
 
-func TestInMemoryKeyValueStore_Put_Overwrite(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Put_Overwrite(t *testing.T) {
+	s := newTestMap()
 	s.Put("earth", jupiter)
 	err := s.Put("earth", earth)
 	assert.Nil(t, err)
 	assert.Equal(t, earth, s.m["earth"])
 }
 
-func TestInMemoryKeyValueStore_Delete_Existing(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Delete_Existing(t *testing.T) {
+	s := newTestMap()
 	s.m["neptune"] = neptune
 	err := s.Delete("neptune")
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(s.m))
 }
 
-func TestInMemoryKeyValueStore_Delete_NonExisting(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Delete_NonExisting(t *testing.T) {
+	s := newTestMap()
 	s.m["uranus"] = uranus
 	err := s.Delete("mercury")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(s.m))
 }
 
-func TestInMemoryKeyValueStore_GetAll(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_GetAll(t *testing.T) {
+	s := newTestMap()
 	s.m["mars"] = mars
 	kvs, err := s.GetAll([]string{"venus", "mars"})
 	assert.Equal(t, nil, err)
@@ -85,16 +85,16 @@ func TestInMemoryKeyValueStore_GetAll(t *testing.T) {
 	assert.Equal(t, kvs[1].Value, mars)
 }
 
-func TestInMemoryKeyValueStore_GetAll_Empty(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_GetAll_Empty(t *testing.T) {
+	s := newTestMap()
 	_, err := s.GetAll([]string{})
 	assert.Nil(t, err)
 	_, err = s.GetAll(nil)
 	assert.Nil(t, err)
 }
 
-func TestInMemoryKeyValueStore_PutAll(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_PutAll(t *testing.T) {
+	s := newTestMap()
 	err := s.PutAll([]KeyValue{{"jupiter", jupiter}, {"neptune", neptune}})
 	assert.Nil(t, err)
 	assert.Equal(t, len(s.m), 2)
@@ -102,22 +102,22 @@ func TestInMemoryKeyValueStore_PutAll(t *testing.T) {
 	assert.Equal(t, s.m["neptune"], neptune)
 }
 
-func TestInMemoryKeyValueStore_PutAll_Empty(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_PutAll_Empty(t *testing.T) {
+	s := newTestMap()
 	err := s.PutAll([]KeyValue{})
 	assert.Nil(t, err)
 	err = s.PutAll(nil)
 	assert.Nil(t, err)
 }
 
-func TestInMemoryKeyValueStore_Flush(t *testing.T) {
-	s := newTestInMemoryKV()
+func TestMap_Flush(t *testing.T) {
+	s := newTestMap()
 	err := s.Flush()
 	assert.Nil(t, err)
 }
 
-func BenchmarkInMemoryKeyValueStore_Get(b *testing.B) {
-	s := newTestInMemoryKV()
+func BenchmarkMap_Get(b *testing.B) {
+	s := newTestMap()
 	s.m["earth"] = earth
 	s.m["jupiter"] = jupiter
 	s.m["mercury"] = mercury
@@ -130,8 +130,8 @@ func BenchmarkInMemoryKeyValueStore_Get(b *testing.B) {
 	}
 }
 
-func BenchmarkInMemoryKeyValueStore_Put(b *testing.B) {
-	s := newTestInMemoryKV()
+func BenchmarkMap_Put(b *testing.B) {
+	s := newTestMap()
 	kvs := []*KeyValue{
 		{"earth", earth},
 		{"mars", mars},

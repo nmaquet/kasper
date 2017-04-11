@@ -25,8 +25,8 @@ const defaultTypeMapping = `{
 	}]
 }`
 
-// ElasticsearchKeyValueStore is a key-value storage that uses ElasticSearch.
-type ElasticsearchKeyValueStore struct {
+// Elasticsearch is a key-value storage that uses ElasticSearch.
+type Elasticsearch struct {
 	IndexSettings string
 	TypeMapping   string
 
@@ -36,11 +36,8 @@ type ElasticsearchKeyValueStore struct {
 	typeName        string
 }
 
-// NewElasticsearchKeyValueStoreWithMetrics creates new ElasticsearchKeyValueStore instance.
-// Host must of the format hostname:port.
-// StructPtr should be a pointer to struct type that is used.
-// for serialization and deserialization of store values.
-func NewElasticsearchKeyValueStore(url, indexName, typeName string) *ElasticsearchKeyValueStore {
+// TBD
+func NewElasticsearch(url, indexName, typeName string) *Elasticsearch {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -48,8 +45,8 @@ func NewElasticsearchKeyValueStore(url, indexName, typeName string) *Elasticsear
 	if err != nil {
 		logger.Panicf("Cannot create ElasticSearch Client to '%s': %s", url, err)
 	}
-	logger.Info("Connected to Elasticsearch at ", url)
-	s := &ElasticsearchKeyValueStore{
+	logger.Info("Connected to MultiElasticsearch at ", url)
+	s := &Elasticsearch{
 		client:          client,
 		context:         context.Background(),
 		indexName:       indexName,
@@ -62,7 +59,7 @@ func NewElasticsearchKeyValueStore(url, indexName, typeName string) *Elasticsear
 	return s
 }
 
-func (s *ElasticsearchKeyValueStore) checkOrCreateIndex() {
+func (s *Elasticsearch) checkOrCreateIndex() {
 	exists, err := s.client.IndexExists(s.indexName).Do(s.context)
 	if err != nil {
 		logger.Panic(fmt.Sprintf("Failed to check if index exists: %s", err))
@@ -79,7 +76,7 @@ func (s *ElasticsearchKeyValueStore) checkOrCreateIndex() {
 	}
 }
 
-func (s *ElasticsearchKeyValueStore) checkOrPutMapping() {
+func (s *Elasticsearch) checkOrPutMapping() {
 	getResp, err := s.client.GetMapping().
 		Index(s.indexName).
 		Type(s.typeName).
@@ -111,8 +108,8 @@ func (s *ElasticsearchKeyValueStore) checkOrPutMapping() {
 }
 
 // Get gets value by key from store
-func (s *ElasticsearchKeyValueStore) Get(key string) ([]byte, error) {
-	logger.Debug("Elasticsearch Get: ", key)
+func (s *Elasticsearch) Get(key string) ([]byte, error) {
+	logger.Debug("MultiElasticsearch Get: ", key)
 	rawValue, err := s.client.Get().
 		Index(s.indexName).
 		Type(s.typeName).
@@ -135,11 +132,11 @@ func (s *ElasticsearchKeyValueStore) Get(key string) ([]byte, error) {
 }
 
 // GetAll gets multiple keys from store using MultiGet.
-func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]KeyValue, error) {
+func (s *Elasticsearch) GetAll(keys []string) ([]KeyValue, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
-	logger.Debug("Elasticsearch GetAll: ", keys)
+	logger.Debug("MultiElasticsearch GetAll: ", keys)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 
@@ -164,8 +161,8 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]KeyValue, error) {
 }
 
 // Put updates key in store with serialized value
-func (s *ElasticsearchKeyValueStore) Put(key string, value []byte) error {
-	logger.Debug(fmt.Sprintf("Elasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
+func (s *Elasticsearch) Put(key string, value []byte) error {
+	logger.Debug(fmt.Sprintf("MultiElasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
 
 	_, err := s.client.Index().
 		Index(s.indexName).
@@ -178,8 +175,8 @@ func (s *ElasticsearchKeyValueStore) Put(key string, value []byte) error {
 }
 
 // PutAll bulk executes Put operation for several kvs
-func (s *ElasticsearchKeyValueStore) PutAll(kvs []KeyValue) error {
-	logger.Debugf("Elasticsearch PutAll of %d keys", len(kvs))
+func (s *Elasticsearch) PutAll(kvs []KeyValue) error {
+	logger.Debugf("MultiElasticsearch PutAll of %d keys", len(kvs))
 	if len(kvs) == 0 {
 		return nil
 	}
@@ -203,8 +200,8 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []KeyValue) error {
 }
 
 // Delete removes key from store
-func (s *ElasticsearchKeyValueStore) Delete(key string) error {
-	logger.Debug("Elasticsearch Delete: ", key)
+func (s *Elasticsearch) Delete(key string) error {
+	logger.Debug("MultiElasticsearch Delete: ", key)
 
 	_, err := s.client.Delete().
 		Index(s.indexName).
@@ -219,22 +216,22 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	return err
 }
 
-// Flush the Elasticsearch translog to disk
-func (s *ElasticsearchKeyValueStore) Flush() error {
-	logger.Info("Elasticsearch Flush...")
+// Flush the MultiElasticsearch translog to disk
+func (s *Elasticsearch) Flush() error {
+	logger.Info("MultiElasticsearch Flush...")
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
 		Do(s.context)
-	logger.Info("Elasticsearch Flush complete")
+	logger.Info("MultiElasticsearch Flush complete")
 	return err
 }
 
 // GetClient return underlying elastic.Client
-func (s *ElasticsearchKeyValueStore) GetClient() *elastic.Client {
+func (s *Elasticsearch) GetClient() *elastic.Client {
 	return s.client
 }
 
-func (s* ElasticsearchKeyValueStore) WithMetrics(provider MetricsProvider, label string) KeyValueStore {
+func (s*Elasticsearch) WithMetrics(provider MetricsProvider, label string) Store {
 	return NewStoreMetrics(s, provider, label)
 }
 

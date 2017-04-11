@@ -16,7 +16,7 @@ import (
 // WordCountExample is message processor that shows how to use key-value store in processing Kafka messages
 // and outputs results to topic "word-counts"
 type WordCountExample struct {
-	store kasper.KeyValueStore
+	store kasper.Store
 }
 
 // Process processes Kafka messages from topic "words" and outputs each word with counter to "word-counts" topic
@@ -67,7 +67,7 @@ func main() {
 		InputPartitions:    []int{0},
 		Config:             kasper.DefaultConfig(),
 	}
-	store := kasper.NewInMemoryKeyValueStore(10000)
+	store := kasper.NewMap(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
 	topicProcessor.Start()

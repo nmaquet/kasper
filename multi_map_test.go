@@ -7,11 +7,11 @@ import (
 )
 
 func TestMultitenantInMemoryKVStore_ForTenant(t *testing.T) {
-	mtkv := NewMultitenantInMemoryKVStore(10)
-	testMultiTenantKeyValueStore(t, mtkv)
+	mtkv := NewMultiMap(10)
+	testMultiStore(t, mtkv)
 }
 
-func testMultiTenantKeyValueStore(t *testing.T, mtkv MultitenantKeyValueStore) {
+func testMultiStore(t *testing.T, mtkv MultiStore) {
 	spiderman := []byte(`{"name":"Spiderman","power":"webs"}`)
 	ironman := []byte(`{"name":"Ironman","power":"a kickass powered armor"}`)
 	batman := []byte(`{"name":"Batman","power":"money and an inflated sense of self"}`)
