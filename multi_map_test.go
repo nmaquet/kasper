@@ -28,14 +28,14 @@ func testMultiStore(t *testing.T, mtkv MultiStore) {
 
 	heroes := []string{"spiderman", "ironman", "batman", "superman"}
 
-	marvel, err := ToMap(mtkv.Tenant("marvel").GetAll(heroes))
+	marvel, err := mtkv.Tenant("marvel").GetAll(heroes)
 	assert.Nil(t, err)
 	assert.NotNil(t, marvel["spiderman"])
 	assert.NotNil(t, marvel["ironman"])
 	assert.Nil(t, marvel["batman"])
 	assert.Nil(t, marvel["superman"])
 
-	dc, err := ToMap(mtkv.Tenant("dc").GetAll(heroes))
+	dc, err := mtkv.Tenant("dc").GetAll(heroes)
 	assert.Nil(t, err)
 	assert.Nil(t, dc["spiderman"])
 	assert.Nil(t, dc["ironman"])

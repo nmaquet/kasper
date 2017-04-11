@@ -82,12 +82,12 @@ func TestElasticsearch_GetAll_PutAll(t *testing.T) {
 	assert.Nil(t, err)
 
 	// GetAll on 4 keys, one non existing
-	kvs, err := ToMap(store.GetAll([]string{
+	kvs, err := store.GetAll([]string{
 		"saphira",
 		"draco",
 		"mushu",
 		"fin-fang-foom",
-	}))
+	})
 	assert.Nil(t, err)
 
 	// Check the 3 keys
@@ -101,15 +101,15 @@ func TestElasticsearch_GetAll_PutAll(t *testing.T) {
 	assert.Nil(t, err)
 
 	// PutAll all 3 dragons again
-	err = store.PutAll(FromMap(kvs))
+	err = store.PutAll(kvs)
 	assert.Nil(t, err)
 
 	// Check the 3 keys once more
-	kvs, err = ToMap(store.GetAll([]string{
+	kvs, err = store.GetAll([]string{
 		"saphira",
 		"mushu",
 		"fin-fang-foom",
-	}))
+	})
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(kvs))
 	assert.Equal(t, saphira, kvs["saphira"])
@@ -123,14 +123,14 @@ func TestElasticsearch_GetAll_PutAll(t *testing.T) {
 	err = store.Put("vorgansharax", []byte(`{"color": "2009-11-15T14:12:12", "name": "Vorgansharax"}`))
 	assert.Nil(t, err)
 	// Then try to put a regular string in
-	err = store.PutAll([]KeyValue{
-		{"vorgansharax1", vorgansharax},
-		{"vorgansharax2", vorgansharax},
-		{"vorgansharax3", vorgansharax},
-		{"vorgansharax4", vorgansharax},
-		{"vorgansharax5", vorgansharax},
-		{"vorgansharax6", vorgansharax},
-		{"vorgansharax7", vorgansharax},
+	err = store.PutAll(map[string][]byte{
+		"vorgansharax1": vorgansharax,
+		"vorgansharax2": vorgansharax,
+		"vorgansharax3": vorgansharax,
+		"vorgansharax4": vorgansharax,
+		"vorgansharax5": vorgansharax,
+		"vorgansharax6": vorgansharax,
+		"vorgansharax7": vorgansharax,
 	})
 	assert.NotNil(t, err)
 

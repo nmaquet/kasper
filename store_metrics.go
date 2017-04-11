@@ -40,7 +40,7 @@ func (s *StoreMetrics) Get(key string) ([]byte, error) {
 }
 
 // GetAll gets several keys from underlying map at once. Returns KeyValue pairs.
-func (s *StoreMetrics) GetAll(keys []string) ([]KeyValue, error) {
+func (s *StoreMetrics) GetAll(keys []string) (map[string][]byte, error) {
 	s.getAllSummary.Observe(float64(len(keys)), s.label)
 	return s.store.GetAll(keys)
 }
@@ -52,7 +52,7 @@ func (s *StoreMetrics) Put(key string, value []byte) error {
 }
 
 // PutAll bulk executes all Put operations
-func (s *StoreMetrics) PutAll(kvs []KeyValue) error {
+func (s *StoreMetrics) PutAll(kvs map[string][]byte) error {
 	s.putAllSummary.Observe(float64(len(kvs)), s.label)
 	return s.store.PutAll(kvs)
 }

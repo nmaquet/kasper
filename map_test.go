@@ -78,11 +78,8 @@ func TestMap_GetAll(t *testing.T) {
 	s.m["mars"] = mars
 	kvs, err := s.GetAll([]string{"venus", "mars"})
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 2, len(kvs))
-	assert.Equal(t, kvs[0].Key, "venus")
-	assert.Nil(t, kvs[0].Value)
-	assert.Equal(t, kvs[1].Key, "mars")
-	assert.Equal(t, kvs[1].Value, mars)
+	assert.Equal(t, 1, len(kvs))
+	assert.Equal(t, kvs["mars"], mars)
 }
 
 func TestMap_GetAll_Empty(t *testing.T) {
@@ -95,7 +92,7 @@ func TestMap_GetAll_Empty(t *testing.T) {
 
 func TestMap_PutAll(t *testing.T) {
 	s := newTestMap()
-	err := s.PutAll([]KeyValue{{"jupiter", jupiter}, {"neptune", neptune}})
+	err := s.PutAll(map[string][]byte{"jupiter" : jupiter, "neptune": neptune})
 	assert.Nil(t, err)
 	assert.Equal(t, len(s.m), 2)
 	assert.Equal(t, s.m["jupiter"], jupiter)
@@ -104,7 +101,7 @@ func TestMap_PutAll(t *testing.T) {
 
 func TestMap_PutAll_Empty(t *testing.T) {
 	s := newTestMap()
-	err := s.PutAll([]KeyValue{})
+	err := s.PutAll(map[string][]byte{})
 	assert.Nil(t, err)
 	err = s.PutAll(nil)
 	assert.Nil(t, err)
@@ -132,19 +129,27 @@ func BenchmarkMap_Get(b *testing.B) {
 
 func BenchmarkMap_Put(b *testing.B) {
 	s := newTestMap()
-	kvs := []*KeyValue{
-		{"earth", earth},
-		{"mars", mars},
-		{"jupiter", jupiter},
-		{"saturn", saturn},
-		{"mercury", mercury},
-		{"venus", venus},
-		{"neptune", neptune},
+	kvs := map[string][]byte{
+		"earth": earth,
+		"mars": mars,
+		"jupiter": jupiter,
+		"saturn": saturn,
+		"mercury": mercury,
+		"venus": venus,
+		"neptune": neptune,
 	}
-	kvsLength := len(kvs)
+	keys := []string{
+		"earth",
+		"mars",
+		"jupiter",
+		"saturn",
+		"mercury",
+		"venus",
+		"neptune",
+	}
 	for i := 0; i < b.N; i++ {
-		kv := kvs[i%kvsLength]
-		err := s.Put(kv.Key, kv.Value)
+		key := keys[i % len(keys)]
+		err := s.Put(key, kvs[key])
 		assert.Nil(b, err)
 	}
 }

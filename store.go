@@ -6,12 +6,6 @@ Kasper companion library for stateful stream processing.
 
 package kasper
 
-// KeyValue is a key-value pair for Store
-type KeyValue struct {
-	Key   string
-	Value []byte
-}
-
 // TenantKey is a pair of tenant and key. Use it to get multiple entries from
 // MultiStore.GetAll
 type TenantKey struct {
@@ -25,10 +19,10 @@ type Store interface {
 	// get value by key
 	Get(key string) ([]byte, error)
 	// get multiple values for keys as bulk
-	GetAll(keys []string) ([]KeyValue, error)
+	GetAll(keys []string) (map[string][]byte, error)
 	Put(key string, value []byte) error
 	// put multiple key -value pairs as bulk
-	PutAll(kvs []KeyValue) error
+	PutAll(map[string][]byte) error
 	// deletes key from store
 	Delete(key string) error
 	// flush store contents to DB/drive/anything
@@ -46,32 +40,4 @@ type MultiStore interface {
 	Fetch(keys []TenantKey) (*MultiMap, error)
 	// put items to underlying stores for all tenants
 	Push(store *MultiMap) error
-}
-
-// ToMap transforms KeyValue pairs to key-value map
-func ToMap(kvs []KeyValue, err error) (map[string][]byte, error) {
-	if err != nil {
-		return nil, err
-	}
-	res := make(map[string][]byte, len(kvs))
-	for _, kv := range kvs {
-		if kv.Value != nil {
-			res[kv.Key] = kv.Value
-		}
-	}
-	return res, nil
-}
-
-// FromMap key-value map to KeyValue pairs
-func FromMap(m map[string][]byte) []KeyValue {
-	res := make([]KeyValue, len(m))
-	i := 0
-	for key, value := range m {
-		if value == nil {
-			continue
-		}
-		res[i] = KeyValue{key, value}
-		i++
-	}
-	return res[0:i]
 }

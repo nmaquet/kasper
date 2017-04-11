@@ -132,9 +132,9 @@ func (s *Elasticsearch) Get(key string) ([]byte, error) {
 }
 
 // GetAll gets multiple keys from store using MultiGet.
-func (s *Elasticsearch) GetAll(keys []string) ([]KeyValue, error) {
+func (s *Elasticsearch) GetAll(keys []string) (map[string][]byte, error) {
 	if len(keys) == 0 {
-		return nil, nil
+		return map[string][]byte{}, nil
 	}
 	logger.Debug("MultiElasticsearch GetAll: ", keys)
 	multiGet := s.client.MultiGet()
@@ -151,10 +151,10 @@ func (s *Elasticsearch) GetAll(keys []string) ([]KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	kvs := make([]KeyValue, len(keys))
+	kvs := make(map[string][]byte, len(keys))
 	for i, doc := range response.Docs {
 		if doc.Found {
-			kvs[i] = KeyValue{keys[i], *doc.Source}
+			kvs[keys[i]] = *doc.Source
 		}
 	}
 	return kvs, nil
@@ -175,18 +175,18 @@ func (s *Elasticsearch) Put(key string, value []byte) error {
 }
 
 // PutAll bulk executes Put operation for several kvs
-func (s *Elasticsearch) PutAll(kvs []KeyValue) error {
+func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
 	logger.Debugf("MultiElasticsearch PutAll of %d keys", len(kvs))
 	if len(kvs) == 0 {
 		return nil
 	}
 	bulk := s.client.Bulk()
-	for _, kv := range kvs {
+	for key, value := range kvs {
 		bulk.Add(elastic.NewBulkIndexRequest().
 			Index(s.indexName).
 			Type(s.typeName).
-			Id(kv.Key).
-			Doc(string(kv.Value)),
+			Id(key).
+			Doc(string(value)),
 		)
 	}
 	response, err := bulk.Do(s.context)

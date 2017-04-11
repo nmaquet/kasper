@@ -24,11 +24,13 @@ func (s *Map) Get(key string) ([]byte, error) {
 }
 
 // GetAll gets several keys from underlying map at once. Returns KeyValue pairs.
-func (s *Map) GetAll(keys []string) ([]KeyValue, error) {
-	kvs := make([]KeyValue, len(keys))
-	for i, key := range keys {
+func (s *Map) GetAll(keys []string) (map[string][]byte, error) {
+	kvs := make(map[string][]byte, len(keys))
+	for _, key := range keys {
 		value, _ := s.Get(key)
-		kvs[i] = KeyValue{key, value}
+		if value != nil {
+			kvs[key] = value
+		}
 	}
 	return kvs, nil
 }
@@ -40,9 +42,9 @@ func (s *Map) Put(key string, value []byte) error {
 }
 
 // PutAll bulk executes all Put operations
-func (s *Map) PutAll(kvs []KeyValue) error {
-	for _, kv := range kvs {
-		_ = s.Put(kv.Key, kv.Value)
+func (s *Map) PutAll(kvs map[string][]byte) error {
+	for key, value := range kvs {
+		_ = s.Put(key, value)
 	}
 	return nil
 }
