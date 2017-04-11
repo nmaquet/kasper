@@ -63,13 +63,13 @@ type Test struct {
 	characterToFictionsStore map[string]*IDs
 }
 
-func (t *Test) ProcessBatch(msgs []*IncomingMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) ProcessBatch(msgs []*sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
 	for _, msg := range msgs {
-		t.Process(*msg, sender, coordinator)
+		t.Process(msg, sender, coordinator)
 	}
 }
 
-func (t *Test) Process(msg IncomingMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) Process(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
 	topic := msg.Topic
 	if topic == "characters" {
 		t.processCharacter(msg, sender, coordinator)
@@ -80,7 +80,7 @@ func (t *Test) Process(msg IncomingMessage, sender Sender, coordinator Coordinat
 	}
 }
 
-func (t *Test) processCharacter(msg IncomingMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) processCharacter(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
 	character := &Character{}
 	character.fromBytes(msg.Value)
 	t.characterStore[character.ID] = character
@@ -95,13 +95,13 @@ func (t *Test) processCharacter(msg IncomingMessage, sender Sender, coordinator 
 		}
 		message := t.createOutgoingMessage(fiction)
 		if message != nil {
-			sender.Send(*message)
+			sender.Send(message)
 			*t.sendCount++
 		}
 	}
 }
 
-func (t *Test) processFictions(msg IncomingMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) processFictions(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
 	fiction := &Fiction{}
 	fiction.fromBytes(msg.Value)
 	t.fictionStore[fiction.ID] = fiction
@@ -116,12 +116,12 @@ func (t *Test) processFictions(msg IncomingMessage, sender Sender, coordinator C
 	}
 	message := t.createOutgoingMessage(fiction)
 	if message != nil {
-		sender.Send(*message)
+		sender.Send(message)
 		*t.sendCount++
 	}
 }
 
-func (t *Test) createOutgoingMessage(fiction *Fiction) *OutgoingMessage {
+func (t *Test) createOutgoingMessage(fiction *Fiction) *sarama.ProducerMessage {
 	output := FictionAndCharacters{
 		ID:          fiction.ID,
 		FictionType: fiction.FictionType,
@@ -135,11 +135,11 @@ func (t *Test) createOutgoingMessage(fiction *Fiction) *OutgoingMessage {
 		}
 		output.Characters = append(output.Characters, *character)
 	}
-	return &OutgoingMessage{
+	return &sarama.ProducerMessage{
 		Topic:     "fictions-and-characters",
 		Partition: 0,
-		Key:       []byte(fiction.ID),
-		Value:     output.toBytes(),
+		Key:       sarama.ByteEncoder([]byte(fiction.ID)),
+		Value:     sarama.ByteEncoder(output.toBytes()),
 	}
 }
 

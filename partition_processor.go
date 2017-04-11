@@ -81,34 +81,15 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMes
 	return pp
 }
 
-func (pp *partitionProcessor) process(consumerMessage *sarama.ConsumerMessage) []*sarama.ProducerMessage {
-	incomingMessage := IncomingMessage{
-		Topic:     consumerMessage.Topic,
-		Partition: int(consumerMessage.Partition),
-		Offset:    consumerMessage.Offset,
-		Key:       consumerMessage.Key,
-		Value:     consumerMessage.Value,
-		Timestamp: consumerMessage.Timestamp,
-	}
+func (pp *partitionProcessor) process(msg *sarama.ConsumerMessage) []*sarama.ProducerMessage {
 	sender := newSender(pp)
-	pp.messageProcessor.Process(incomingMessage, sender, pp.coordinator)
+	pp.messageProcessor.Process(msg, sender, pp.coordinator)
 	return sender.producerMessages
 }
 
-func (pp *partitionProcessor) processBatch(messages []*sarama.ConsumerMessage) []*sarama.ProducerMessage {
-	incomingMessages := make([]*IncomingMessage, len(messages))
-	for i, message := range messages {
-		incomingMessages[i] = &IncomingMessage{
-			Topic:     message.Topic,
-			Partition: int(message.Partition),
-			Offset:    message.Offset,
-			Key:       message.Key,
-			Value:     message.Value,
-			Timestamp: message.Timestamp,
-		}
-	}
+func (pp *partitionProcessor) processBatch(msgs []*sarama.ConsumerMessage) []*sarama.ProducerMessage {
 	sender := newSender(pp)
-	pp.batchMessageProcessor.ProcessBatch(incomingMessages, sender, pp.coordinator)
+	pp.batchMessageProcessor.ProcessBatch(msgs, sender, pp.coordinator)
 	return sender.producerMessages
 }
 

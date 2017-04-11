@@ -6,7 +6,7 @@ import (
 
 // Sender describes an interface for sending messages to Kafka topics
 type Sender interface {
-	Send(OutgoingMessage) // Send message to output topics
+	Send(msg *sarama.ProducerMessage) // Send message to output topics
 }
 
 type sender struct {
@@ -21,12 +21,6 @@ func newSender(pp *partitionProcessor) *sender {
 	}
 }
 
-func (sender *sender) Send(msg OutgoingMessage) {
-	producerMessage := &sarama.ProducerMessage{
-		Topic:     msg.Topic,
-		Key:       sarama.ByteEncoder(msg.Key),
-		Value:     sarama.ByteEncoder(msg.Value),
-		Partition: int32(msg.Partition),
-	}
-	sender.producerMessages = append(sender.producerMessages, producerMessage)
+func (sender *sender) Send(msg *sarama.ProducerMessage) {
+	sender.producerMessages = append(sender.producerMessages, msg)
 }

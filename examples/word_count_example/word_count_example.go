@@ -5,11 +5,12 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/Shopify/sarama"
 	"github.com/movio/kasper"
-	"strconv"
 )
 
 // WordCountExample is message processor that shows how to use key-value store in processing Kafka messages
@@ -19,18 +20,18 @@ type WordCountExample struct {
 }
 
 // Process processes Kafka messages from topic "words" and outputs each word with counter to "word-counts" topic
-func (processor *WordCountExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (processor *WordCountExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	line := string(msg.Value)
 	words := strings.Split(line, " ")
 	for _, word := range words {
 		wordStoreKey := fmt.Sprintf("word-count/count/%s", word)
 		wordCount := processor.get(wordStoreKey)
-		processor.put(wordStoreKey, wordCount + 1)
-		outgoingMessage := kasper.OutgoingMessage{
+		processor.put(wordStoreKey, wordCount+1)
+		outgoingMessage := &sarama.ProducerMessage{
 			Topic:     "word-counts",
 			Partition: 0,
-			Key:       msg.Key,
-			Value:     []byte(fmt.Sprintf("%s has been seen %d times", word, wordCount)),
+			Key:       sarama.ByteEncoder(msg.Key),
+			Value:     sarama.ByteEncoder([]byte(fmt.Sprintf("%s has been seen %d times", word, wordCount))),
 		}
 		sender.Send(outgoingMessage)
 	}
@@ -64,7 +65,7 @@ func main() {
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"words"},
 		InputPartitions:    []int{0},
-		Config: kasper.DefaultConfig(),
+		Config:             kasper.DefaultConfig(),
 	}
 	store := kasper.NewInMemoryKeyValueStore(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }

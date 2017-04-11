@@ -5,7 +5,6 @@ NB: interfaces should have abstract names
 # don't wrap shopify.Sarama, take Clients as input
 # don't wrap olivere.Elastic, take Clients as input
 # use decorator pattern on KeyValueStore for metrics
-# use ConsumerMessage and ProducerMessage instead of wrappers
 
 ### QUESTIONS ###
 # what to do about multi tenanting ???

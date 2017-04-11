@@ -40,14 +40,14 @@ type MessageProcessor interface {
 	// Process message from Kafka input topics.
 	// This is the function where you perform all needed actions, like
 	// population KV storage or producing Kafka output messages
-	Process(IncomingMessage, Sender, Coordinator)
+	Process(*sarama.ConsumerMessage, Sender, Coordinator)
 }
 
 // BatchMessageProcessor processes several messages at once.
 type BatchMessageProcessor interface {
 	// ProcessBatch gets an array of incoming Kafka messages.
 	// Use Sender to send messages to output topics.
-	ProcessBatch([]*IncomingMessage, Sender, Coordinator)
+	ProcessBatch([]*sarama.ConsumerMessage, Sender, Coordinator)
 }
 
 // NewTopicProcessor creates a new TopicProcessor with the given config.

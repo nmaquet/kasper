@@ -9,7 +9,7 @@ import (
 
 type fixture struct {
 	pp *partitionProcessor
-	in *IncomingMessage
+	in *sarama.ConsumerMessage
 }
 
 func newFixture() *fixture {
@@ -21,18 +21,18 @@ func newFixture() *fixture {
 				},
 			},
 		},
-		&IncomingMessage{},
+		&sarama.ConsumerMessage{},
 	}
 }
 
 func TestSender_Send_OneMessage(t *testing.T) {
 	f := newFixture()
 	sender := newSender(f.pp)
-	out := OutgoingMessage{
+	out := &sarama.ProducerMessage{
 		Topic:     "hello",
 		Partition: 6,
-		Key:       []byte("AAA"),
-		Value:     []byte("BBB"),
+		Key:       sarama.ByteEncoder([]byte("AAA")),
+		Value:     sarama.ByteEncoder([]byte("BBB")),
 	}
 	sender.Send(out)
 	if len(sender.producerMessages) != 1 {
@@ -52,17 +52,17 @@ func TestSender_Send_OneMessage(t *testing.T) {
 func TestSender_Send_TwoMessages(t *testing.T) {
 	f := newFixture()
 	sender := newSender(f.pp)
-	sender.Send(OutgoingMessage{
+	sender.Send(&sarama.ProducerMessage{
 		Topic:     "hello",
 		Partition: 6,
-		Key:       []byte("AAA"),
-		Value:     []byte("BBB"),
+		Key:       sarama.ByteEncoder([]byte("AAA")),
+		Value:     sarama.ByteEncoder([]byte("BBB")),
 	})
-	sender.Send(OutgoingMessage{
+	sender.Send(&sarama.ProducerMessage{
 		Topic:     "hello",
 		Partition: 7,
-		Key:       []byte("CCC"),
-		Value:     []byte("DDD"),
+		Key:       sarama.ByteEncoder([]byte("CCC")),
+		Value:     sarama.ByteEncoder([]byte("DDD")),
 	})
 	if len(sender.producerMessages) != 2 {
 		t.Fail()
@@ -91,11 +91,11 @@ func BenchmarkSender_Send(b *testing.B) {
 	f := newFixture()
 	sender := newSender(f.pp)
 	for i := 0; i < b.N; i++ {
-		out := OutgoingMessage{
+		out := &sarama.ProducerMessage{
 			Topic:     "hello",
 			Partition: 6,
-			Key:       []byte("AAA"),
-			Value:     []byte("BBB"),
+			Key:       sarama.ByteEncoder([]byte("AAA")),
+			Value:     sarama.ByteEncoder([]byte("BBB")),
 		}
 		sender.Send(out)
 	}

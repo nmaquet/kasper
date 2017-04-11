@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Shopify/sarama"
 	"github.com/movio/kasper"
 )
 
@@ -14,7 +15,7 @@ import (
 type MultipleInputTopicsExample struct{}
 
 // Process processes Kafka messages from topics "hello" and "world" and prints info to console
-func (*MultipleInputTopicsExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (*MultipleInputTopicsExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := string(msg.Key)
 	value := string(msg.Value)
 	offset := msg.Offset

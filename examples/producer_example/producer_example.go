@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Shopify/sarama"
 	"github.com/movio/kasper"
 )
 
@@ -14,7 +15,7 @@ import (
 type ProducerExample struct{}
 
 // Process processes Kafka messages from topics "hello" and "world" and publish outgoing messages to "world" topi
-func (*ProducerExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (*ProducerExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := string(msg.Key)
 	value := string(msg.Value)
 	offset := msg.Offset
@@ -22,11 +23,11 @@ func (*ProducerExample) Process(msg kasper.IncomingMessage, sender kasper.Sender
 	partition := msg.Partition
 	format := "Got message: key='%s', value='%s' at offset='%d' (topic='%s', partition='%d')\n"
 	fmt.Printf(format, key, value, offset, topic, partition)
-	outgoingMessage := kasper.OutgoingMessage{
+	outgoingMessage := &sarama.ProducerMessage{
 		Topic:     "world",
 		Partition: 0,
-		Key:       msg.Key,
-		Value:     []byte(fmt.Sprintf("Hello %s", value)),
+		Key:       sarama.ByteEncoder(msg.Key),
+		Value:     sarama.ByteEncoder([]byte(fmt.Sprintf("Hello %s", value))),
 	}
 	sender.Send(outgoingMessage)
 }
@@ -37,7 +38,7 @@ func main() {
 		BrokerList:         []string{"localhost:9092"},
 		InputTopics:        []string{"hello", "world"},
 		InputPartitions:    []int{0},
-		Config: kasper.DefaultConfig(),
+		Config:             kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &ProducerExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)

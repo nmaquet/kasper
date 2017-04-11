@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Shopify/sarama"
 	"github.com/movio/kasper"
 )
 
@@ -14,7 +15,7 @@ import (
 type HelloWorldExample struct{}
 
 // Process processes Kafka messages from topic "hello" and prints info to console
-func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (*HelloWorldExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
 	key := string(msg.Key)
 	value := string(msg.Value)
 	offset := msg.Offset
@@ -26,11 +27,11 @@ func (*HelloWorldExample) Process(msg kasper.IncomingMessage, sender kasper.Send
 
 func main() {
 	config := kasper.TopicProcessorConfig{
-		TopicProcessorName:     "hello-world-example",
-		BrokerList:             []string{"localhost:9092"},
-		InputTopics:            []string{"hello"},
-		InputPartitions:        []int{0},
-		Config:                 kasper.DefaultConfig(),
+		TopicProcessorName: "hello-world-example",
+		BrokerList:         []string{"localhost:9092"},
+		InputTopics:        []string{"hello"},
+		InputPartitions:    []int{0},
+		Config:             kasper.DefaultConfig(),
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
 	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
