@@ -4,11 +4,13 @@ NB: interfaces should have abstract names
 ### CHANGES ###
 # don't wrap shopify.Sarama, take Clients as input
 # don't wrap olivere.Elastic, take Clients as input
-# use decorator pattern on KeyValueStore for metrics
+# remove KeyValue / FromMap / ToMap
+# remove TenantKey
 
 ### QUESTIONS ###
 # what to do about multi tenanting ???
 
 ### RENAMINGS ###
-# KeyValueStore -> idem
+# KeyValueStore -> Store
 # InMemoryKeyValueStore -> Map
+# ElasticSearchKeyValueStore -> Elasticsearch

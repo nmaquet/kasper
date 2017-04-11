@@ -17,10 +17,8 @@ var neptune = []byte("neptune")
 
 func newTestInMemoryKV() *InMemoryKeyValueStore {
 	s := &InMemoryKeyValueStore{
-		m:               make(map[string][]byte, 10),
-		metricsProvider: &NoopMetricsProvider{},
+		m: make(map[string][]byte, 10),
 	}
-	s.createMetrics()
 	return s
 }
 

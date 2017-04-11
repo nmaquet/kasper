@@ -34,29 +34,13 @@ type ElasticsearchKeyValueStore struct {
 	context         context.Context
 	indexName       string
 	typeName        string
-	metricsProvider MetricsProvider
-
-	getCounter    Counter
-	getAllSummary Summary
-	putCounter    Counter
-	putAllSummary Summary
-	deleteCounter Counter
-	flushCounter  Counter
-}
-
-// NewElasticsearchKeyValueStore creates new ElasticsearchKeyValueStore instance.
-// Host must of the format hostname:port.
-// StructPtr should be a pointer to struct type that is used.
-// for serialization and deserialization of store values.
-func NewElasticsearchKeyValueStore(url, indexName, typeName string) *ElasticsearchKeyValueStore {
-	return NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName, &NoopMetricsProvider{})
 }
 
 // NewElasticsearchKeyValueStoreWithMetrics creates new ElasticsearchKeyValueStore instance.
 // Host must of the format hostname:port.
 // StructPtr should be a pointer to struct type that is used.
 // for serialization and deserialization of store values.
-func NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName string, provider MetricsProvider) *ElasticsearchKeyValueStore {
+func NewElasticsearchKeyValueStore(url, indexName, typeName string) *ElasticsearchKeyValueStore {
 	client, err := elastic.NewClient(
 		elastic.SetURL(url),
 		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
@@ -70,23 +54,12 @@ func NewElasticsearchKeyValueStoreWithMetrics(url, indexName, typeName string, p
 		context:         context.Background(),
 		indexName:       indexName,
 		typeName:        typeName,
-		metricsProvider: provider,
 	}
 	s.IndexSettings = defaultIndexSettings
 	s.TypeMapping = defaultTypeMapping
 	s.checkOrCreateIndex()
 	s.checkOrPutMapping()
-	s.createMetrics()
 	return s
-}
-
-func (s *ElasticsearchKeyValueStore) createMetrics() {
-	s.getCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Get", "Number of Get() calls", "index", "type")
-	s.getAllSummary = s.metricsProvider.NewSummary("ElasticsearchKeyValueStore_GetAll", "Summary of GetAll() calls", "index", "type")
-	s.putCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Put", "Number of Put() calls", "index", "type")
-	s.putAllSummary = s.metricsProvider.NewSummary("ElasticsearchKeyValueStore_PutAll", "Summary of PutAll() calls", "index", "type")
-	s.deleteCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Delete", "Number of Delete() calls", "index", "type")
-	s.flushCounter = s.metricsProvider.NewCounter("ElasticsearchKeyValueStore_Flush", "Summary of Flush() calls", "index", "type")
 }
 
 func (s *ElasticsearchKeyValueStore) checkOrCreateIndex() {
@@ -140,7 +113,6 @@ func (s *ElasticsearchKeyValueStore) checkOrPutMapping() {
 // Get gets value by key from store
 func (s *ElasticsearchKeyValueStore) Get(key string) ([]byte, error) {
 	logger.Debug("Elasticsearch Get: ", key)
-	s.getCounter.Inc(s.indexName, s.typeName)
 	rawValue, err := s.client.Get().
 		Index(s.indexName).
 		Type(s.typeName).
@@ -168,7 +140,6 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]KeyValue, error) {
 		return nil, nil
 	}
 	logger.Debug("Elasticsearch GetAll: ", keys)
-	s.getAllSummary.Observe(float64(len(keys)), s.indexName, s.typeName)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 
@@ -195,7 +166,6 @@ func (s *ElasticsearchKeyValueStore) GetAll(keys []string) ([]KeyValue, error) {
 // Put updates key in store with serialized value
 func (s *ElasticsearchKeyValueStore) Put(key string, value []byte) error {
 	logger.Debug(fmt.Sprintf("Elasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
-	s.putCounter.Inc(s.indexName, s.typeName)
 
 	_, err := s.client.Index().
 		Index(s.indexName).
@@ -210,7 +180,6 @@ func (s *ElasticsearchKeyValueStore) Put(key string, value []byte) error {
 // PutAll bulk executes Put operation for several kvs
 func (s *ElasticsearchKeyValueStore) PutAll(kvs []KeyValue) error {
 	logger.Debugf("Elasticsearch PutAll of %d keys", len(kvs))
-	s.putAllSummary.Observe(float64(len(kvs)), s.indexName, s.typeName)
 	if len(kvs) == 0 {
 		return nil
 	}
@@ -236,7 +205,6 @@ func (s *ElasticsearchKeyValueStore) PutAll(kvs []KeyValue) error {
 // Delete removes key from store
 func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 	logger.Debug("Elasticsearch Delete: ", key)
-	s.deleteCounter.Inc(s.indexName, s.typeName)
 
 	_, err := s.client.Delete().
 		Index(s.indexName).
@@ -253,7 +221,6 @@ func (s *ElasticsearchKeyValueStore) Delete(key string) error {
 
 // Flush the Elasticsearch translog to disk
 func (s *ElasticsearchKeyValueStore) Flush() error {
-	s.flushCounter.Inc(s.indexName, s.typeName)
 	logger.Info("Elasticsearch Flush...")
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
@@ -266,6 +233,11 @@ func (s *ElasticsearchKeyValueStore) Flush() error {
 func (s *ElasticsearchKeyValueStore) GetClient() *elastic.Client {
 	return s.client
 }
+
+func (s* ElasticsearchKeyValueStore) WithMetrics(provider MetricsProvider, label string) KeyValueStore {
+	return NewStoreMetrics(s, provider, label)
+}
+
 
 func createBulkError(response *elastic.BulkResponse) error {
 	reasons := []string{}
