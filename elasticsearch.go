@@ -10,26 +10,8 @@ import (
 
 const maxBulkErrorReasons = 5
 
-const defaultIndexSettings = `{
-	"index.translog.durability": "request"
-}`
-
-const defaultTypeMapping = `{
-	"dynamic_templates": [{
-		"no_index": {
-			"mapping": {
-				"index": "no"
-			},
-			"match": "*"
-		}
-	}]
-}`
-
 // Elasticsearch is a key-value storage that uses ElasticSearch.
 type Elasticsearch struct {
-	IndexSettings string
-	TypeMapping   string
-
 	client          *elastic.Client
 	context         context.Context
 	indexName       string
@@ -37,74 +19,14 @@ type Elasticsearch struct {
 }
 
 // TBD
-func NewElasticsearch(url, indexName, typeName string) *Elasticsearch {
-	client, err := elastic.NewClient(
-		elastic.SetURL(url),
-		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
-	)
-	if err != nil {
-		logger.Panicf("Cannot create ElasticSearch Client to '%s': %s", url, err)
-	}
-	logger.Info("Connected to MultiElasticsearch at ", url)
+func NewElasticsearch(client *elastic.Client, indexName, typeName string) *Elasticsearch {
 	s := &Elasticsearch{
 		client:          client,
 		context:         context.Background(),
 		indexName:       indexName,
 		typeName:        typeName,
 	}
-	s.IndexSettings = defaultIndexSettings
-	s.TypeMapping = defaultTypeMapping
-	s.checkOrCreateIndex()
-	s.checkOrPutMapping()
 	return s
-}
-
-func (s *Elasticsearch) checkOrCreateIndex() {
-	exists, err := s.client.IndexExists(s.indexName).Do(s.context)
-	if err != nil {
-		logger.Panic(fmt.Sprintf("Failed to check if index exists: %s", err))
-	}
-	if !exists {
-		logger.Infof("Creating index %s", s.indexName)
-		_, err = s.client.
-			CreateIndex(s.indexName).
-			BodyString(s.IndexSettings).
-			Do(s.context)
-		if err != nil {
-			logger.Panic(fmt.Sprintf("Failed to create index: %s", err))
-		}
-	}
-}
-
-func (s *Elasticsearch) checkOrPutMapping() {
-	getResp, err := s.client.GetMapping().
-		Index(s.indexName).
-		Type(s.typeName).
-		Do(s.context)
-	if err != nil {
-		logger.Panicf("Failed to get mapping for %s/%s: %s", s.indexName, s.typeName, err)
-	}
-
-	_, found := getResp[s.typeName]
-	if found {
-		return
-	}
-
-	putResp, err := s.client.
-		PutMapping().
-		Index(s.indexName).
-		Type(s.typeName).
-		BodyString(s.TypeMapping).
-		Do(s.context)
-	if err != nil {
-		logger.Panic(fmt.Sprintf("Failed to put mapping for %s/%s: %s", s.indexName, s.typeName, err))
-	}
-	if putResp == nil {
-		logger.Panic(fmt.Sprintf("Expected put mapping response; got: %v", putResp))
-	}
-	if !putResp.Acknowledged {
-		logger.Panic(fmt.Sprintf("Expected put mapping ack; got: %v", putResp.Acknowledged))
-	}
 }
 
 // Get gets value by key from store

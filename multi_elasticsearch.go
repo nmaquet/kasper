@@ -10,76 +10,59 @@ import (
 
 // TBD
 type MultiElasticsearch struct {
-	IndexSettings string
-	TypeMapping   string
-	client        *elastic.Client
-	context       context.Context
-	kvs           map[string]Store
-	typeName      string
-	metricsProvider       MetricsProvider
-	metricsLabel  string
+	client          *elastic.Client
+	context         context.Context
+	stores          map[string]Store
+	typeName        string
+	metricsProvider MetricsProvider
+	metricsLabel    string
 }
 
 // TBD
-func NewMultiElasticsearch(url, typeName string) *MultiElasticsearch {
-	client, err := elastic.NewClient(
-		elastic.SetURL(url),
-		elastic.SetSniff(false), // FIXME: workaround for issues with ES in docker
-	)
-	if err != nil {
-		logger.Panicf("Cannot create ElasticSearch Client to '%s': %s", url, err)
-	}
-	logger.Info("Connected to MultiElasticsearch at ", url)
+func NewMultiElasticsearch(client *elastic.Client, typeName string) *MultiElasticsearch {
 	s := &MultiElasticsearch{
-		IndexSettings: defaultIndexSettings,
-		TypeMapping:   defaultTypeMapping,
-		client:        client,
-		context:       context.Background(),
-		kvs:           make(map[string]Store),
-		typeName:      typeName,
+		client:   client,
+		context:  context.Background(),
+		stores:   make(map[string]Store),
+		typeName: typeName,
 	}
 	return s
 }
 
 // Tenant returns underlying Elasticsearch as for given tenant
-func (mtkv *MultiElasticsearch) WithMetrics(provider MetricsProvider, label string) MultiStore {
-	mtkv.metricsProvider = provider
-	mtkv.metricsLabel = label
-	return mtkv
+func (s *MultiElasticsearch) WithMetrics(provider MetricsProvider, label string) MultiStore {
+	s.metricsProvider = provider
+	s.metricsLabel = label
+	return s
 }
 
 // Tenant returns underlying Elasticsearch as for given tenant
-func (mtkv *MultiElasticsearch) Tenant(tenant string) Store {
-	kv, found := mtkv.kvs[tenant]
+func (s *MultiElasticsearch) Tenant(tenant string) Store {
+	kv, found := s.stores[tenant]
 	if !found {
-		ekv := &Elasticsearch{
-			IndexSettings: mtkv.IndexSettings,
-			TypeMapping:   mtkv.TypeMapping,
-
-			client:    mtkv.client,
-			context:   mtkv.context,
+		e := &Elasticsearch{
+			client:    s.client,
+			context:   s.context,
 			indexName: tenant,
-			typeName:  mtkv.typeName,
+			typeName:  s.typeName,
 		}
-		ekv.checkOrCreateIndex()
-		ekv.checkOrPutMapping()
-		if mtkv.metricsProvider != nil {
-			label := fmt.Sprintf("%s/%s", tenant, mtkv.metricsLabel)
-			mtkv.kvs[tenant] = ekv.WithMetrics(mtkv.metricsProvider, label)
+		if s.metricsProvider != nil {
+			label := fmt.Sprintf("%s/%s", tenant, s.metricsLabel)
+			s.stores[tenant] = e.WithMetrics(s.metricsProvider, label)
 		} else {
-			mtkv.kvs[tenant] = ekv
+			s.stores[tenant] = e
 		}
-		kv = ekv
+		kv = e
 	}
 	return kv
 }
 
 // AllTenants returns a list of keys for underlyings stores.
 // Stores can be accessed by key using store.Tentant(key).
-func (mtkv *MultiElasticsearch) AllTenants() []string {
-	tenants := make([]string, len(mtkv.kvs))
+func (s *MultiElasticsearch) AllTenants() []string {
+	tenants := make([]string, len(s.stores))
 	i := 0
-	for tenant := range mtkv.kvs {
+	for tenant := range s.stores {
 		tenants[i] = tenant
 		i++
 	}
@@ -88,22 +71,22 @@ func (mtkv *MultiElasticsearch) AllTenants() []string {
 }
 
 // Fetch gets entries from underlying stores using GetAll
-func (mtkv *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
+func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	res := NewMultiMap(len(keys) / 10)
 	if len(keys) == 0 {
 		return res, nil
 	}
 	logger.Debugf("Multitenant MultiElasticsearch GetAll: %#v", keys)
-	multiGet := mtkv.client.MultiGet()
+	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 		item := elastic.NewMultiGetItem().
 			Index(key.Tenant).
-			Type(mtkv.typeName).
+			Type(s.typeName).
 			Id(key.Key)
 
 		multiGet.Add(item)
 	}
-	response, err := multiGet.Do(mtkv.context)
+	response, err := multiGet.Do(s.context)
 	if err != nil {
 		return nil, err
 	}
@@ -122,17 +105,17 @@ func (mtkv *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 }
 
 // Push puts entries to underlying stores using PutAll
-func (mtkv *MultiElasticsearch) Push(s *MultiMap) error {
-	for _, tenant := range s.AllTenants() {
-		mtkv.Tenant(tenant) // force creation of index & mappings if they don't exist
+func (s *MultiElasticsearch) Push(m *MultiMap) error {
+	for _, tenant := range m.AllTenants() {
+		s.Tenant(tenant) // force creation of index & mappings if they don't exist
 	}
-	bulk := mtkv.client.Bulk()
+	bulk := s.client.Bulk()
 	i := 0
-	for _, tenant := range s.AllTenants() {
-		for key, value := range s.Tenant(tenant).(*Map).GetMap() {
+	for _, tenant := range m.AllTenants() {
+		for key, value := range m.Tenant(tenant).(*Map).GetMap() {
 			bulk.Add(elastic.NewBulkIndexRequest().
 				Index(tenant).
-				Type(mtkv.typeName).
+				Type(s.typeName).
 				Id(key).
 				Doc(string(value)),
 			)
@@ -143,7 +126,7 @@ func (mtkv *MultiElasticsearch) Push(s *MultiMap) error {
 		return nil
 	}
 	logger.Debugf("Multitenant MultiElasticsearch PutAll of %d keys", i)
-	response, err := bulk.Do(mtkv.context)
+	response, err := bulk.Do(s.context)
 	if err != nil {
 		return err
 	}

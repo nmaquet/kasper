@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 var store *Elasticsearch
@@ -154,14 +155,17 @@ func init() {
 		return
 	}
 	SetLogger(&NoopLogger{})
-	store = NewElasticsearch(
-		"http://localhost:9200",
-		"kasper",
-		"dragon",
+	client, err := elastic.NewClient(
+		elastic.SetURL("http://localhost:9200"),
+		elastic.SetSniff(false),
 	)
-	_, err := store.client.DeleteIndex("kasper").Do(store.context)
 	if err != nil {
 		panic(err)
 	}
-	store.checkOrCreateIndex()
+	store = NewElasticsearch(client,
+		"kasper",
+		"dragon",
+	)
+	store.client.DeleteIndex("kasper").Do(store.context)
+	store.client.CreateIndex("kasper").Do(store.context)
 }

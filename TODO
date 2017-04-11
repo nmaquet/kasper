@@ -3,5 +3,4 @@ NB: interfaces should have abstract names
 
 ### CHANGES ###
 # don't wrap shopify.Sarama, take Clients as input
-# don't wrap olivere.Elastic, take Clients as input
 # remove *Provider
