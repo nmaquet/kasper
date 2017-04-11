@@ -26,9 +26,10 @@ func (*HelloWorldExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sen
 }
 
 func main() {
+	client, _ := sarama.NewClient([]string{"localhost:9092"}, sarama.NewConfig())
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "hello-world-example",
-		BrokerList:         []string{"localhost:9092"},
+		Client:             client,
 		InputTopics:        []string{"hello"},
 		InputPartitions:    []int{0},
 		Config:             kasper.DefaultConfig(),

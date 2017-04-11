@@ -33,9 +33,10 @@ func (*ProducerExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sende
 }
 
 func main() {
+	client, _ := sarama.NewClient([]string{"localhost:9092"}, sarama.NewConfig())
 	config := kasper.TopicProcessorConfig{
 		TopicProcessorName: "producer-example",
-		BrokerList:         []string{"localhost:9092"},
+		Client:             client,
 		InputTopics:        []string{"hello", "world"},
 		InputPartitions:    []int{0},
 		Config:             kasper.DefaultConfig(),

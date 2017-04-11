@@ -2,5 +2,5 @@ NB: interfaces should have abstract names
     structs should have concrete names
 
 ### CHANGES ###
-# don't wrap shopify.Sarama, take Clients as input
 # remove *Provider
+# remove Config

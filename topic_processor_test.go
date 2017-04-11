@@ -335,10 +335,16 @@ const expectedResultJSON string = `
 func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	config := DefaultConfig()
 	config.MetricsUpdateInterval = 100 * time.Millisecond
-
+	saramaConfig := sarama.NewConfig()
+	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	saramaConfig.Producer.Return.Successes = true
+	client, err := sarama.NewClient([]string{"localhost:9092"}, saramaConfig)
+	if err != nil {
+		panic(err)
+	}
 	tpConfig := TopicProcessorConfig{
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
-		BrokerList:         []string{"localhost:9092"},
+		Client:             client,
 		InputTopics:        []string{"characters", "fictions"},
 		InputPartitions:    []int{0},
 		Config:             config,

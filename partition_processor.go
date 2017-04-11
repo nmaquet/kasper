@@ -35,7 +35,7 @@ func getPartitionOffsetManager(tp *TopicProcessor, topic string, partition int) 
 }
 
 func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sarama.PartitionOffsetManager, topic string, partition int) sarama.PartitionConsumer {
-	newestOffset, err := tp.client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
+	newestOffset, err := tp.config.Client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -54,7 +54,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, bmp BatchMes
 	if (mp == nil && bmp == nil) || (mp != nil && bmp != nil) {
 		logger.Panic("Exactly one message processor must be provided")
 	}
-	consumer, err := sarama.NewConsumerFromClient(tp.client)
+	consumer, err := sarama.NewConsumerFromClient(tp.config.Client)
 	if err != nil {
 		logger.Panic(err)
 	}

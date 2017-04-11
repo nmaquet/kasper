@@ -17,7 +17,6 @@ import (
 // TopicProcessor describes kafka topic processor
 type TopicProcessor struct {
 	config              *TopicProcessorConfig
-	client              sarama.Client
 	producer            sarama.SyncProducer
 	offsetManager       sarama.OffsetManager
 	partitionProcessors map[int32]*partitionProcessor
@@ -56,13 +55,11 @@ type BatchMessageProcessor interface {
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
 	inputTopics := config.InputTopics
 	partitions := config.InputPartitions
-	client, offsetManager := mustSetupClient(config)
+	offsetManager := mustSetupOffsetManager(config)
 	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
-	requiredAcks := config.Config.RequiredAcks
-	producer := mustSetupProducer(config.BrokerList, config.producerClientID(), requiredAcks)
+	producer := mustSetupProducer(config.Client)
 	topicProcessor := TopicProcessor{
 		config:              config,
-		client:              client,
 		producer:            producer,
 		offsetManager:       offsetManager,
 		partitionProcessors: partitionProcessors,
@@ -97,12 +94,11 @@ type BatchingOpts struct {
 func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts) *TopicProcessor {
 	inputTopics := config.InputTopics
 	partitions := config.InputPartitions
-	client, offsetManager := mustSetupClient(config)
+	offsetManager := mustSetupOffsetManager(config)
 	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
-	producer := mustSetupProducer(config.BrokerList, config.producerClientID(), config.Config.RequiredAcks)
+	producer := mustSetupProducer(config.Client)
 	topicProcessor := TopicProcessor{
 		config:              config,
-		client:              client,
 		producer:            producer,
 		offsetManager:       offsetManager,
 		partitionProcessors: partitionProcessors,
@@ -128,19 +124,12 @@ func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
 	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
 }
 
-func mustSetupClient(config *TopicProcessorConfig) (sarama.Client, sarama.OffsetManager) {
-	saramaConfig := sarama.NewConfig()
-	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest // TODO: make this configurable
-	client, err := sarama.NewClient(config.BrokerList, saramaConfig)
+func mustSetupOffsetManager(config *TopicProcessorConfig) sarama.OffsetManager {
+	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), config.Client)
 	if err != nil {
 		logger.Panic(err)
 	}
-	logger.Info("Connected to Kafka Brokers", config.BrokerList)
-	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), client)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return client, offsetManager
+	return offsetManager
 }
 
 // Start launches a deferred routine for topic processing.
@@ -296,10 +285,6 @@ func (tp *TopicProcessor) onShutdown(tickers ...*time.Ticker) {
 	if err != nil {
 		logger.Panic(err)
 	}
-	err = tp.client.Close()
-	if err != nil {
-		logger.Panic(err)
-	}
 	logger.Info("Shutdown complete")
 }
 
@@ -342,17 +327,10 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	return chans
 }
 
-func mustSetupProducer(brokers []string, producerClientID string, requiredAcks sarama.RequiredAcks) sarama.SyncProducer {
-	saramaConfig := sarama.NewConfig()
-	saramaConfig.ClientID = producerClientID
-	saramaConfig.Producer.Return.Successes = true
-	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
-	saramaConfig.Producer.RequiredAcks = requiredAcks
-
-	producer, err := sarama.NewSyncProducer(brokers, saramaConfig)
+func mustSetupProducer(client sarama.Client) sarama.SyncProducer {
+	producer, err := sarama.NewSyncProducerFromClient(client)
 	if err != nil {
 		logger.Panic(err)
 	}
-
 	return producer
 }

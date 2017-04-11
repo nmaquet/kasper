@@ -2,6 +2,7 @@ package kasper
 
 import (
 	"fmt"
+	"github.com/Shopify/sarama"
 )
 
 // TopicProcessorConfig describes a config for Kafka topic processor
@@ -9,7 +10,7 @@ type TopicProcessorConfig struct {
 	// Used for logging
 	TopicProcessorName string
 	// Kafka Brokers list
-	BrokerList []string
+	Client sarama.Client
 	// List of Kafka topics to process messages from
 	InputTopics []string
 	// List of topic partitions to process
