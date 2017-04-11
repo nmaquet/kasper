@@ -1,5 +1,0 @@
-NB: interfaces should have abstract names
-    structs should have concrete names
-
-### CHANGES ###
-# remove *Provider

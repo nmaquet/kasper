@@ -7,7 +7,7 @@ import (
 )
 
 type prometheusCounter struct {
-	provider       *PrometheusMetricsProvider
+	provider       *Prometheus
 	promCounterVec *prometheus.CounterVec
 }
 
@@ -24,7 +24,7 @@ func (counter *prometheusCounter) Add(value float64, labelValues ...string) {
 }
 
 type prometheusGauge struct {
-	provider     *PrometheusMetricsProvider
+	provider     *Prometheus
 	promGaugeVec *prometheus.GaugeVec
 }
 
@@ -35,7 +35,7 @@ func (gauge *prometheusGauge) Set(value float64, labelValues ...string) {
 }
 
 type prometheusSummary struct {
-	provider       *PrometheusMetricsProvider
+	provider       *Prometheus
 	promSummaryVec *prometheus.SummaryVec
 }
 
@@ -44,9 +44,9 @@ func (summary *prometheusSummary) Observe(value float64, labelValues ...string) 
 	summary.promSummaryVec.WithLabelValues(labelValues...).Observe(value)
 }
 
-// PrometheusMetricsProvider sends metrics to prometheus
+// Prometheus sends metrics to prometheus
 // See: https://prometheus.io/
-type PrometheusMetricsProvider struct {
+type Prometheus struct {
 	topicProcessorName string
 	containerID        string
 	Registry           *prometheus.Registry
@@ -55,9 +55,9 @@ type PrometheusMetricsProvider struct {
 	gauges             map[string]*prometheus.GaugeVec
 }
 
-// NewPrometheusMetricsProvider creates new PrometheusMetricsProvider
-func NewPrometheusMetricsProvider(topicProcessorName string, containerID int) *PrometheusMetricsProvider {
-	return &PrometheusMetricsProvider{
+// NewPrometheus creates new Prometheus
+func NewPrometheus(topicProcessorName string, containerID int) *Prometheus {
+	return &Prometheus{
 		topicProcessorName,
 		strconv.Itoa(containerID),
 		prometheus.NewRegistry(),
@@ -68,7 +68,7 @@ func NewPrometheusMetricsProvider(topicProcessorName string, containerID int) *P
 }
 
 // NewCounter creates new prometheus CounterVec
-func (provider *PrometheusMetricsProvider) NewCounter(name string, help string, labelNames ...string) Counter {
+func (provider *Prometheus) NewCounter(name string, help string, labelNames ...string) Counter {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	counterVec, found := provider.counters[name]
 	if !found {
@@ -90,7 +90,7 @@ func (provider *PrometheusMetricsProvider) NewCounter(name string, help string, 
 }
 
 // NewGauge creates new prometheus GaugeVec
-func (provider *PrometheusMetricsProvider) NewGauge(name string, help string, labelNames ...string) Gauge {
+func (provider *Prometheus) NewGauge(name string, help string, labelNames ...string) Gauge {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	gaugeVec, found := provider.gauges[name]
 	if !found {
@@ -112,7 +112,7 @@ func (provider *PrometheusMetricsProvider) NewGauge(name string, help string, la
 }
 
 // NewSummary creates new prometheus SummaryVec
-func (provider *PrometheusMetricsProvider) NewSummary(name string, help string, labelNames ...string) Summary {
+func (provider *Prometheus) NewSummary(name string, help string, labelNames ...string) Summary {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	summaryVec, found := provider.summaries[name]
 	if !found {
