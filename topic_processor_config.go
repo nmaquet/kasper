@@ -20,6 +20,10 @@ type TopicProcessorConfig struct {
 	MetricsProvider MetricsProvider
 	// TBD
 	MetricsUpdateInterval time.Duration
+	// TBD
+	BatchSize int
+	// TBD
+	BatchWaitDuration time.Duration
 }
 
 func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
@@ -36,5 +40,11 @@ func (config *TopicProcessorConfig) SetDefaults() {
 	}
 	if config.MetricsUpdateInterval == 0 {
 		config.MetricsUpdateInterval = 15 * time.Second
+	}
+	if config.BatchSize == 0 {
+		config.BatchSize = 1000
+	}
+	if config.BatchWaitDuration == 0 {
+		config.MetricsUpdateInterval = 5 * time.Second
 	}
 }

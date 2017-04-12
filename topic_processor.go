@@ -24,34 +24,20 @@ type TopicProcessor struct {
 	partitions          []int
 	close               chan struct{}
 	waitGroup           sync.WaitGroup
-	batchingEnabled     bool
-	batchSize           int
-	batchWaitDuration   time.Duration
 
 	incomingMessageCount        Counter
 	outgoingMessageCount        Counter
 	messagesBehindHighWaterMark Gauge
 }
 
-// MessageProcessor describes kafka message processor.
-// It can be useful if you use external data sources that support bulk requests.
+// MessageProcessor processes several messages at once.
 type MessageProcessor interface {
-	// Process message from Kafka input topics.
-	// This is the function where you perform all needed actions, like
-	// population KV storage or producing Kafka output messages
-	Process(*sarama.ConsumerMessage, Sender, Coordinator)
-}
-
-// BatchMessageProcessor processes several messages at once.
-type BatchMessageProcessor interface {
-	// ProcessBatch gets an array of incoming Kafka messages.
+	// Process gets an array of incoming Kafka messages.
 	// Use Sender to send messages to output topics.
-	ProcessBatch([]*sarama.ConsumerMessage, Sender, Coordinator)
+	Process([]*sarama.ConsumerMessage, Sender, Coordinator)
 }
 
-// NewTopicProcessor creates a new TopicProcessor with the given config.
-// It requires a factory function that creates MessageProcessor instances and a container id.
-// The container id must be a number between 0 and config.ContainerCount - 1.
+// NewTopicProcessor creates a new instance of MessageProcessor
 func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
 	config.SetDefaults()
 	inputTopics := config.InputTopics
@@ -68,54 +54,11 @@ func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() Messag
 		partitions:          partitions,
 		close:               make(chan struct{}),
 		waitGroup:           sync.WaitGroup{},
-		batchingEnabled:     false,
 	}
 	setupMetrics(&topicProcessor, config.MetricsProvider)
 	for _, partition := range partitions {
 		processor := makeProcessor()
-		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, nil, partition)
-	}
-	return &topicProcessor
-}
-
-// BatchingOpts set baching options for BatchMessageProcessor
-type BatchingOpts struct {
-	// Function that return ne winstance of BatchMessageProcessor
-	MakeProcessor func() BatchMessageProcessor
-	// Max amount of messages to be processed at once in BatchMessageProcessor.Process.
-	// Actual amount of messages may be less then BatchSize.
-	BatchSize int
-	// BatchMessageProcessor.Process is executed for incoming messages if
-	// BatchSize has not been reached in BatchWaitDuration.
-	// If there are no incoming messages, BatchMessageProcessor.Process is not executed.
-	BatchWaitDuration time.Duration
-}
-
-// NewBatchTopicProcessor creates a new instance of BatchMessageProcessor
-func NewBatchTopicProcessor(config *TopicProcessorConfig, opts BatchingOpts) *TopicProcessor {
-	config.SetDefaults()
-	inputTopics := config.InputTopics
-	partitions := config.InputPartitions
-	offsetManager := mustSetupOffsetManager(config)
-	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
-	producer := mustSetupProducer(config.Client)
-	topicProcessor := TopicProcessor{
-		config:              config,
-		producer:            producer,
-		offsetManager:       offsetManager,
-		partitionProcessors: partitionProcessors,
-		inputTopics:         inputTopics,
-		partitions:          partitions,
-		close:               make(chan struct{}),
-		waitGroup:           sync.WaitGroup{},
-		batchingEnabled:     true,
-		batchSize:           opts.BatchSize,
-		batchWaitDuration:   opts.BatchWaitDuration,
-	}
-	setupMetrics(&topicProcessor, config.MetricsProvider)
-	for _, partition := range partitions {
-		processor := opts.MakeProcessor()
-		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, nil, processor, partition)
+		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, partition)
 	}
 	return &topicProcessor
 }
@@ -163,24 +106,11 @@ func (tp *TopicProcessor) HasConsumedAllMessages() bool {
 	return true
 }
 
-func (tp *TopicProcessor) getBatchTickerChan(batchTicker *time.Ticker) <-chan time.Time {
-	if tp.batchingEnabled {
-		return batchTicker.C
-	}
-	return make(<-chan time.Time)
-}
-
-func (tp *TopicProcessor) getBatchTicker() *time.Ticker {
-	if tp.batchingEnabled {
-		return time.NewTicker(tp.batchWaitDuration)
-	}
-	return nil
-}
 func (tp *TopicProcessor) getBatches() map[int][]*sarama.ConsumerMessage {
 	batches := make(map[int][]*sarama.ConsumerMessage)
 
 	for _, partition := range tp.partitions {
-		batches[partition] = make([]*sarama.ConsumerMessage, tp.batchSize)
+		batches[partition] = make([]*sarama.ConsumerMessage, tp.config.BatchSize)
 	}
 
 	return batches
@@ -189,8 +119,7 @@ func (tp *TopicProcessor) getBatches() map[int][]*sarama.ConsumerMessage {
 func (tp *TopicProcessor) runLoop() {
 	consumerChan := tp.getConsumerMessagesChan()
 	metricsTicker := time.NewTicker(tp.config.MetricsUpdateInterval)
-	batchTicker := tp.getBatchTicker()
-	batchTickerChan := tp.getBatchTickerChan(batchTicker)
+	batchTicker := time.NewTicker(tp.config.BatchWaitDuration)
 
 	batches := tp.getBatches()
 	lengths := make(map[int]int)
@@ -201,24 +130,18 @@ func (tp *TopicProcessor) runLoop() {
 		select {
 		case consumerMessage := <-consumerChan:
 			logger.Debugf("Received: %s", consumerMessage)
-			if tp.batchingEnabled {
-				partition := int(consumerMessage.Partition)
-				batches[partition][lengths[partition]] = consumerMessage
-				lengths[partition]++
-				if lengths[partition] == tp.batchSize {
-					logger.Debugf("Processing batch of %d messages...", tp.batchSize)
-					tp.processConsumerMessageBatch(batches[partition], partition)
-					lengths[partition] = 0
-					logger.Debug("Processing of batch complete")
-				}
-			} else {
-				logger.Debug("Processing message...")
-				tp.processConsumerMessage(consumerMessage)
-				logger.Debug("Processing of message complete")
+			partition := int(consumerMessage.Partition)
+			batches[partition][lengths[partition]] = consumerMessage
+			lengths[partition]++
+			if lengths[partition] == tp.config.BatchSize {
+				logger.Debugf("Processing batch of %d messages...", tp.config.BatchSize)
+				tp.processConsumerMessageBatch(batches[partition], partition)
+				lengths[partition] = 0
+				logger.Debug("Processing of batch complete")
 			}
 		case <-metricsTicker.C:
 			tp.onMetricsTick()
-		case <-batchTickerChan:
+		case <-batchTicker.C:
 			for _, partition := range tp.partitions {
 				if lengths[partition] == 0 {
 					continue
@@ -235,30 +158,12 @@ func (tp *TopicProcessor) runLoop() {
 	}
 }
 
-func (tp *TopicProcessor) processConsumerMessage(consumerMessage *sarama.ConsumerMessage) {
-	tp.incomingMessageCount.Inc(consumerMessage.Topic, strconv.Itoa(int(consumerMessage.Partition)))
-	pp := tp.partitionProcessors[consumerMessage.Partition]
-	producerMessages := pp.process(consumerMessage)
-	if len(producerMessages) > 0 {
-		logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
-		err := tp.producer.SendMessages(producerMessages)
-		logger.Debug("Producing of Kafka messages complete")
-		if err != nil {
-			tp.onProducerError(err)
-		}
-	}
-	pp.markOffsets(consumerMessage)
-	for _, message := range producerMessages {
-		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
-	}
-}
-
 func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.ConsumerMessage, partition int) {
 	for _, message := range messages {
 		tp.incomingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}
 	pp := tp.partitionProcessors[int32(partition)]
-	producerMessages := pp.processBatch(messages)
+	producerMessages := pp.process(messages)
 	if len(producerMessages) > 0 {
 		logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
 		err := tp.producer.SendMessages(producerMessages)
@@ -267,7 +172,7 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 			tp.onProducerError(err)
 		}
 	}
-	pp.markOffsetsForBatch(messages)
+	pp.markOffsets(messages)
 	for _, message := range producerMessages {
 		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}

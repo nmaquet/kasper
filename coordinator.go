@@ -1,6 +1,6 @@
 package kasper
 
-// Coordinator helps to batch process Kafka messages
+// TBD
 type Coordinator interface {
 	// CloseTopicProcessor safely shuts down topic processor, closing both client and producer
 	CloseTopicProcessor()

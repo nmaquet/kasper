@@ -332,7 +332,7 @@ const expectedResultJSON string = `
 }
 `
 
-func populateFictionAndCharactersTopic(batchingEnabled bool) int {
+func populateFictionAndCharactersTopic() int {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaConfig.Producer.Return.Successes = true
@@ -345,6 +345,8 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		Client:             client,
 		InputTopics:        []string{"characters", "fictions"},
 		InputPartitions:    []int{0},
+		BatchSize:          3,
+		BatchWaitDuration:  3 * time.Second,
 	}
 
 	sendCount := 0
@@ -356,20 +358,7 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 		make(map[string]*IDs, 100),
 	}
 
-	mkMessageProcessor := func() MessageProcessor { return test }
-
-	batchingOpts := BatchingOpts{
-		MakeProcessor:     func() BatchMessageProcessor { return test },
-		BatchSize:         3,
-		BatchWaitDuration: 3 * time.Second,
-	}
-
-	var topicProcessor *TopicProcessor
-	if batchingEnabled {
-		topicProcessor = NewBatchTopicProcessor(&tpConfig, batchingOpts)
-	} else {
-		topicProcessor = NewTopicProcessor(&tpConfig, mkMessageProcessor)
-	}
+	topicProcessor := NewTopicProcessor(&tpConfig, func() MessageProcessor { return test })
 
 	topicProcessor.Start()
 	for {
@@ -382,21 +371,12 @@ func populateFictionAndCharactersTopic(batchingEnabled bool) int {
 	return sendCount
 }
 
-func TestTopicProcessor(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-	consumer, partitionConsumer := mustSetupConsumer()
-	sendCount := populateFictionAndCharactersTopic(false)
-	validateFictionsAndCharactersTopic(partitionConsumer, sendCount, consumer, t)
-}
-
 func TestBatchTopicProcessor(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	consumer, partitionConsumer := mustSetupConsumer()
-	sendCount := populateFictionAndCharactersTopic(true)
+	sendCount := populateFictionAndCharactersTopic()
 	validateFictionsAndCharactersTopic(partitionConsumer, sendCount, consumer, t)
 }
 
