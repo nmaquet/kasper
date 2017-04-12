@@ -49,7 +49,7 @@ func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sara
 	return c
 }
 
-func newPartitionProcessor(tp *TopicProcessor, bmp MessageProcessor, partition int) *partitionProcessor {
+func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int) *partitionProcessor {
 	consumer, err := sarama.NewConsumerFromClient(tp.config.Client)
 	if err != nil {
 		logger.Panic(err)
@@ -68,7 +68,7 @@ func newPartitionProcessor(tp *TopicProcessor, bmp MessageProcessor, partition i
 		consumer,
 		partitionConsumers,
 		partitionOffsetManagers,
-		bmp,
+		mp,
 		tp.inputTopics,
 		partition,
 	}
