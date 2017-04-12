@@ -16,7 +16,7 @@ func newFixture() *fixture {
 	return &fixture{
 		&partitionProcessor{
 			topicProcessor: &TopicProcessor{
-				config: &TopicProcessorConfig{
+				config: &Config{
 
 				},
 			},

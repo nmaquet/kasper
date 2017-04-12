@@ -16,7 +16,7 @@ import (
 
 // TopicProcessor describes kafka topic processor
 type TopicProcessor struct {
-	config              *TopicProcessorConfig
+	config              *Config
 	producer            sarama.SyncProducer
 	offsetManager       sarama.OffsetManager
 	partitionProcessors map[int32]*partitionProcessor
@@ -38,7 +38,7 @@ type MessageProcessor interface {
 }
 
 // NewTopicProcessor creates a new instance of MessageProcessor
-func NewTopicProcessor(config *TopicProcessorConfig, makeProcessor func() MessageProcessor) *TopicProcessor {
+func NewTopicProcessor(config *Config, makeProcessor func() MessageProcessor) *TopicProcessor {
 	config.SetDefaults()
 	inputTopics := config.InputTopics
 	partitions := config.InputPartitions
@@ -69,7 +69,7 @@ func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
 	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
 }
 
-func mustSetupOffsetManager(config *TopicProcessorConfig) sarama.OffsetManager {
+func mustSetupOffsetManager(config *Config) sarama.OffsetManager {
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), config.Client)
 	if err != nil {
 		logger.Panic(err)

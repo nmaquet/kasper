@@ -61,7 +61,7 @@ func (processor *WordCountExample) put(key string, count int) {
 
 func main() {
 	client, _ := sarama.NewClient([]string{"localhost:9092"}, sarama.NewConfig())
-	config := kasper.TopicProcessorConfig{
+	config := kasper.Config{
 		TopicProcessorName: "key-value-store-example",
 		Client:             client,
 		InputTopics:        []string{"words"},

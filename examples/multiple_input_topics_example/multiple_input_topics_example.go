@@ -27,7 +27,7 @@ func (*MultipleInputTopicsExample) Process(msg *sarama.ConsumerMessage, sender k
 
 func main() {
 	client, _ := sarama.NewClient([]string{"localhost:9092"}, sarama.NewConfig())
-	config := kasper.TopicProcessorConfig{
+	config := kasper.Config{
 		TopicProcessorName: "multiple-input-topics-example",
 		Client:             client,
 		InputTopics:        []string{"hello", "world"},

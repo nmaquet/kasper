@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// TopicProcessorConfig describes a config for Kafka topic processor
-type TopicProcessorConfig struct {
+// Config describes a config for Kafka topic processor
+type Config struct {
 	// Used for logging
 	TopicProcessorName string
 	// Kafka Brokers list
@@ -26,15 +26,15 @@ type TopicProcessorConfig struct {
 	BatchWaitDuration time.Duration
 }
 
-func (config *TopicProcessorConfig) kafkaConsumerGroup() string {
+func (config *Config) kafkaConsumerGroup() string {
 	return fmt.Sprintf("kasper-topic-processor-%s", config.TopicProcessorName)
 }
 
-func (config *TopicProcessorConfig) producerClientID() string {
+func (config *Config) producerClientID() string {
 	return fmt.Sprintf("kasper-topic-processor-%s", config.TopicProcessorName)
 }
 
-func (config *TopicProcessorConfig) SetDefaults() {
+func (config *Config) SetDefaults() {
 	if config.MetricsProvider == nil {
 		config.MetricsProvider = &NoopMetricsProvider{}
 	}

@@ -63,13 +63,13 @@ type Test struct {
 	characterToFictionsStore map[string]*IDs
 }
 
-func (t *Test) ProcessBatch(msgs []*sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) Process(msgs []*sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
 	for _, msg := range msgs {
-		t.Process(msg, sender, coordinator)
+		t.ProcessMessage(msg, sender, coordinator)
 	}
 }
 
-func (t *Test) Process(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) ProcessMessage(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
 	topic := msg.Topic
 	if topic == "characters" {
 		t.processCharacter(msg, sender, coordinator)
@@ -340,7 +340,7 @@ func populateFictionAndCharactersTopic() int {
 	if err != nil {
 		panic(err)
 	}
-	tpConfig := TopicProcessorConfig{
+	tpConfig := Config{
 		TopicProcessorName: fmt.Sprintf("topic-processor-integration-test-%d", time.Now().Unix()),
 		Client:             client,
 		InputTopics:        []string{"characters", "fictions"},
