@@ -117,11 +117,6 @@ func (pp *partitionProcessor) onMetricsTick() {
 	pp.countMessagesBehindHighWaterMark()
 }
 
-//func (pp *partitionProcessor) markOffsets(message *sarama.ConsumerMessage) {
-//	logger.Debugf("Marking offset %s:%d", message.Topic, message.Offset+1)
-//	pp.offsetManagers[message.Topic].MarkOffset(message.Offset+1, "")
-//}
-
 func (pp *partitionProcessor) markOffsets(messages []*sarama.ConsumerMessage) {
 	latestOffset := make(map[string]int64)
 	for _, message := range messages {
