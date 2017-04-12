@@ -34,7 +34,7 @@ func (config *Config) producerClientID() string {
 	return fmt.Sprintf("kasper-topic-processor-%s", config.TopicProcessorName)
 }
 
-func (config *Config) SetDefaults() {
+func (config *Config) setDefaults() {
 	if config.MetricsProvider == nil {
 		config.MetricsProvider = &NoopMetricsProvider{}
 	}

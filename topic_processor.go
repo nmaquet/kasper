@@ -39,7 +39,7 @@ type MessageProcessor interface {
 
 // NewTopicProcessor creates a new instance of MessageProcessor
 func NewTopicProcessor(config *Config, makeProcessor func() MessageProcessor) *TopicProcessor {
-	config.SetDefaults()
+	config.setDefaults()
 	inputTopics := config.InputTopics
 	partitions := config.InputPartitions
 	offsetManager := mustSetupOffsetManager(config)
