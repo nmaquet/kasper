@@ -36,7 +36,7 @@ func (config *Config) producerClientID() string {
 
 func (config *Config) setDefaults() {
 	if config.MetricsProvider == nil {
-		config.MetricsProvider = &NoopMetricsProvider{}
+		config.MetricsProvider = &noopMetricsProvider{}
 	}
 	if config.MetricsUpdateInterval == 0 {
 		config.MetricsUpdateInterval = 15 * time.Second

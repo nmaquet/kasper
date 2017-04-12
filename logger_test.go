@@ -23,12 +23,12 @@ func TestLogger(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	testLogger(t, &NoopLogger{})
+	testLogger(t, &noopLogger{})
 	testLogger(t, NewBasicLogger(true))
 	testLogger(t, NewTextLogger("test", 0, true))
 	testLogger(t, NewJSONLogger("test", 0, false))
 }
 
 func init() {
-	SetLogger(&NoopLogger{})
+	SetLogger(&noopLogger{})
 }

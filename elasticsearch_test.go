@@ -154,7 +154,7 @@ func init() {
 	if testing.Short() {
 		return
 	}
-	SetLogger(&NoopLogger{})
+	SetLogger(&noopLogger{})
 	client, err := elastic.NewClient(
 		elastic.SetURL("http://localhost:9200"),
 		elastic.SetSniff(false),

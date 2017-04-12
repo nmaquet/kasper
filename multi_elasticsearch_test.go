@@ -72,7 +72,7 @@ func TestElasticsearchType_PutAll_GetAll(t *testing.T) {
 }
 
 func init() {
-	SetLogger(&NoopLogger{})
+	SetLogger(&noopLogger{})
 	store.client.DeleteIndex("marvel").Do(store.context)
 	store.client.DeleteIndex("dc").Do(store.context)
 	store.client.CreateIndex("marvel").Do(store.context)
