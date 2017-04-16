@@ -35,7 +35,7 @@ type TopicProcessor struct {
 type MessageProcessor interface {
 	// Process gets an array of incoming Kafka messages.
 	// Use Sender to send messages to output topics.
-	Process([]*sarama.ConsumerMessage, Sender, Coordinator)
+	Process([]*sarama.ConsumerMessage, Sender) error
 }
 
 // NewTopicProcessor creates a new instance of MessageProcessor
@@ -76,16 +76,6 @@ func mustSetupOffsetManager(config *Config) sarama.OffsetManager {
 	return offsetManager
 }
 
-// Start launches a deferred routine for topic processing.
-func (tp *TopicProcessor) Start() {
-	tp.logger.Info("Topic processor started")
-	tp.waitGroup.Add(1)
-	go func() {
-		defer tp.waitGroup.Done()
-		tp.runLoop()
-	}()
-}
-
 // Close safely shuts down topic processing, waiting for unfinished jobs
 func (tp *TopicProcessor) Close() {
 	tp.logger.Info("Received close request")
@@ -115,7 +105,7 @@ func (tp *TopicProcessor) getBatches() map[int][]*sarama.ConsumerMessage {
 	return batches
 }
 
-func (tp *TopicProcessor) runLoop() {
+func (tp *TopicProcessor) RunLoop() error {
 	consumerChan := tp.getConsumerMessagesChan()
 	metricsTicker := time.NewTicker(tp.config.MetricsUpdateInterval)
 	batchTicker := time.NewTicker(tp.config.BatchWaitDuration)
@@ -152,7 +142,7 @@ func (tp *TopicProcessor) runLoop() {
 			}
 		case <-tp.close:
 			tp.onClose(metricsTicker, batchTicker)
-			return
+			return nil
 		}
 	}
 }

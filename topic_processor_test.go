@@ -63,24 +63,25 @@ type Test struct {
 	characterToFictionsStore map[string]*IDs
 }
 
-func (t *Test) Process(msgs []*sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) Process(msgs []*sarama.ConsumerMessage, sender Sender) error {
 	for _, msg := range msgs {
-		t.ProcessMessage(msg, sender, coordinator)
+		t.ProcessMessage(msg, sender)
 	}
+	return nil
 }
 
-func (t *Test) ProcessMessage(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) ProcessMessage(msg *sarama.ConsumerMessage, sender Sender) {
 	topic := msg.Topic
 	if topic == "characters" {
-		t.processCharacter(msg, sender, coordinator)
+		t.processCharacter(msg, sender)
 	} else if topic == "fictions" {
-		t.processFictions(msg, sender, coordinator)
+		t.processFictions(msg, sender)
 	} else {
 		panic(fmt.Sprintf("Unrecoginzed topic: %s", topic))
 	}
 }
 
-func (t *Test) processCharacter(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) processCharacter(msg *sarama.ConsumerMessage, sender Sender) {
 	character := &Character{}
 	character.fromBytes(msg.Value)
 	t.characterStore[character.ID] = character
@@ -101,7 +102,7 @@ func (t *Test) processCharacter(msg *sarama.ConsumerMessage, sender Sender, coor
 	}
 }
 
-func (t *Test) processFictions(msg *sarama.ConsumerMessage, sender Sender, coordinator Coordinator) {
+func (t *Test) processFictions(msg *sarama.ConsumerMessage, sender Sender) {
 	fiction := &Fiction{}
 	fiction.fromBytes(msg.Value)
 	t.fictionStore[fiction.ID] = fiction
@@ -360,7 +361,12 @@ func populateFictionAndCharactersTopic() int {
 
 	topicProcessor := NewTopicProcessor(&tpConfig, func() MessageProcessor { return test })
 
-	topicProcessor.Start()
+	go func() {
+		err := topicProcessor.RunLoop()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	for {
 		time.Sleep(100 * time.Millisecond)
 		if topicProcessor.HasConsumedAllMessages() {

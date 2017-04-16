@@ -14,10 +14,11 @@ import (
 // HelloWorldExample is Kafka message processor that shows how to read messages from Kafka topic
 type HelloWorldExample struct{}
 
-func (processor *HelloWorldExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (processor *HelloWorldExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender) error {
 	for _, msg := range msgs {
 		processor.ProcessMessage(msg)
 	}
+	return nil
 }
 
 // Process processes Kafka messages from topic "hello" and prints info to console

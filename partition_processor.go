@@ -8,7 +8,6 @@ import (
 
 type partitionProcessor struct {
 	topicProcessor     *TopicProcessor
-	coordinator        Coordinator
 	consumer           sarama.Consumer
 	partitionConsumers []sarama.PartitionConsumer
 	offsetManagers     map[string]sarama.PartitionOffsetManager
@@ -65,7 +64,6 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 	}
 	pp := &partitionProcessor{
 		tp,
-		nil,
 		consumer,
 		partitionConsumers,
 		partitionOffsetManagers,
@@ -74,13 +72,12 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		partition,
 		tp.logger,
 	}
-	pp.coordinator = &partitionProcessorCoordinator{pp}
 	return pp
 }
 
 func (pp *partitionProcessor) process(msgs []*sarama.ConsumerMessage) []*sarama.ProducerMessage {
 	sender := newSender(pp)
-	pp.messageProcessor.Process(msgs, sender, pp.coordinator)
+	pp.messageProcessor.Process(msgs, sender)
 	return sender.producerMessages
 }
 

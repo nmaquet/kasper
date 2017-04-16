@@ -19,14 +19,15 @@ type WordCountExample struct {
 	store kasper.Store
 }
 
-func (processor *WordCountExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (processor *WordCountExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender) error {
 	for _, msg := range msgs {
 		processor.ProcessMessage(msg, sender)
 	}
+	return nil
 }
 
 // Process processes Kafka messages from topic "words" and outputs each word with counter to "word-counts" topic
-func (*WordCountExample) ProcessMessage(msg *sarama.ConsumerMessage, sender kasper.Sender) {
+func (processor *WordCountExample) ProcessMessage(msg *sarama.ConsumerMessage, sender kasper.Sender) {
 	line := string(msg.Value)
 	words := strings.Split(line, " ")
 	for _, word := range words {

@@ -14,10 +14,11 @@ import (
 // MultipleInputTopicsExample is Kafka message processor that shows how to read messages from muptiple Kafka topics
 type MultipleInputTopicsExample struct{}
 
-func (processor *MultipleInputTopicsExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (processor *MultipleInputTopicsExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender) error {
 	for _, msg := range msgs {
 		processor.ProcessMessage(msg)
 	}
+	return nil
 }
 
 // Process processes Kafka messages from topics "hello" and "world" and prints info to console
