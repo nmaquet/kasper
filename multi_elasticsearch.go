@@ -5,34 +5,38 @@ import (
 
 	"golang.org/x/net/context"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"fmt"
 )
 
 // TBD
 type MultiElasticsearch struct {
-	client          *elastic.Client
-	context         context.Context
-	stores          map[string]Store
-	typeName        string
-	metricsProvider MetricsProvider
-	metricsLabel    string
+	config   *Config
+	client   *elastic.Client
+	context  context.Context
+	stores   map[string]Store
+	typeName string
+
+	logger       Logger
+	labelValues  []string
+	pushCounter  Counter
+	fetchCounter Counter
 }
 
 // TBD
-func NewMultiElasticsearch(client *elastic.Client, typeName string) *MultiElasticsearch {
+func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName string) *MultiElasticsearch {
+	metrics := config.MetricsProvider
+	labelNames := []string{"topicProcessor", "type"}
+	labelValues := []string{config.TopicProcessorName, typeName}
 	s := &MultiElasticsearch{
-		client:   client,
-		context:  context.Background(),
-		stores:   make(map[string]Store),
-		typeName: typeName,
+		config,
+		client,
+		context.Background(),
+		make(map[string]Store),
+		typeName,
+		config.Logger,
+		labelValues,
+		metrics.NewCounter("MultiElasticsearch_Push", "Summary of Push() calls", labelNames...),
+		metrics.NewCounter("MultiElasticsearch_Fetch", "Summary of Fetch() calls", labelNames...),
 	}
-	return s
-}
-
-// Tenant returns underlying Elasticsearch as for given tenant
-func (s *MultiElasticsearch) WithMetrics(provider MetricsProvider, label string) MultiStore {
-	s.metricsProvider = provider
-	s.metricsLabel = label
 	return s
 }
 
@@ -40,19 +44,8 @@ func (s *MultiElasticsearch) WithMetrics(provider MetricsProvider, label string)
 func (s *MultiElasticsearch) Tenant(tenant string) Store {
 	kv, found := s.stores[tenant]
 	if !found {
-		e := &Elasticsearch{
-			client:    s.client,
-			context:   s.context,
-			indexName: tenant,
-			typeName:  s.typeName,
-		}
-		if s.metricsProvider != nil {
-			label := fmt.Sprintf("%s/%s", tenant, s.metricsLabel)
-			s.stores[tenant] = e.WithMetrics(s.metricsProvider, label)
-		} else {
-			s.stores[tenant] = e
-		}
-		kv = e
+		kv = NewElasticsearch(s.config, s.client, tenant, s.typeName)
+		s.stores[tenant] = kv
 	}
 	return kv
 }
@@ -72,11 +65,12 @@ func (s *MultiElasticsearch) AllTenants() []string {
 
 // Fetch gets entries from underlying stores using GetAll
 func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
+	s.fetchCounter.Inc(s.labelValues...)
 	res := NewMultiMap(len(keys) / 10)
 	if len(keys) == 0 {
 		return res, nil
 	}
-	logger.Debugf("Multitenant MultiElasticsearch GetAll: %#v", keys)
+	s.logger.Debugf("Multitenant MultiElasticsearch GetAll: %#v", keys)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 		item := elastic.NewMultiGetItem().
@@ -92,10 +86,10 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	}
 	for _, doc := range response.Docs {
 		if !doc.Found {
-			logger.Debug(doc.Index, doc.Id, " not found")
+			s.logger.Debug(doc.Index, doc.Id, " not found")
 			continue
 		}
-		logger.Debug("unmarshalling ", doc.Source)
+		s.logger.Debug("unmarshalling ", doc.Source)
 		err := res.Tenant(doc.Index).Put(doc.Id, *doc.Source)
 		if err != nil {
 			return nil, err
@@ -106,6 +100,7 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 
 // Push puts entries to underlying stores using PutAll
 func (s *MultiElasticsearch) Push(m *MultiMap) error {
+	s.pushCounter.Inc(s.labelValues...)
 	for _, tenant := range m.AllTenants() {
 		s.Tenant(tenant) // force creation of index & mappings if they don't exist
 	}
@@ -125,7 +120,7 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 	if i == 0 {
 		return nil
 	}
-	logger.Debugf("Multitenant MultiElasticsearch PutAll of %d keys", i)
+	s.logger.Debugf("Multitenant MultiElasticsearch PutAll of %d keys", i)
 	response, err := bulk.Do(s.context)
 	if err != nil {
 		return err

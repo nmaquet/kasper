@@ -15,6 +15,7 @@ type partitionProcessor struct {
 	messageProcessor   MessageProcessor
 	inputTopics        []string
 	partition          int
+	logger             Logger
 }
 
 func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMessage {
@@ -28,7 +29,7 @@ func (pp *partitionProcessor) consumerMessageChannels() []<-chan *sarama.Consume
 func getPartitionOffsetManager(tp *TopicProcessor, topic string, partition int) sarama.PartitionOffsetManager {
 	pom, err := tp.offsetManager.ManagePartition(topic, int32(partition))
 	if err != nil {
-		logger.Panic(err)
+		tp.logger.Panic(err)
 	}
 	return pom
 }
@@ -36,7 +37,7 @@ func getPartitionOffsetManager(tp *TopicProcessor, topic string, partition int) 
 func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sarama.PartitionOffsetManager, topic string, partition int) sarama.PartitionConsumer {
 	newestOffset, err := tp.config.Client.GetOffset(topic, int32(partition), sarama.OffsetNewest)
 	if err != nil {
-		logger.Panic(err)
+		tp.logger.Panic(err)
 	}
 	nextOffset, _ := pom.NextOffset()
 	if nextOffset > newestOffset {
@@ -44,7 +45,7 @@ func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sara
 	}
 	c, err := consumer.ConsumePartition(topic, int32(partition), nextOffset)
 	if err != nil {
-		logger.Panic(err)
+		tp.logger.Panic(err)
 	}
 	return c
 }
@@ -52,7 +53,7 @@ func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sara
 func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition int) *partitionProcessor {
 	consumer, err := sarama.NewConsumerFromClient(tp.config.Client)
 	if err != nil {
-		logger.Panic(err)
+		tp.logger.Panic(err)
 	}
 	partitionConsumers := make([]sarama.PartitionConsumer, len(tp.inputTopics))
 	partitionOffsetManagers := make(map[string]sarama.PartitionOffsetManager)
@@ -71,6 +72,7 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 		mp,
 		tp.inputTopics,
 		partition,
+		tp.logger,
 	}
 	pp.coordinator = &partitionProcessorCoordinator{pp}
 	return pp
@@ -105,11 +107,11 @@ func (pp *partitionProcessor) hasConsumedAllMessages() bool {
 		currentOffset, _ := offsetManager.NextOffset()
 		highWaterMark := highWaterMarks[topic][int32(pp.partition)]
 		if highWaterMark != currentOffset {
-			logger.Debugf("Topic %s partition %d has messages remaining to consume (offset = %d, hight water mark = %d)", topic, pp.partition, currentOffset, highWaterMark)
+			pp.logger.Debugf("Topic %s partition %d has messages remaining to consume (offset = %d, hight water mark = %d)", topic, pp.partition, currentOffset, highWaterMark)
 			return false
 		}
 	}
-	logger.Debug("Partitions %d of all input topics have been consumed", pp.partition)
+	pp.logger.Debug("Partitions %d of all input topics have been consumed", pp.partition)
 	return true
 }
 
@@ -123,7 +125,7 @@ func (pp *partitionProcessor) markOffsets(messages []*sarama.ConsumerMessage) {
 		latestOffset[message.Topic] = message.Offset
 	}
 	for topic, offset := range latestOffset {
-		logger.Debugf("Marking offset %s:%d", topic, offset+1)
+		pp.logger.Debugf("Marking offset %s:%d", topic, offset+1)
 		pp.offsetManagers[topic].MarkOffset(offset+1, "")
 	}
 }
@@ -133,18 +135,18 @@ func (pp *partitionProcessor) onClose() {
 	for _, pom := range pp.offsetManagers {
 		err = pom.Close()
 		if err != nil {
-			logger.Panicf("Cannot close offset manager: %s", err)
+			pp.logger.Panicf("Cannot close offset manager: %s", err)
 		}
 
 	}
 	for _, pc := range pp.partitionConsumers {
 		err = pc.Close()
 		if err != nil {
-			logger.Panicf("Cannot close partition consumer: %s", err)
+			pp.logger.Panicf("Cannot close partition consumer: %s", err)
 		}
 	}
 	err = pp.consumer.Close()
 	if err != nil {
-		logger.Panic(err)
+		pp.logger.Panic(err)
 	}
 }

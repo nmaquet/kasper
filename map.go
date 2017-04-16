@@ -64,7 +64,3 @@ func (s *Map) Flush() error {
 func (s *Map) GetMap() map[string][]byte {
 	return s.m
 }
-
-func (s*Map) WithMetrics(provider MetricsProvider, label string) Store {
-	return NewStoreMetrics(s, provider, label)
-}

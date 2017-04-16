@@ -16,14 +16,16 @@ type Config struct {
 	InputTopics []string
 	// List of topic partitions to process
 	InputPartitions []int
-	// TDB
-	MetricsProvider MetricsProvider
-	// TBD
-	MetricsUpdateInterval time.Duration
 	// TBD
 	BatchSize int
 	// TBD
 	BatchWaitDuration time.Duration
+	// TBD
+	Logger Logger
+	// TDB
+	MetricsProvider MetricsProvider
+	// TBD
+	MetricsUpdateInterval time.Duration
 }
 
 func (config *Config) kafkaConsumerGroup() string {
@@ -35,16 +37,19 @@ func (config *Config) producerClientID() string {
 }
 
 func (config *Config) setDefaults() {
-	if config.MetricsProvider == nil {
-		config.MetricsProvider = &noopMetricsProvider{}
-	}
-	if config.MetricsUpdateInterval == 0 {
-		config.MetricsUpdateInterval = 15 * time.Second
-	}
 	if config.BatchSize == 0 {
 		config.BatchSize = 1000
 	}
 	if config.BatchWaitDuration == 0 {
 		config.MetricsUpdateInterval = 5 * time.Second
+	}
+	if config.Logger == nil {
+		config.Logger = NewBasicLogger(false)
+	}
+	if config.MetricsProvider == nil {
+		config.MetricsProvider = &noopMetricsProvider{}
+	}
+	if config.MetricsUpdateInterval == 0 {
+		config.MetricsUpdateInterval = 15 * time.Second
 	}
 }

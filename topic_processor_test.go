@@ -76,7 +76,7 @@ func (t *Test) ProcessMessage(msg *sarama.ConsumerMessage, sender Sender, coordi
 	} else if topic == "fictions" {
 		t.processFictions(msg, sender, coordinator)
 	} else {
-		logger.Panic(fmt.Sprintf("Unrecoginzed topic: %s", topic))
+		panic(fmt.Sprintf("Unrecoginzed topic: %s", topic))
 	}
 }
 
@@ -91,7 +91,7 @@ func (t *Test) processCharacter(msg *sarama.ConsumerMessage, sender Sender, coor
 	for _, fictionID := range fictionIDs.IDs {
 		fiction := t.fictionStore[fictionID]
 		if fiction == nil {
-			logger.Panic("Did not find fiction in fiction store!")
+			panic("Did not find fiction in fiction store!")
 		}
 		message := t.createOutgoingMessage(fiction)
 		if message != nil {
@@ -383,11 +383,11 @@ func TestBatchTopicProcessor(t *testing.T) {
 func mustSetupConsumer() (sarama.Consumer, sarama.PartitionConsumer) {
 	consumer, err := sarama.NewConsumer([]string{"127.0.0.1:9092"}, sarama.NewConfig())
 	if err != nil {
-		logger.Panic(err)
+		panic(err)
 	}
 	partitionConsumer, err := consumer.ConsumePartition("fictions-and-characters", 0, sarama.OffsetNewest)
 	if err != nil {
-		logger.Panic(err)
+		panic(err)
 	}
 	return consumer, partitionConsumer
 }
@@ -400,7 +400,7 @@ func validateFictionsAndCharactersTopic(partitionConsumer sarama.PartitionConsum
 		value := FictionAndCharacters{}
 		err := json.Unmarshal(msg.Value, &value)
 		if err != nil {
-			logger.Panic(err)
+			panic(err)
 		}
 		result[key] = &value
 		consumedCount++
@@ -410,20 +410,16 @@ func validateFictionsAndCharactersTopic(partitionConsumer sarama.PartitionConsum
 	}
 	err := partitionConsumer.Close()
 	if err != nil {
-		logger.Panic(err)
+		panic(err)
 	}
 	err = consumer.Close()
 	if err != nil {
-		logger.Panic(err)
+		panic(err)
 	}
 	expected := make(map[string]*FictionAndCharacters)
 	err = json.Unmarshal([]byte(expectedResultJSON), &expected)
 	if err != nil {
-		logger.Panic(err)
+		panic(err)
 	}
 	assert.Equal(t, expected, result)
-}
-
-func init() {
-	SetLogger(&noopLogger{})
 }

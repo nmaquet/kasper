@@ -154,7 +154,11 @@ func init() {
 	if testing.Short() {
 		return
 	}
-	SetLogger(&noopLogger{})
+	config := &Config{
+		TopicProcessorName: "test",
+		Logger:             &noopLogger{},
+		MetricsProvider:    &noopMetricsProvider{},
+	}
 	client, err := elastic.NewClient(
 		elastic.SetURL("http://localhost:9200"),
 		elastic.SetSniff(false),
@@ -162,10 +166,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	store = NewElasticsearch(client,
-		"kasper",
-		"dragon",
-	)
+	store = NewElasticsearch(config, client, "kasper", "dragon")
 	store.client.DeleteIndex("kasper").Do(store.context)
 	store.client.CreateIndex("kasper").Do(store.context)
 }

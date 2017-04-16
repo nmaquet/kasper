@@ -25,6 +25,7 @@ type TopicProcessor struct {
 	close               chan struct{}
 	waitGroup           sync.WaitGroup
 
+	logger                      Logger
 	incomingMessageCount        Counter
 	outgoingMessageCount        Counter
 	messagesBehindHighWaterMark Gauge
@@ -44,18 +45,22 @@ func NewTopicProcessor(config *Config, makeProcessor func() MessageProcessor) *T
 	partitions := config.InputPartitions
 	offsetManager := mustSetupOffsetManager(config)
 	partitionProcessors := make(map[int32]*partitionProcessor, len(partitions))
-	producer := mustSetupProducer(config.Client)
+	producer := mustSetupProducer(config)
+	provider := config.MetricsProvider
 	topicProcessor := TopicProcessor{
-		config:              config,
-		producer:            producer,
-		offsetManager:       offsetManager,
-		partitionProcessors: partitionProcessors,
-		inputTopics:         inputTopics,
-		partitions:          partitions,
-		close:               make(chan struct{}),
-		waitGroup:           sync.WaitGroup{},
+		config,
+		producer,
+		offsetManager,
+		partitionProcessors,
+		inputTopics,
+		partitions,
+		make(chan struct{}),
+		sync.WaitGroup{},
+		config.Logger,
+		provider.NewCounter("incoming_message_count", "Number of incoming messages received", "topic", "partition"),
+		provider.NewCounter("outgoing_message_count", "Number of outgoing messages sent", "topic", "partition"),
+		provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition"),
 	}
-	setupMetrics(&topicProcessor, config.MetricsProvider)
 	for _, partition := range partitions {
 		processor := makeProcessor()
 		partitionProcessors[int32(partition)] = newPartitionProcessor(&topicProcessor, processor, partition)
@@ -63,23 +68,17 @@ func NewTopicProcessor(config *Config, makeProcessor func() MessageProcessor) *T
 	return &topicProcessor
 }
 
-func setupMetrics(tp *TopicProcessor, provider MetricsProvider) {
-	tp.incomingMessageCount = provider.NewCounter("incoming_message_count", "Number of incoming messages received", "topic", "partition")
-	tp.outgoingMessageCount = provider.NewCounter("outgoing_message_count", "Number of outgoing messages sent", "topic", "partition")
-	tp.messagesBehindHighWaterMark = provider.NewGauge("messages_behind_high_water_mark_count", "Number of messages remaining to consume on the topic/partition", "topic", "partition")
-}
-
 func mustSetupOffsetManager(config *Config) sarama.OffsetManager {
 	offsetManager, err := sarama.NewOffsetManagerFromClient(config.kafkaConsumerGroup(), config.Client)
 	if err != nil {
-		logger.Panic(err)
+		config.Logger.Panic(err)
 	}
 	return offsetManager
 }
 
 // Start launches a deferred routine for topic processing.
 func (tp *TopicProcessor) Start() {
-	logger.Info("Topic processor started")
+	tp.logger.Info("Topic processor started")
 	tp.waitGroup.Add(1)
 	go func() {
 		defer tp.waitGroup.Done()
@@ -89,20 +88,20 @@ func (tp *TopicProcessor) Start() {
 
 // Close safely shuts down topic processing, waiting for unfinished jobs
 func (tp *TopicProcessor) Close() {
-	logger.Info("Received close request")
+	tp.logger.Info("Received close request")
 	close(tp.close)
 	tp.waitGroup.Wait()
 }
 
 // HasConsumedAllMessages returns true when all input topics have been entirely consumed
 func (tp *TopicProcessor) HasConsumedAllMessages() bool {
-	logger.Debugf("Checking wheter we have more messages to consume")
+	tp.logger.Debugf("Checking wheter we have more messages to consume")
 	for _, partition := range tp.partitions {
 		if !tp.partitionProcessors[int32(partition)].hasConsumedAllMessages() {
 			return false
 		}
 	}
-	logger.Debug("No more messages to consume")
+	tp.logger.Debug("No more messages to consume")
 	return true
 }
 
@@ -124,20 +123,20 @@ func (tp *TopicProcessor) runLoop() {
 	batches := tp.getBatches()
 	lengths := make(map[int]int)
 
-	logger.Info("Entering run loop")
+	tp.logger.Info("Entering run loop")
 
 	for {
 		select {
 		case consumerMessage := <-consumerChan:
-			logger.Debugf("Received: %s", consumerMessage)
+			tp.logger.Debugf("Received: %s", consumerMessage)
 			partition := int(consumerMessage.Partition)
 			batches[partition][lengths[partition]] = consumerMessage
 			lengths[partition]++
 			if lengths[partition] == tp.config.BatchSize {
-				logger.Debugf("Processing batch of %d messages...", tp.config.BatchSize)
+				tp.logger.Debugf("Processing batch of %d messages...", tp.config.BatchSize)
 				tp.processConsumerMessageBatch(batches[partition], partition)
 				lengths[partition] = 0
-				logger.Debug("Processing of batch complete")
+				tp.logger.Debug("Processing of batch complete")
 			}
 		case <-metricsTicker.C:
 			tp.onMetricsTick()
@@ -146,10 +145,10 @@ func (tp *TopicProcessor) runLoop() {
 				if lengths[partition] == 0 {
 					continue
 				}
-				logger.Debugf("Processing batch of %d messages...", lengths[partition])
+				tp.logger.Debugf("Processing batch of %d messages...", lengths[partition])
 				tp.processConsumerMessageBatch(batches[partition][0:lengths[partition]], partition)
 				lengths[partition] = 0
-				logger.Debug("Processing of batch complete")
+				tp.logger.Debug("Processing of batch complete")
 			}
 		case <-tp.close:
 			tp.onClose(metricsTicker, batchTicker)
@@ -165,9 +164,9 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 	pp := tp.partitionProcessors[int32(partition)]
 	producerMessages := pp.process(messages)
 	if len(producerMessages) > 0 {
-		logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
+		tp.logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
 		err := tp.producer.SendMessages(producerMessages)
-		logger.Debug("Producing of Kafka messages complete")
+		tp.logger.Debug("Producing of Kafka messages complete")
 		if err != nil {
 			tp.onProducerError(err)
 		}
@@ -179,7 +178,7 @@ func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.Consume
 }
 
 func (tp *TopicProcessor) onClose(tickers ...*time.Ticker) {
-	logger.Info("Closing topic processor...")
+	tp.logger.Info("Closing topic processor...")
 	for _, ticker := range tickers {
 		if ticker != nil {
 			ticker.Stop()
@@ -190,9 +189,9 @@ func (tp *TopicProcessor) onClose(tickers ...*time.Ticker) {
 	}
 	err := tp.producer.Close()
 	if err != nil {
-		logger.Panic(err)
+		tp.logger.Panic(err)
 	}
-	logger.Info("Close complete")
+	tp.logger.Info("Close complete")
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
@@ -216,7 +215,7 @@ func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessa
 }
 
 func (tp *TopicProcessor) onProducerError(err error) {
-	logger.Panic(err)
+	tp.logger.Panic(err)
 }
 
 func (tp *TopicProcessor) onMetricsTick() {
@@ -234,10 +233,10 @@ func (tp *TopicProcessor) consumerMessageChannels() []<-chan *sarama.ConsumerMes
 	return chans
 }
 
-func mustSetupProducer(client sarama.Client) sarama.SyncProducer {
-	producer, err := sarama.NewSyncProducerFromClient(client)
+func mustSetupProducer(config *Config) sarama.SyncProducer {
+	producer, err := sarama.NewSyncProducerFromClient(config.Client)
 	if err != nil {
-		logger.Panic(err)
+		config.Logger.Panic(err)
 	}
 	return producer
 }

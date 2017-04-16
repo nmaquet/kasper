@@ -8,6 +8,11 @@ import (
 )
 
 func TestElasticsearchType(t *testing.T) {
+	config := &Config{
+		TopicProcessorName: "test",
+		Logger:             &noopLogger{},
+		MetricsProvider:    &noopMetricsProvider{},
+	}
 	client, err := elastic.NewClient(
 		elastic.SetURL("http://localhost:9200"),
 		elastic.SetSniff(false),
@@ -15,14 +20,16 @@ func TestElasticsearchType(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	store := NewMultiElasticsearch(
-		client,
-		"hero",
-	)
+	store := NewMultiElasticsearch(config, client, "hero")
 	testMultiStore(t, store)
 }
 
 func TestElasticsearchType_PutAll_GetAll(t *testing.T) {
+	config := &Config{
+		TopicProcessorName: "test",
+		Logger:             &noopLogger{},
+		MetricsProvider:    &noopMetricsProvider{},
+	}
 	client, err := elastic.NewClient(
 		elastic.SetURL("http://localhost:9200"),
 		elastic.SetSniff(false),
@@ -30,22 +37,19 @@ func TestElasticsearchType_PutAll_GetAll(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	mtkv := NewMultiElasticsearch(
-		client,
-		"hero",
-	)
+	store := NewMultiElasticsearch(config, client, "hero")
 
 	spiderman := []byte(`{"name":"Spiderman","power":"webs"}`)
 	ironman := []byte(`{"name":"Ironman","power":"a kickass powered armor"}`)
 	batman := []byte(`{"name":"Batman","power":"money and an inflated sense of self"}`)
 	superman := []byte(`{"name":"Superman","power":"not being recognized by wearing glasses"}`)
 
-	err = mtkv.Tenant("marvel").Put("spiderman", spiderman)
+	err = store.Tenant("marvel").Put("spiderman", spiderman)
 	assert.Nil(t, err)
-	err = mtkv.Tenant("dc").Put("batman", batman)
+	err = store.Tenant("dc").Put("batman", batman)
 	assert.Nil(t, err)
 
-	s, err := mtkv.Fetch([]TenantKey{{"marvel", "spiderman"}, {"dc", "batman"}})
+	s, err := store.Fetch([]TenantKey{{"marvel", "spiderman"}, {"dc", "batman"}})
 	assert.Nil(t, err)
 
 	hero, _ := s.Tenant("marvel").Get("spiderman")
@@ -59,20 +63,19 @@ func TestElasticsearchType_PutAll_GetAll(t *testing.T) {
 	err = s.Tenant("dc").Put("superman", superman)
 	assert.Nil(t, err)
 
-	err = mtkv.Push(s)
+	err = store.Push(s)
 	assert.Nil(t, err)
 
-	hero, err = mtkv.Tenant("marvel").Get("ironman")
+	hero, err = store.Tenant("marvel").Get("ironman")
 	assert.Nil(t, err)
 	assert.Equal(t, ironman, hero)
 
-	hero, err = mtkv.Tenant("dc").Get("superman")
+	hero, err = store.Tenant("dc").Get("superman")
 	assert.Nil(t, err)
 	assert.Equal(t, superman, hero)
 }
 
 func init() {
-	SetLogger(&noopLogger{})
 	store.client.DeleteIndex("marvel").Do(store.context)
 	store.client.DeleteIndex("dc").Do(store.context)
 	store.client.CreateIndex("marvel").Do(store.context)

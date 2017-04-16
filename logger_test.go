@@ -28,7 +28,3 @@ func TestLogger(t *testing.T) {
 	testLogger(t, NewTextLogger("test", 0, true))
 	testLogger(t, NewJSONLogger("test", 0, false))
 }
-
-func init() {
-	SetLogger(&noopLogger{})
-}

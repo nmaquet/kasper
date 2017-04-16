@@ -14,8 +14,14 @@ import (
 // ProducerExample is Kafka message processor that shows how to write messages to Kafka topics
 type ProducerExample struct{}
 
+func (processor *ProducerExample) Process(msgs []*sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+	for _, msg := range msgs {
+		processor.ProcessMessage(msg, sender)
+	}
+}
+
 // Process processes Kafka messages from topics "hello" and "world" and publish outgoing messages to "world" topi
-func (*ProducerExample) Process(msg *sarama.ConsumerMessage, sender kasper.Sender, coordinator kasper.Coordinator) {
+func (*ProducerExample) ProcessMessage(msg *sarama.ConsumerMessage, sender kasper.Sender) {
 	key := string(msg.Key)
 	value := string(msg.Value)
 	offset := msg.Offset

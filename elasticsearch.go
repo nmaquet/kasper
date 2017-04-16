@@ -12,26 +12,46 @@ const maxBulkErrorReasons = 5
 
 // Elasticsearch is a key-value storage that uses ElasticSearch.
 type Elasticsearch struct {
-	client          *elastic.Client
-	context         context.Context
-	indexName       string
-	typeName        string
+	client    *elastic.Client
+	context   context.Context
+	indexName string
+	typeName  string
+
+	logger        Logger
+	labelValues   []string
+	getCounter    Counter
+	getAllSummary Summary
+	putCounter    Counter
+	putAllSummary Summary
+	deleteCounter Counter
+	flushCounter  Counter
 }
 
 // TBD
-func NewElasticsearch(client *elastic.Client, indexName, typeName string) *Elasticsearch {
+func NewElasticsearch(config *Config, client *elastic.Client, indexName, typeName string) *Elasticsearch {
+	metrics := config.MetricsProvider
+	labelNames := []string{"topicProcessor", "index", "type"}
 	s := &Elasticsearch{
-		client:          client,
-		context:         context.Background(),
-		indexName:       indexName,
-		typeName:        typeName,
+		client,
+		context.Background(),
+		indexName,
+		typeName,
+		config.Logger,
+		[]string{config.TopicProcessorName, indexName, typeName},
+		metrics.NewCounter("Elasticsearch_Get", "Number of Get() calls", labelNames...),
+		metrics.NewSummary("Elasticsearch_GetAll", "Summary of GetAll() calls", labelNames...),
+		metrics.NewCounter("Elasticsearch_Put", "Number of Put() calls", labelNames...),
+		metrics.NewSummary("Elasticsearch_PutAll", "Summary of PutAll() calls", labelNames...),
+		metrics.NewCounter("Elasticsearch_Delete", "Number of Delete() calls", labelNames...),
+		metrics.NewCounter("Elasticsearch_Flush", "Summary of Flush() calls", labelNames...),
 	}
 	return s
 }
 
 // Get gets value by key from store
 func (s *Elasticsearch) Get(key string) ([]byte, error) {
-	logger.Debug("MultiElasticsearch Get: ", key)
+	s.logger.Debug("Elasticsearch Get: ", key)
+	s.getCounter.Inc(s.labelValues...)
 	rawValue, err := s.client.Get().
 		Index(s.indexName).
 		Type(s.typeName).
@@ -55,10 +75,11 @@ func (s *Elasticsearch) Get(key string) ([]byte, error) {
 
 // GetAll gets multiple keys from store using MultiGet.
 func (s *Elasticsearch) GetAll(keys []string) (map[string][]byte, error) {
+	s.getAllSummary.Observe(float64(len(keys)), s.labelValues...)
 	if len(keys) == 0 {
 		return map[string][]byte{}, nil
 	}
-	logger.Debug("MultiElasticsearch GetAll: ", keys)
+	s.logger.Debug("Elasticsearch GetAll: ", keys)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
 
@@ -84,8 +105,8 @@ func (s *Elasticsearch) GetAll(keys []string) (map[string][]byte, error) {
 
 // Put updates key in store with serialized value
 func (s *Elasticsearch) Put(key string, value []byte) error {
-	logger.Debug(fmt.Sprintf("MultiElasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
-
+	s.logger.Debug(fmt.Sprintf("MultiElasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
+	s.putCounter.Inc(s.labelValues...)
 	_, err := s.client.Index().
 		Index(s.indexName).
 		Type(s.typeName).
@@ -98,7 +119,8 @@ func (s *Elasticsearch) Put(key string, value []byte) error {
 
 // PutAll bulk executes Put operation for several kvs
 func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
-	logger.Debugf("MultiElasticsearch PutAll of %d keys", len(kvs))
+	s.logger.Debugf("MultiElasticsearch PutAll of %d keys", len(kvs))
+	s.putAllSummary.Observe(float64(len(kvs)), s.labelValues...)
 	if len(kvs) == 0 {
 		return nil
 	}
@@ -123,8 +145,8 @@ func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
 
 // Delete removes key from store
 func (s *Elasticsearch) Delete(key string) error {
-	logger.Debug("MultiElasticsearch Delete: ", key)
-
+	s.logger.Debug("MultiElasticsearch Delete: ", key)
+	s.deleteCounter.Inc(s.labelValues...)
 	_, err := s.client.Delete().
 		Index(s.indexName).
 		Type(s.typeName).
@@ -140,11 +162,12 @@ func (s *Elasticsearch) Delete(key string) error {
 
 // Flush the MultiElasticsearch translog to disk
 func (s *Elasticsearch) Flush() error {
-	logger.Info("MultiElasticsearch Flush...")
+	s.logger.Info("MultiElasticsearch Flush...")
+	s.flushCounter.Inc(s.labelValues...)
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
 		Do(s.context)
-	logger.Info("MultiElasticsearch Flush complete")
+	s.logger.Info("MultiElasticsearch Flush complete")
 	return err
 }
 
@@ -152,11 +175,6 @@ func (s *Elasticsearch) Flush() error {
 func (s *Elasticsearch) GetClient() *elastic.Client {
 	return s.client
 }
-
-func (s*Elasticsearch) WithMetrics(provider MetricsProvider, label string) Store {
-	return NewStoreMetrics(s, provider, label)
-}
-
 
 func createBulkError(response *elastic.BulkResponse) error {
 	reasons := []string{}
