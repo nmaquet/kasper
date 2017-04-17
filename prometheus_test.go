@@ -3,7 +3,7 @@ package kasper
 import "testing"
 
 func TestNewPrometheusMetricsProvider(t *testing.T) {
-	provider := NewPrometheus("test", 0)
+	provider := NewPrometheus("test")
 	gauge := provider.NewGauge("test_gauge", "A test gauge", "label1", "label2")
 	counter := provider.NewCounter("test_counter", "A test counter", "label1", "label2")
 	summary := provider.NewSummary("test_summary", "A test summary", "label1", "label2")
