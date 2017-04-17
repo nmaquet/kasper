@@ -43,4 +43,21 @@ func testMultiStore(t *testing.T, mtkv MultiStore) {
 	assert.NotNil(t, dc["superman"])
 
 	assert.Equal(t, []string{"dc", "marvel"}, mtkv.AllTenants())
+
+	s, err := mtkv.Fetch([]TenantKey{{"marvel", "spiderman"}, {"dc", "batman"}})
+	assert.Nil(t, err)
+
+	hero, _ := s.Tenant("marvel").Get("spiderman")
+	assert.Equal(t, spiderman, hero)
+
+	hero, _ = s.Tenant("dc").Get("batman")
+	assert.Equal(t, batman, hero)
+
+	err = s.Tenant("marvel").Put("ironman", ironman)
+	assert.Nil(t, err)
+	err = s.Tenant("dc").Put("superman", superman)
+	assert.Nil(t, err)
+
+	err = mtkv.Push(s)
+	assert.Nil(t, err)
 }

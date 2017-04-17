@@ -62,7 +62,7 @@ func NewPrometheus(label string) *Prometheus {
 
 // NewCounter creates a new prometheus CounterVec
 func (provider *Prometheus) NewCounter(name string, help string, labelNames ...string) Counter {
-	labelNames = append(labelNames, "topic_processor_name", "container_id")
+	labelNames = append(labelNames, "label")
 	counterVec, found := provider.counters[name]
 	if !found {
 		counterVec = prometheus.NewCounterVec(
@@ -84,7 +84,7 @@ func (provider *Prometheus) NewCounter(name string, help string, labelNames ...s
 
 // NewGauge creates a new prometheus GaugeVec
 func (provider *Prometheus) NewGauge(name string, help string, labelNames ...string) Gauge {
-	labelNames = append(labelNames, "topic_processor_name", "container_id")
+	labelNames = append(labelNames, "label")
 	gaugeVec, found := provider.gauges[name]
 	if !found {
 		gaugeVec = prometheus.NewGaugeVec(
