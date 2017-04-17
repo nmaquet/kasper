@@ -2,9 +2,9 @@ package kasper
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	stdlibLog "log"
 	"os"
-	"github.com/sirupsen/logrus"
 )
 
 // Logger is a logging interface for Kasper.

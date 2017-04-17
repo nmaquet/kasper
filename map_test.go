@@ -92,7 +92,7 @@ func TestMap_GetAll_Empty(t *testing.T) {
 
 func TestMap_PutAll(t *testing.T) {
 	s := newTestMap()
-	err := s.PutAll(map[string][]byte{"jupiter" : jupiter, "neptune": neptune})
+	err := s.PutAll(map[string][]byte{"jupiter": jupiter, "neptune": neptune})
 	assert.Nil(t, err)
 	assert.Equal(t, len(s.m), 2)
 	assert.Equal(t, s.m["jupiter"], jupiter)
@@ -130,12 +130,12 @@ func BenchmarkMap_Get(b *testing.B) {
 func BenchmarkMap_Put(b *testing.B) {
 	s := newTestMap()
 	kvs := map[string][]byte{
-		"earth": earth,
-		"mars": mars,
+		"earth":   earth,
+		"mars":    mars,
 		"jupiter": jupiter,
-		"saturn": saturn,
+		"saturn":  saturn,
 		"mercury": mercury,
-		"venus": venus,
+		"venus":   venus,
 		"neptune": neptune,
 	}
 	keys := []string{
@@ -148,7 +148,7 @@ func BenchmarkMap_Put(b *testing.B) {
 		"neptune",
 	}
 	for i := 0; i < b.N; i++ {
-		key := keys[i % len(keys)]
+		key := keys[i%len(keys)]
 		err := s.Put(key, kvs[key])
 		assert.Nil(b, err)
 	}

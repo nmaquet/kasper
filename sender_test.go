@@ -16,9 +16,7 @@ func newFixture() *fixture {
 	return &fixture{
 		&partitionProcessor{
 			topicProcessor: &TopicProcessor{
-				config: &Config{
-
-				},
+				config: &Config{},
 			},
 		},
 		&sarama.ConsumerMessage{},
