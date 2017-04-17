@@ -27,7 +27,7 @@ We recommend setting sarama.Config.Producer.RequiredAcks to WaitForAll and saram
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Producer.RequiredAcks = sarama.WaitForAll
 	saramaConfig.Producer.Retry.Max = 0
-	client, err := sarama.NewClient([]string{"localhost:9092"}, )
+	client, err := sarama.NewClient([]string{"localhost:9092"}, saramaConfig)
 
 ## Step 2 - create a Config
 
