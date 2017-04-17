@@ -6,7 +6,7 @@ kasper
 [![Go Report Card](https://goreportcard.com/badge/github.com/movio/kasper)](https://goreportcard.com/report/github.com/movio/kasper)
 [![Coverage Status](https://coveralls.io/repos/github/movio/kasper/badge.svg?branch=master)](https://coveralls.io/github/movio/kasper?branch=master)
 
-*This project is currently in Beta. The API is ~95% stable so you can expect minor changes.*
+*This project is currently in Beta. The API is ~95% stable so you can expect only minor breaking changes.*
 
 Kasper is a lightweight library for processing Kafka topics.
 It is heavily inspired by Apache Samza (See http://samza.apache.org).
