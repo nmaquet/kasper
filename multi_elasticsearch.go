@@ -7,7 +7,10 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-// TBD
+// MultiElasticsearch is an implementation of MultiStore that uses Elasticsearch.
+// Each instance provides key-value access to a given document type, and
+// assumes a one-to-one mapping between index and tenant.
+// This implementation supports Elasticsearch 5.x
 type MultiElasticsearch struct {
 	config   *Config
 	client   *elastic.Client
@@ -21,7 +24,9 @@ type MultiElasticsearch struct {
 	fetchCounter Counter
 }
 
-// TBD
+// NewMultiElasticsearch creates MultiElasticsearch instances.
+// All documents read and written will correspond to the URL:
+//	 https://{cluster}:9092/{tenant}/{typeName}/{key}
 func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName string) *MultiElasticsearch {
 	metrics := config.MetricsProvider
 	labelNames := []string{"topicProcessor", "type"}
@@ -34,13 +39,14 @@ func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName stri
 		typeName,
 		config.Logger,
 		labelValues,
-		metrics.NewCounter("MultiElasticsearch_Push", "Summary of Push() calls", labelNames...),
-		metrics.NewCounter("MultiElasticsearch_Fetch", "Summary of Fetch() calls", labelNames...),
+		metrics.NewCounter("MultiElasticsearch_Push", "Counter of Push() calls", labelNames...),
+		metrics.NewCounter("MultiElasticsearch_Fetch", "Counter of Fetch() calls", labelNames...),
 	}
 	return s
 }
 
-// Tenant returns underlying Elasticsearch as for given tenant
+// Tenant returns an Elasticsearch Store for the given tenant.
+// Created instances are cached on future invocations.
 func (s *MultiElasticsearch) Tenant(tenant string) Store {
 	kv, found := s.stores[tenant]
 	if !found {
@@ -50,8 +56,7 @@ func (s *MultiElasticsearch) Tenant(tenant string) Store {
 	return kv
 }
 
-// AllTenants returns a list of keys for underlyings stores.
-// Stores can be accessed by key using store.Tentant(key).
+// AllTenants returns the list of tenants known to this instance.
 func (s *MultiElasticsearch) AllTenants() []string {
 	tenants := make([]string, len(s.stores))
 	i := 0
@@ -63,7 +68,7 @@ func (s *MultiElasticsearch) AllTenants() []string {
 	return tenants
 }
 
-// Fetch gets entries from underlying stores using GetAll
+// Fetch performs a single MultiGet operation the Elasticsearch cluster across multiple tenants (i.e. indexes).
 func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	s.fetchCounter.Inc(s.labelValues...)
 	res := NewMultiMap(len(keys) / 10)
@@ -98,7 +103,8 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	return res, nil
 }
 
-// Push puts entries to underlying stores using PutAll
+// Push performs a single Bulk index request with all documents provided.
+// It returns an error if any operation fails.
 func (s *MultiElasticsearch) Push(m *MultiMap) error {
 	s.pushCounter.Inc(s.labelValues...)
 	for _, tenant := range m.AllTenants() {

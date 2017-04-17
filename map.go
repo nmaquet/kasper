@@ -1,20 +1,18 @@
 package kasper
 
-// Map is im-memory store, that stores keys in map.
+// Map wraps a map[string][]byte value and implements the Store interface.
 type Map struct {
 	m map[string][]byte
 }
 
-// NewMap creates new store.
-// StructPtr should be a pointer to struct type that is used
-// for serialization and deserialization of store values.
+// NewMap creates a new map of the given size.
 func NewMap(size int) *Map {
 	return &Map{
 		make(map[string][]byte, size),
 	}
 }
 
-// Get gets value by key from underlying map
+// Get gets a value by key. Returns (nil, nil) if the key is not present.
 func (s *Map) Get(key string) ([]byte, error) {
 	src, found := s.m[key]
 	if !found {
@@ -23,7 +21,7 @@ func (s *Map) Get(key string) ([]byte, error) {
 	return src, nil
 }
 
-// GetAll gets several keys from underlying map at once. Returns KeyValue pairs.
+// GetAll returns multiple values by key. The returned map does not contain entries for missing documents.
 func (s *Map) GetAll(keys []string) (map[string][]byte, error) {
 	kvs := make(map[string][]byte, len(keys))
 	for _, key := range keys {
@@ -35,13 +33,13 @@ func (s *Map) GetAll(keys []string) (map[string][]byte, error) {
 	return kvs, nil
 }
 
-// Put updates key in store with serialized value
+// Put inserts or updates a value by key.
 func (s *Map) Put(key string, value []byte) error {
 	s.m[key] = value
 	return nil
 }
 
-// PutAll bulk executes all Put operations
+// PutAll inserts or updates multiple key-value pairs.
 func (s *Map) PutAll(kvs map[string][]byte) error {
 	for key, value := range kvs {
 		_ = s.Put(key, value)
@@ -49,18 +47,18 @@ func (s *Map) PutAll(kvs map[string][]byte) error {
 	return nil
 }
 
-// Delete removes key from store
+// Delete removes a single value by key. Does not return an error if the key is not present.
 func (s *Map) Delete(key string) error {
 	delete(s.m, key)
 	return nil
 }
 
-// Flush does nothing for in memory storage
+// Flush does nothing.
 func (s *Map) Flush() error {
 	return nil
 }
 
-// GetMap returns underlying map
+// GetMap returns the underlying map.
 func (s *Map) GetMap() map[string][]byte {
 	return s.m
 }

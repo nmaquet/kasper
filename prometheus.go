@@ -1,8 +1,6 @@
 package kasper
 
 import (
-	"strconv"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -11,15 +9,13 @@ type prometheusCounter struct {
 	promCounterVec *prometheus.CounterVec
 }
 
-// Inc increments Prometheus CounterVec value
 func (counter *prometheusCounter) Inc(labelValues ...string) {
-	labelValues = append(labelValues, counter.provider.topicProcessorName, counter.provider.containerID)
+	labelValues = append(labelValues, counter.provider.label)
 	counter.promCounterVec.WithLabelValues(labelValues...).Inc()
 }
 
-// Add increases Prometheus CounterVec by value
 func (counter *prometheusCounter) Add(value float64, labelValues ...string) {
-	labelValues = append(labelValues, counter.provider.topicProcessorName, counter.provider.containerID)
+	labelValues = append(labelValues, counter.provider.label)
 	counter.promCounterVec.WithLabelValues(labelValues...).Add(value)
 }
 
@@ -28,9 +24,8 @@ type prometheusGauge struct {
 	promGaugeVec *prometheus.GaugeVec
 }
 
-// Set changes Prometheus GaugeVec to value
 func (gauge *prometheusGauge) Set(value float64, labelValues ...string) {
-	labelValues = append(labelValues, gauge.provider.topicProcessorName, gauge.provider.containerID)
+	labelValues = append(labelValues, gauge.provider.label)
 	gauge.promGaugeVec.WithLabelValues(labelValues...).Set(value)
 }
 
@@ -40,26 +35,24 @@ type prometheusSummary struct {
 }
 
 func (summary *prometheusSummary) Observe(value float64, labelValues ...string) {
-	labelValues = append(labelValues, summary.provider.topicProcessorName, summary.provider.containerID)
+	labelValues = append(labelValues, summary.provider.label)
 	summary.promSummaryVec.WithLabelValues(labelValues...).Observe(value)
 }
 
-// Prometheus sends metrics to prometheus
-// See: https://prometheus.io/
+// Prometheus is an implementation of MetricsProvider that uses Prometheus.
+// See https://github.com/prometheus/client_golang
 type Prometheus struct {
-	topicProcessorName string
-	containerID        string
-	Registry           *prometheus.Registry
-	summaries          map[string]*prometheus.SummaryVec
-	counters           map[string]*prometheus.CounterVec
-	gauges             map[string]*prometheus.GaugeVec
+	label     string
+	Registry  *prometheus.Registry
+	summaries map[string]*prometheus.SummaryVec
+	counters  map[string]*prometheus.CounterVec
+	gauges    map[string]*prometheus.GaugeVec
 }
 
-// NewPrometheus creates new Prometheus
-func NewPrometheus(topicProcessorName string, containerID int) *Prometheus {
+// NewPrometheus creates new Prometheus instance.
+func NewPrometheus(label string) *Prometheus {
 	return &Prometheus{
-		topicProcessorName,
-		strconv.Itoa(containerID),
+		label,
 		prometheus.NewRegistry(),
 		make(map[string]*prometheus.SummaryVec),
 		make(map[string]*prometheus.CounterVec),
@@ -67,7 +60,7 @@ func NewPrometheus(topicProcessorName string, containerID int) *Prometheus {
 	}
 }
 
-// NewCounter creates new prometheus CounterVec
+// NewCounter creates a new prometheus CounterVec
 func (provider *Prometheus) NewCounter(name string, help string, labelNames ...string) Counter {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	counterVec, found := provider.counters[name]
@@ -89,7 +82,7 @@ func (provider *Prometheus) NewCounter(name string, help string, labelNames ...s
 	}
 }
 
-// NewGauge creates new prometheus GaugeVec
+// NewGauge creates a new prometheus GaugeVec
 func (provider *Prometheus) NewGauge(name string, help string, labelNames ...string) Gauge {
 	labelNames = append(labelNames, "topic_processor_name", "container_id")
 	gaugeVec, found := provider.gauges[name]
@@ -111,9 +104,9 @@ func (provider *Prometheus) NewGauge(name string, help string, labelNames ...str
 	}
 }
 
-// NewSummary creates new prometheus SummaryVec
+// NewSummary creates a new prometheus SummaryVec
 func (provider *Prometheus) NewSummary(name string, help string, labelNames ...string) Summary {
-	labelNames = append(labelNames, "topic_processor_name", "container_id")
+	labelNames = append(labelNames, "label")
 	summaryVec, found := provider.summaries[name]
 	if !found {
 		summaryVec = prometheus.NewSummaryVec(

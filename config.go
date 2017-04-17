@@ -6,25 +6,25 @@ import (
 	"time"
 )
 
-// Config describes a config for Kafka topic processor
+// Config contains the configuration settings for a TopicProcessor.
 type Config struct {
-	// Used for logging
+	// Used for logging, metrics, and Kafka consumer group
 	TopicProcessorName string
-	// Kafka Brokers list
+	// Used for consuming and producing messages
 	Client sarama.Client
-	// List of Kafka topics to process messages from
+	// Input topics (all topics need to have the same number of partitions)
 	InputTopics []string
-	// List of topic partitions to process
+	// Input partitions (cannot overlap between TopicProcessor instances)
 	InputPartitions []int
-	// TBD
+	// Maximum number of messages processed in one go
 	BatchSize int
-	// TBD
+	// Maximum amount of time spent waiting for a batch to be filled
 	BatchWaitDuration time.Duration
-	// TBD
+	// Use NewBasicLogger() or any other Logger
 	Logger Logger
-	// TDB
+	// Use NewPrometheus() or any other MetricsProvider
 	MetricsProvider MetricsProvider
-	// TBD
+	// 15 seconds is a sensible value
 	MetricsUpdateInterval time.Duration
 }
 
@@ -41,7 +41,7 @@ func (config *Config) setDefaults() {
 		config.BatchSize = 1000
 	}
 	if config.BatchWaitDuration == 0 {
-		config.MetricsUpdateInterval = 5 * time.Second
+		config.BatchWaitDuration = 5 * time.Second
 	}
 	if config.Logger == nil {
 		config.Logger = NewBasicLogger(false)

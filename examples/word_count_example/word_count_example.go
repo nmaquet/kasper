@@ -75,8 +75,8 @@ func main() {
 		InputPartitions:    []int{0},
 	}
 	store := kasper.NewMap(10000)
-	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
-	tp := kasper.NewTopicProcessor(&config, mkMessageProcessor)
+	messageProcessors := map[int]kasper.MessageProcessor{0: &WordCountExample{store}}
+	tp := kasper.NewTopicProcessor(&config, messageProcessors)
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

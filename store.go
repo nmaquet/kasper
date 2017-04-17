@@ -6,38 +6,39 @@ Kasper companion library for stateful stream processing.
 
 package kasper
 
-// TenantKey is a pair of tenant and key. Use it to get multiple entries from
-// MultiStore.GetAll
+// TenantKey is a pair of tenant and key.
+// Used by MultiStore.GetAll
 type TenantKey struct {
 	Tenant string
 	Key    string
 }
 
-// Store is universal interface for a key-value store
-// Keys are strings, and values are pointers to structs
+// Store is a universal interface for a key-value store.
+// Keys are strings, and values are byte slices.
 type Store interface {
-	// get value by key
+	// Get gets a value by key.
 	Get(key string) ([]byte, error)
-	// get multiple values for keys as bulk
+	// GetAll gets multiple values by key.
 	GetAll(keys []string) (map[string][]byte, error)
+	// Put insert or update a value by key.
 	Put(key string, value []byte) error
-	// put multiple key -value pairs as bulk
+	// PutAll inserts or updates multiple key-value pairs.
 	PutAll(map[string][]byte) error
-	// deletes key from store
+	// Delete deletes a key from the store.
 	Delete(key string) error
-	// flush store contents to DB/drive/anything
+	// Flush indicates that the underlying storage must be made persistent.
 	Flush() error
 }
 
-// MultiStore allows to store entities of the same type Interface
-// different databases (tenants). Instead of Key it operates TenantKey to access values
+// MultiStore is a multitenant version of Store.
+// Tenants are represented as strings. Each tenant has an underlying Store.
 type MultiStore interface {
-	// returns underlying store for current tenant
+	// Tenant returns the underlying store for a tenant.
 	Tenant(tenant string) Store
-	// returns a list of tenants that were selected from parent store
+	// AllTenants returns the list of known tenants to this instance.
 	AllTenants() []string
-	// get items by list of TenantKeys, uses GetAll method of underlying stores
+	// Fetch is a multitenant version of GetAll.
 	Fetch(keys []TenantKey) (*MultiMap, error)
-	// put items to underlying stores for all tenants
+	// Push is a multitenant version of PutAll
 	Push(store *MultiMap) error
 }

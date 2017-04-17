@@ -34,14 +34,14 @@ func (*HelloWorldExample) ProcessMessage(msg *sarama.ConsumerMessage) {
 
 func main() {
 	client, _ := sarama.NewClient([]string{"localhost:9092"}, sarama.NewConfig())
-	config := kasper.Config{
+	config := &kasper.Config{
 		TopicProcessorName: "hello-world-example",
 		Client:             client,
 		InputTopics:        []string{"hello"},
 		InputPartitions:    []int{0},
 	}
-	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
-	tp := kasper.NewTopicProcessor(&config, mkMessageProcessor)
+	messageProcessors := map[int]kasper.MessageProcessor{0: &HelloWorldExample{}}
+	tp := kasper.NewTopicProcessor(config, messageProcessors)
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

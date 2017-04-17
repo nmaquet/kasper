@@ -358,7 +358,7 @@ func populateFictionAndCharactersTopic() int {
 		make(map[string]*IDs, 100),
 	}
 
-	topicProcessor := NewTopicProcessor(&tpConfig, func() MessageProcessor { return test })
+	topicProcessor := NewTopicProcessor(&tpConfig, map[int]MessageProcessor{0: test})
 
 	go func() {
 		err := topicProcessor.RunLoop()

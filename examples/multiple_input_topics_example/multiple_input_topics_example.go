@@ -40,8 +40,8 @@ func main() {
 		InputTopics:        []string{"hello", "world"},
 		InputPartitions:    []int{0},
 	}
-	makeProcessor := func() kasper.MessageProcessor { return &MultipleInputTopicsExample{} }
-	tp := kasper.NewTopicProcessor(&config, makeProcessor)
+	messageProcessors := map[int]kasper.MessageProcessor{0: &MultipleInputTopicsExample{}}
+	tp := kasper.NewTopicProcessor(&config, messageProcessors)
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

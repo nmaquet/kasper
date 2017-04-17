@@ -1,22 +1,22 @@
 package kasper
 
-// Counter is a incremental-only int value metric
+// Counter is a single float metric that can be incremented by one or added to.
 type Counter interface {
 	Inc(labelValues ...string)
 	Add(value float64, labelValues ...string)
 }
 
-// Gauge is a float value metric
+// Gauge is a single float metric that can be set to a specific value.
 type Gauge interface {
 	Set(value float64, labelValues ...string)
 }
 
-// Summary is a float value metric
+// Summary is a float value metric that provides a history of observations.
 type Summary interface {
 	Observe(value float64, labelValues ...string)
 }
 
-// MetricsProvider is used to create new metrics
+// MetricsProvider is a facility to create metrics instances.
 type MetricsProvider interface {
 	NewCounter(name string, help string, labelNames ...string) Counter
 	NewGauge(name string, help string, labelNames ...string) Gauge

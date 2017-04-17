@@ -10,7 +10,9 @@ import (
 
 const maxBulkErrorReasons = 5
 
-// Elasticsearch is a key-value storage that uses ElasticSearch.
+// Elasticsearch is an implementation of Store that uses Elasticsearch.
+// Each instance provides key-value access to a given index and a given document type.
+// This implementation supports Elasticsearch 5.x
 type Elasticsearch struct {
 	client    *elastic.Client
 	context   context.Context
@@ -27,7 +29,8 @@ type Elasticsearch struct {
 	flushCounter  Counter
 }
 
-// TBD
+// NewElasticsearch creates Elasticsearch instances. All documents read and written will correspond to the URL:
+//	 https://{cluster}:9092/{indexName}/{typeName}/{key}
 func NewElasticsearch(config *Config, client *elastic.Client, indexName, typeName string) *Elasticsearch {
 	metrics := config.MetricsProvider
 	labelNames := []string{"topicProcessor", "index", "type"}
@@ -48,7 +51,11 @@ func NewElasticsearch(config *Config, client *elastic.Client, indexName, typeNam
 	return s
 }
 
-// Get gets value by key from store
+// Get gets a document by key (i.e. the Elasticsearch _id).
+// It is implemented by using the Elasticsearch Get API.
+// The returned byte slice contains the UTF8-encoded JSON document (i.e., _source).
+// This function returns (nil, nil) if the document does not exist.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
 func (s *Elasticsearch) Get(key string) ([]byte, error) {
 	s.logger.Debug("Elasticsearch Get: ", key)
 	s.getCounter.Inc(s.labelValues...)
@@ -73,7 +80,8 @@ func (s *Elasticsearch) Get(key string) ([]byte, error) {
 	return *rawValue.Source, nil
 }
 
-// GetAll gets multiple keys from store using MultiGet.
+// GetAll gets multiple document from the store. It is implemented using the Elasticsearch MultiGet API.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-get.html
 func (s *Elasticsearch) GetAll(keys []string) (map[string][]byte, error) {
 	s.getAllSummary.Observe(float64(len(keys)), s.labelValues...)
 	if len(keys) == 0 {
@@ -103,7 +111,10 @@ func (s *Elasticsearch) GetAll(keys []string) (map[string][]byte, error) {
 	return kvs, nil
 }
 
-// Put updates key in store with serialized value
+// Put inserts or updates a document in the store (key is used as the document _id).
+// It is implemented using the Elasticsearch Index API.
+// The value byte slice must contain the UTF8-encoded JSON document (i.e., _source).
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
 func (s *Elasticsearch) Put(key string, value []byte) error {
 	s.logger.Debug(fmt.Sprintf("MultiElasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
 	s.putCounter.Inc(s.labelValues...)
@@ -117,7 +128,10 @@ func (s *Elasticsearch) Put(key string, value []byte) error {
 	return err
 }
 
-// PutAll bulk executes Put operation for several kvs
+// PutAll inserts or updates a number of documents in the store.
+// It is implemented using the Elasticsearch Bulk and Index APIs.
+// It returns an error if any operation fails.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
 	s.logger.Debugf("MultiElasticsearch PutAll of %d keys", len(kvs))
 	s.putAllSummary.Observe(float64(len(kvs)), s.labelValues...)
@@ -143,7 +157,10 @@ func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
 	return nil
 }
 
-// Delete removes key from store
+// Delete removes a document from the store.
+// It does not return an error if the document was not present.
+// It is implemented using the Elasticsearch Delete API.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html
 func (s *Elasticsearch) Delete(key string) error {
 	s.logger.Debug("MultiElasticsearch Delete: ", key)
 	s.deleteCounter.Inc(s.labelValues...)
@@ -160,7 +177,9 @@ func (s *Elasticsearch) Delete(key string) error {
 	return err
 }
 
-// Flush the MultiElasticsearch translog to disk
+// Flush flushes the Elasticsearch translog to disk.
+// It is implemented using the Elasticsearch Flush API.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-flush.html
 func (s *Elasticsearch) Flush() error {
 	s.logger.Info("MultiElasticsearch Flush...")
 	s.flushCounter.Inc(s.labelValues...)
@@ -171,7 +190,7 @@ func (s *Elasticsearch) Flush() error {
 	return err
 }
 
-// GetClient return underlying elastic.Client
+// GetClient returns the underlying elastic.Client
 func (s *Elasticsearch) GetClient() *elastic.Client {
 	return s.client
 }
