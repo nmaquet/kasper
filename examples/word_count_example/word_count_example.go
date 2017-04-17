@@ -76,15 +76,17 @@ func main() {
 	}
 	store := kasper.NewMap(10000)
 	mkMessageProcessor := func() kasper.MessageProcessor { return &WordCountExample{store} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
-	topicProcessor.Start()
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-	log.Println("Topic processor is running...")
-	for range signals {
-		signal.Stop(signals)
-		topicProcessor.Close()
-		break
-	}
-	log.Println("Topic processor closed.")
+	tp := kasper.NewTopicProcessor(&config, mkMessageProcessor)
+	go func() {
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+		log.Println("Topic processor is running...")
+		for range signals {
+			signal.Stop(signals)
+			tp.Close()
+			break
+		}
+	}()
+	err := tp.RunLoop()
+	log.Printf("Topic processor finished with err = %s\n", err)
 }

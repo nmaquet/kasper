@@ -124,7 +124,11 @@ func (tp *TopicProcessor) RunLoop() error {
 			lengths[partition]++
 			if lengths[partition] == tp.config.BatchSize {
 				tp.logger.Debugf("Processing batch of %d messages...", tp.config.BatchSize)
-				tp.processConsumerMessageBatch(batches[partition], partition)
+				err := tp.processConsumerMessages(batches[partition], partition)
+				if err != nil {
+					tp.onClose(metricsTicker, batchTicker)
+					return err
+				}
 				lengths[partition] = 0
 				tp.logger.Debug("Processing of batch complete")
 			}
@@ -136,7 +140,11 @@ func (tp *TopicProcessor) RunLoop() error {
 					continue
 				}
 				tp.logger.Debugf("Processing batch of %d messages...", lengths[partition])
-				tp.processConsumerMessageBatch(batches[partition][0:lengths[partition]], partition)
+				err := tp.processConsumerMessages(batches[partition][0:lengths[partition]], partition)
+				if err != nil {
+					tp.onClose(metricsTicker, batchTicker)
+					return err
+				}
 				lengths[partition] = 0
 				tp.logger.Debug("Processing of batch complete")
 			}
@@ -147,24 +155,29 @@ func (tp *TopicProcessor) RunLoop() error {
 	}
 }
 
-func (tp *TopicProcessor) processConsumerMessageBatch(messages []*sarama.ConsumerMessage, partition int) {
+func (tp *TopicProcessor) processConsumerMessages(messages []*sarama.ConsumerMessage, partition int) error {
 	for _, message := range messages {
 		tp.incomingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}
 	pp := tp.partitionProcessors[int32(partition)]
-	producerMessages := pp.process(messages)
+	producerMessages, err := pp.process(messages)
+	if err != nil {
+		return err
+	}
 	if len(producerMessages) > 0 {
 		tp.logger.Debugf("Producing %d Kafka messages...", len(producerMessages))
 		err := tp.producer.SendMessages(producerMessages)
 		tp.logger.Debug("Producing of Kafka messages complete")
 		if err != nil {
-			tp.onProducerError(err)
+			tp.logger.Errorf("Failed to produce messages: %s", err)
+			return err
 		}
 	}
 	pp.markOffsets(messages)
 	for _, message := range producerMessages {
 		tp.outgoingMessageCount.Inc(message.Topic, strconv.Itoa(int(message.Partition)))
 	}
+	return nil
 }
 
 func (tp *TopicProcessor) onClose(tickers ...*time.Ticker) {
@@ -202,10 +215,6 @@ func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessa
 		}(ch)
 	}
 	return consumerMessagesChan
-}
-
-func (tp *TopicProcessor) onProducerError(err error) {
-	tp.logger.Panic(err)
 }
 
 func (tp *TopicProcessor) onMetricsTick() {

@@ -41,15 +41,17 @@ func main() {
 		InputPartitions:    []int{0},
 	}
 	mkMessageProcessor := func() kasper.MessageProcessor { return &HelloWorldExample{} }
-	topicProcessor := kasper.NewTopicProcessor(&config, mkMessageProcessor)
-	topicProcessor.Start()
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-	log.Println("Topic processor is running...")
-	for range signals {
-		signal.Stop(signals)
-		topicProcessor.Close()
-		break
-	}
-	log.Println("Topic processor closed.")
+	tp := kasper.NewTopicProcessor(&config, mkMessageProcessor)
+	go func() {
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+		log.Println("Topic processor is running...")
+		for range signals {
+			signal.Stop(signals)
+			tp.Close()
+			return
+		}
+	}()
+	err := tp.RunLoop()
+	log.Printf("Topic processor finished with err = %s\n", err)
 }

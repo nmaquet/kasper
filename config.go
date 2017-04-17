@@ -52,4 +52,8 @@ func (config *Config) setDefaults() {
 	if config.MetricsUpdateInterval == 0 {
 		config.MetricsUpdateInterval = 15 * time.Second
 	}
+	if !config.Client.Config().Producer.Return.Successes {
+		// Required by sarama.SyncProducer
+		config.Client.Config().Producer.Return.Successes = true
+	}
 }

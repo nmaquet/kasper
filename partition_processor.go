@@ -75,10 +75,14 @@ func newPartitionProcessor(tp *TopicProcessor, mp MessageProcessor, partition in
 	return pp
 }
 
-func (pp *partitionProcessor) process(msgs []*sarama.ConsumerMessage) []*sarama.ProducerMessage {
+func (pp *partitionProcessor) process(msgs []*sarama.ConsumerMessage) ([]*sarama.ProducerMessage, error) {
 	sender := newSender(pp)
-	pp.messageProcessor.Process(msgs, sender)
-	return sender.producerMessages
+	err := pp.messageProcessor.Process(msgs, sender)
+	if err != nil {
+		pp.logger.Errorf("Message processor returned error: %s", err)
+		return nil, err
+	}
+	return sender.producerMessages, nil
 }
 
 func (pp *partitionProcessor) countMessagesBehindHighWaterMark() {

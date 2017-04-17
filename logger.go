@@ -16,6 +16,9 @@ type Logger interface {
 	Info(...interface{})
 	Infof(string, ...interface{})
 
+	Error(...interface{})
+	Errorf(string, ...interface{})
+
 	Panic(...interface{})
 	Panicf(string, ...interface{})
 }
@@ -71,6 +74,15 @@ func (l *stdlibLogger) Infof(format string, vs ...interface{}) {
 	l.log.Printf(fmt.Sprintf("INFO %s", format), vs...)
 }
 
+func (l *stdlibLogger) Error(vs ...interface{}) {
+	vs = append([]interface{}{"ERROR "}, vs...)
+	l.log.Print(vs...)
+}
+
+func (l *stdlibLogger) Errorf(format string, vs ...interface{}) {
+	l.log.Printf(fmt.Sprintf("ERROR %s", format), vs...)
+}
+
 func (l *stdlibLogger) Panic(vs ...interface{}) {
 	vs = append([]interface{}{"PANIC "}, vs...)
 	l.log.Panic(vs...)
@@ -85,23 +97,20 @@ func NewBasicLogger(debug bool) Logger {
 	return &stdlibLogger{stdlibLog.New(os.Stderr, "(KASPER) ", stdlibLog.LstdFlags), debug}
 }
 
-// noopLogger does nothing. It is used as a default logger.
 type noopLogger struct{}
 
-// Debug does nothing.
 func (noopLogger) Debug(...interface{}) {}
 
-// Debugf does nothing.
 func (noopLogger) Debugf(string, ...interface{}) {}
 
-// Info does nothing.
 func (noopLogger) Info(...interface{}) {}
 
-// Infof does nothing.
 func (noopLogger) Infof(string, ...interface{}) {}
 
-// Panic calls built-in panic.
+func (noopLogger) Error(...interface{}) {}
+
+func (noopLogger) Errorf(string, ...interface{}) {}
+
 func (noopLogger) Panic(...interface{}) { panic("panic") }
 
-// Panicf calls built-in panic.
 func (noopLogger) Panicf(string, ...interface{}) { panic("panic") }

@@ -336,7 +336,6 @@ const expectedResultJSON string = `
 func populateFictionAndCharactersTopic() int {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
-	saramaConfig.Producer.Return.Successes = true
 	client, err := sarama.NewClient([]string{"localhost:9092"}, saramaConfig)
 	if err != nil {
 		panic(err)
