@@ -1,6 +1,7 @@
 package kasper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,8 +14,9 @@ func TestElasticsearchType(t *testing.T) {
 		Logger:             &noopLogger{},
 		MetricsProvider:    &noopMetricsProvider{},
 	}
+	url := fmt.Sprintf("http://%s:9200", getCIHost())
 	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
+		elastic.SetURL(url),
 		elastic.SetSniff(false),
 	)
 	if err != nil {
@@ -30,8 +32,9 @@ func TestElasticsearchType_PutAll_GetAll(t *testing.T) {
 		Logger:             &noopLogger{},
 		MetricsProvider:    &noopMetricsProvider{},
 	}
+	url := fmt.Sprintf("http://%s:9200", getCIHost())
 	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
+		elastic.SetURL(url),
 		elastic.SetSniff(false),
 	)
 	if err != nil {

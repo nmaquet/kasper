@@ -3,12 +3,22 @@ package kasper
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 )
+
+func getCIHost() string {
+	host := os.Getenv("KASPER_CI_HOST")
+	if host == "" {
+		log.Fatal("The environment variable KASPER_CI_HOST must be set to run Kasper tests.")
+	}
+	return host
+}
 
 type Character struct {
 	ID           string `json:"id"`
@@ -336,7 +346,8 @@ const expectedResultJSON string = `
 func populateFictionAndCharactersTopic() int {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
-	client, err := sarama.NewClient([]string{"localhost:9092"}, saramaConfig)
+	host := fmt.Sprintf("%s:9092", getCIHost())
+	client, err := sarama.NewClient([]string{host}, saramaConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -386,7 +397,8 @@ func TestBatchTopicProcessor(t *testing.T) {
 }
 
 func mustSetupConsumer() (sarama.Consumer, sarama.PartitionConsumer) {
-	consumer, err := sarama.NewConsumer([]string{"127.0.0.1:9092"}, sarama.NewConfig())
+	host := fmt.Sprintf("%s:9092", getCIHost())
+	consumer, err := sarama.NewConsumer([]string{host}, sarama.NewConfig())
 	if err != nil {
 		panic(err)
 	}

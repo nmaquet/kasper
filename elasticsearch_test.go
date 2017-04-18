@@ -1,6 +1,7 @@
 package kasper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -159,8 +160,9 @@ func init() {
 		Logger:             &noopLogger{},
 		MetricsProvider:    &noopMetricsProvider{},
 	}
+	url := fmt.Sprintf("http://%s:9200", getCIHost())
 	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
+		elastic.SetURL(url),
 		elastic.SetSniff(false),
 	)
 	if err != nil {

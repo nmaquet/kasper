@@ -31,7 +31,7 @@ before_script:
  - cd ..
 
 script:
- - go test . -v -covermode=count -coverprofile=coverage.out
+ - KASPER_CI_HOST=localhost go test . -v -covermode=count -coverprofile=coverage.out
  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 after_script:
