@@ -12,7 +12,8 @@ const maxBulkErrorReasons = 5
 
 // Elasticsearch is an implementation of Store that uses Elasticsearch.
 // Each instance provides key-value access to a given index and a given document type.
-// This implementation supports Elasticsearch 5.x
+// This implementation supports Elasticsearch 5.x and uses Oliver Eilhard's Go Elasticsearch client.
+// See https://github.com/olivere/elastic
 type Elasticsearch struct {
 	client    *elastic.Client
 	context   context.Context
@@ -57,7 +58,7 @@ func NewElasticsearch(config *Config, client *elastic.Client, indexName, typeNam
 // This function returns (nil, nil) if the document does not exist.
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
 func (s *Elasticsearch) Get(key string) ([]byte, error) {
-	s.logger.Debug("Elasticsearch Get: ", key)
+	s.logger.Debugf("Elasticsearch Get: %s/%s/%s", s.indexName, s.typeName, key)
 	s.getCounter.Inc(s.labelValues...)
 	rawValue, err := s.client.Get().
 		Index(s.indexName).
@@ -116,7 +117,7 @@ func (s *Elasticsearch) GetAll(keys []string) (map[string][]byte, error) {
 // The value byte slice must contain the UTF8-encoded JSON document (i.e., _source).
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
 func (s *Elasticsearch) Put(key string, value []byte) error {
-	s.logger.Debug(fmt.Sprintf("MultiElasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value))
+	s.logger.Debugf("Elasticsearch Put: %s/%s/%s %#v", s.indexName, s.typeName, key, value)
 	s.putCounter.Inc(s.labelValues...)
 	_, err := s.client.Index().
 		Index(s.indexName).
@@ -133,7 +134,7 @@ func (s *Elasticsearch) Put(key string, value []byte) error {
 // It returns an error if any operation fails.
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
-	s.logger.Debugf("MultiElasticsearch PutAll of %d keys", len(kvs))
+	s.logger.Debugf("Elasticsearch PutAll of %d keys", len(kvs))
 	s.putAllSummary.Observe(float64(len(kvs)), s.labelValues...)
 	if len(kvs) == 0 {
 		return nil
@@ -162,7 +163,7 @@ func (s *Elasticsearch) PutAll(kvs map[string][]byte) error {
 // It is implemented using the Elasticsearch Delete API.
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html
 func (s *Elasticsearch) Delete(key string) error {
-	s.logger.Debug("MultiElasticsearch Delete: ", key)
+	s.logger.Debugf("Elasticsearch Delete: %s/%s/%s", s.indexName, s.typeName, key)
 	s.deleteCounter.Inc(s.labelValues...)
 	_, err := s.client.Delete().
 		Index(s.indexName).
@@ -181,12 +182,12 @@ func (s *Elasticsearch) Delete(key string) error {
 // It is implemented using the Elasticsearch Flush API.
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-flush.html
 func (s *Elasticsearch) Flush() error {
-	s.logger.Info("MultiElasticsearch Flush...")
+	s.logger.Info("Elasticsearch Flush...")
 	s.flushCounter.Inc(s.labelValues...)
 	_, err := s.client.Flush("_all").
 		WaitIfOngoing(true).
 		Do(s.context)
-	s.logger.Info("MultiElasticsearch Flush complete")
+	s.logger.Info("Elasticsearch Flush complete")
 	return err
 }
 

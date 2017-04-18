@@ -68,7 +68,7 @@ func (s *MultiElasticsearch) AllTenants() []string {
 	return tenants
 }
 
-// Fetch performs a single MultiGet operation the Elasticsearch cluster across multiple tenants (i.e. indexes).
+// Fetch performs a single MultiGet operation on the Elasticsearch cluster across multiple tenants (i.e. indexes).
 func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	s.fetchCounter.Inc(s.labelValues...)
 	res := NewMultiMap(len(keys) / 10)

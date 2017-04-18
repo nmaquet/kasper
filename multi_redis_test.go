@@ -4,43 +4,37 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/stretchr/testify/assert"
-	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-func TestMultiElasticsearch(t *testing.T) {
+func TestMultiRedis(t *testing.T) {
 	config := &Config{
 		TopicProcessorName: "test",
 		Logger:             &noopLogger{},
 		MetricsProvider:    &noopMetricsProvider{},
 	}
-	url := fmt.Sprintf("http://%s:9200", getCIHost())
-	client, err := elastic.NewClient(
-		elastic.SetURL(url),
-		elastic.SetSniff(false),
-	)
+	url := fmt.Sprintf("redis://%s:6379", getCIHost())
+	conn, err := redis.DialURL(url)
 	if err != nil {
 		panic(err)
 	}
-	store := NewMultiElasticsearch(config, client, "hero")
+	store := NewMultiRedis(config, conn, "hero")
 	testMultiStore(t, store)
 }
 
-func TestMultiElasticsearch_PutAll_GetAll(t *testing.T) {
+func TestMultiRedis_PutAll_GetAll(t *testing.T) {
 	config := &Config{
 		TopicProcessorName: "test",
 		Logger:             &noopLogger{},
 		MetricsProvider:    &noopMetricsProvider{},
 	}
-	url := fmt.Sprintf("http://%s:9200", getCIHost())
-	client, err := elastic.NewClient(
-		elastic.SetURL(url),
-		elastic.SetSniff(false),
-	)
+	url := fmt.Sprintf("redis://%s:6379", getCIHost())
+	conn, err := redis.DialURL(url)
 	if err != nil {
 		panic(err)
 	}
-	store := NewMultiElasticsearch(config, client, "hero")
+	store := NewMultiRedis(config, conn, "hero")
 
 	spiderman := []byte(`{"name":"Spiderman","power":"webs"}`)
 	ironman := []byte(`{"name":"Ironman","power":"a kickass powered armor"}`)
@@ -79,8 +73,13 @@ func TestMultiElasticsearch_PutAll_GetAll(t *testing.T) {
 }
 
 func init() {
-	store.client.DeleteIndex("marvel").Do(store.context)
-	store.client.DeleteIndex("dc").Do(store.context)
-	store.client.CreateIndex("marvel").Do(store.context)
-	store.client.CreateIndex("dc").Do(store.context)
+	url := fmt.Sprintf("redis://%s:6379", getCIHost())
+	conn, err := redis.DialURL(url)
+	if err != nil {
+		panic(err)
+	}
+	_, err = conn.Do("FLUSHALL")
+	if err != nil {
+		panic(err)
+	}
 }
