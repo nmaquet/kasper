@@ -14,11 +14,10 @@ Kasper uses Shopify's excellent sarama library (see https://github.com/Shopify/s
 for consuming and producing messages to Kafka. All Kasper application must begin with instantiating a sarama Client.
 Choose the parameters in sarama.Config carefully; the performance, reliability, and correctness
 of your application are all highly sensitive to these settings.
-We recommend setting sarama.Config.Producer.RequiredAcks to WaitForAll and sarama.Config.Producer.Retry.Max to 0.
+We recommend setting sarama.Config.Producer.RequiredAcks to WaitForAll.
 
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Producer.RequiredAcks = sarama.WaitForAll
-	saramaConfig.Producer.Retry.Max = 0
 	client, err := sarama.NewClient([]string{"kafka-broker.local:9092"}, saramaConfig)
 
 Step 2 - create a Config
