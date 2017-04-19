@@ -8,6 +8,8 @@ kasper
 
 *This project is currently in Beta. The API is ~95% stable so you can expect only minor breaking changes.*
 
+For an introduction to Kasper and the motivation behind it, you can [read our introductory blog post](https://movio.co/blog/Kasper-process-library/).
+
 Kasper is a lightweight library for processing Kafka topics.
 It is heavily inspired by Apache Samza (See http://samza.apache.org).
 Kasper processes Kafka messages in small batches and is designed to work with centralized key-value stores such as Redis,
