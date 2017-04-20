@@ -33,11 +33,11 @@ to a new topic with the desired number of partitions.
 		Client:                client,
 		InputTopics:           []string{"tweets", "twitter-followers"},
 		InputPartitions:       []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
-		BatchSize: 	       10000
-		BatchWaitDuration:     5 * time.Second
-		Logger: 	       kasper.NewJSONLogger("twitter-reach-0", false)
-		MetricsProvider:       kasper.NewPrometheus("twitter-reach-0")
-		MetricsUpdateInterval: 60 * time.Second
+		BatchSize: 	       10000,
+		BatchWaitDuration:     5 * time.Second,
+		Logger: 	       kasper.NewJSONLogger("twitter-reach-0", false),
+		MetricsProvider:       kasper.NewPrometheus("twitter-reach-0"),
+		MetricsUpdateInterval: 60 * time.Second,
 	}
 
 Kasper is instrumented with a number of useful metrics so we
