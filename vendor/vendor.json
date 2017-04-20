@@ -172,7 +172,7 @@
 		},
 		{
 			"checksumSHA1": "WNUXk4QuaSU7sTkz3qD8aKeMino=",
-			"path": "gopkg.in/olivere/elastic.v5",
+				"path": "gopkg.in/olivere/elastic.v5",
 			"revision": "5f2bc471137b3a0574c35c3f33ee9e644e41c9f9",
 			"revisionTime": "2017-04-14T09:06:51Z"
 		},
