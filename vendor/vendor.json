@@ -51,6 +51,30 @@
 			"revisionTime": "2017-02-16T21:49:44Z"
 		},
 		{
+			"checksumSHA1": "zA94L2jjh5V/v4HUU5AMpa5FhYw=",
+			"path": "github.com/gocql/gocql",
+			"revision": "7e9748ccda7fd5135a7db13ba03f09cad0c86bed",
+			"revisionTime": "2017-04-19T08:06:53Z"
+		},
+		{
+			"checksumSHA1": "7RlYIbPYgPkxDDCSEuE6bvYEEeU=",
+			"path": "github.com/gocql/gocql/internal/lru",
+			"revision": "7e9748ccda7fd5135a7db13ba03f09cad0c86bed",
+			"revisionTime": "2017-04-19T08:06:53Z"
+		},
+		{
+			"checksumSHA1": "ctK9mwZKnt/8dHxx2Ef6nZTljZs=",
+			"path": "github.com/gocql/gocql/internal/murmur",
+			"revision": "7e9748ccda7fd5135a7db13ba03f09cad0c86bed",
+			"revisionTime": "2017-04-19T08:06:53Z"
+		},
+		{
+			"checksumSHA1": "tZQDfMMTKrYMXqen0zjJWLtOf1A=",
+			"path": "github.com/gocql/gocql/internal/streams",
+			"revision": "7e9748ccda7fd5135a7db13ba03f09cad0c86bed",
+			"revisionTime": "2017-04-19T08:06:53Z"
+		},
+		{
 			"checksumSHA1": "kBeNcaKk56FguvPSUCEaH6AxpRc=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef",
@@ -61,6 +85,12 @@
 			"path": "github.com/golang/snappy",
 			"revision": "553a641470496b2327abcac10b36396bd98e45c9",
 			"revisionTime": "2017-02-15T23:32:05Z"
+		},
+		{
+			"checksumSHA1": "O0r0hj4YL+jSRNjnshkeH4GY+4s=",
+			"path": "github.com/hailocab/go-hostpool",
+			"revision": "e80d13ce29ede4452c43dea11e79b9bc8a15b478",
+			"revisionTime": "2016-01-25T11:53:50Z"
 		},
 		{
 			"checksumSHA1": "BM6ZlNJmtKy3GBoWwg2X55gnZ4A=",
@@ -171,8 +201,14 @@
 			"revisionTime": "2017-04-05T16:58:12Z"
 		},
 		{
+			"checksumSHA1": "6f8MEU31llHM1sLM/GGH4/Qxu0A=",
+			"path": "gopkg.in/inf.v0",
+			"revision": "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4",
+			"revisionTime": "2015-09-11T12:57:57Z"
+		},
+		{
 			"checksumSHA1": "WNUXk4QuaSU7sTkz3qD8aKeMino=",
-				"path": "gopkg.in/olivere/elastic.v5",
+			"path": "gopkg.in/olivere/elastic.v5",
 			"revision": "5f2bc471137b3a0574c35c3f33ee9e644e41c9f9",
 			"revisionTime": "2017-04-14T09:06:51Z"
 		},
