@@ -101,14 +101,12 @@ func TestCassandra_PutAll(t *testing.T) {
 type testMapping struct{}
 
 func (testMapping) Select(keys []string) (string, []interface{}) {
-	qMarks := make([]string, len(keys))
 	bindings := make([]interface{}, len(keys))
 	for i := range keys {
-		qMarks[i] = "?"
 		bindings[i] = keys[i]
 	}
 	format := "SELECT key, value FROM kasper.test WHERE key in (%s)"
-	statement := fmt.Sprintf(format, strings.Join(qMarks, ", "))
+	statement := fmt.Sprintf(format, strings.Repeat(",?", len(keys))[1:])
 	return statement, bindings
 }
 
