@@ -98,9 +98,9 @@ func TestCassandra_PutAll(t *testing.T) {
 	assert.Equal(t, saphira, kvs["saphira"])
 }
 
-type testMapping struct{}
+type testQueries struct{}
 
-func (testMapping) Select(keys []string) (string, []interface{}) {
+func (testQueries) Select(keys []string) (string, []interface{}) {
 	bindings := make([]interface{}, len(keys))
 	for i := range keys {
 		bindings[i] = keys[i]
@@ -110,11 +110,11 @@ func (testMapping) Select(keys []string) (string, []interface{}) {
 	return statement, bindings
 }
 
-func (testMapping) Insert(key string, value []byte) (string, []interface{}) {
+func (testQueries) Insert(key string, value []byte) (string, []interface{}) {
 	return "INSERT INTO kasper.test (key, value) VALUES (?, ?)", []interface{}{key, value}
 }
 
-func (testMapping) Delete(key string) (string, []interface{}) {
+func (testQueries) Delete(key string) (string, []interface{}) {
 	return "DELETE FROM kasper.test WHERE key = ?", []interface{}{key}
 }
 
@@ -147,5 +147,5 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	cassandraStore = NewCassandra(config, session, testMapping{})
+	cassandraStore = NewCassandra(config, session, testQueries{})
 }
