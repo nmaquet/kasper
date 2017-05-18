@@ -20,8 +20,8 @@ type MultiElasticsearch struct {
 
 	logger       Logger
 	labelValues  []string
-	pushCounter  Counter
-	fetchCounter Counter
+	pushSummary  Summary
+	fetchSummary Summary
 }
 
 // NewMultiElasticsearch creates MultiElasticsearch instances.
@@ -39,8 +39,8 @@ func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName stri
 		typeName,
 		config.Logger,
 		labelValues,
-		metrics.NewCounter("MultiElasticsearch_Push", "Counter of Push() calls", labelNames...),
-		metrics.NewCounter("MultiElasticsearch_Fetch", "Counter of Fetch() calls", labelNames...),
+		metrics.NewSummary("MultiElasticsearch_Push", "Summary of Push() calls", labelNames...),
+		metrics.NewSummary("MultiElasticsearch_Fetch", "Summary of Fetch() calls", labelNames...),
 	}
 	return s
 }
@@ -70,7 +70,7 @@ func (s *MultiElasticsearch) AllTenants() []string {
 
 // Fetch performs a single MultiGet operation on the Elasticsearch cluster across multiple tenants (i.e. indexes).
 func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
-	s.fetchCounter.Inc(s.labelValues...)
+	s.fetchSummary.Observe(float64(len(keys)), s.labelValues...)
 	res := NewMultiMap(len(keys) / 10)
 	if len(keys) == 0 {
 		return res, nil
@@ -106,7 +106,6 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 // Push performs a single Bulk index request with all documents provided.
 // It returns an error if any operation fails.
 func (s *MultiElasticsearch) Push(m *MultiMap) error {
-	s.pushCounter.Inc(s.labelValues...)
 	for _, tenant := range m.AllTenants() {
 		s.Tenant(tenant) // force creation of index & mappings if they don't exist
 	}
@@ -127,6 +126,7 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 		return nil
 	}
 	s.logger.Debugf("Multitenant MultiElasticsearch PutAll of %d keys", i)
+	s.pushSummary.Observe(float64(i), s.labelValues...)
 	response, err := bulk.Do(s.context)
 	if err != nil {
 		return err
