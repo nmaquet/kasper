@@ -18,10 +18,12 @@ type MultiElasticsearch struct {
 	stores   map[string]Store
 	typeName string
 
-	logger       Logger
-	labelValues  []string
-	pushSummary  Summary
-	fetchSummary Summary
+	logger            Logger
+	labelValues       []string
+	pushSummary       Summary
+	fetchSummary      Summary
+	pushBytesSummary  Summary
+	fetchBytesSummary Summary
 }
 
 // NewMultiElasticsearch creates MultiElasticsearch instances.
@@ -41,6 +43,8 @@ func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName stri
 		labelValues,
 		metrics.NewSummary("MultiElasticsearch_Push", "Summary of Push() calls", labelNames...),
 		metrics.NewSummary("MultiElasticsearch_Fetch", "Summary of Fetch() calls", labelNames...),
+		metrics.NewSummary("MultiElasticsearch_Push_Bytes", "Summary of Push() bytes written", labelNames...),
+		metrics.NewSummary("MultiElasticsearch_Fetch_Bytes", "Summary of Fetch() bytes read", labelNames...),
 	}
 	return s
 }
@@ -89,6 +93,7 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	if err != nil {
 		return nil, err
 	}
+	bytesRead := 0
 	for _, doc := range response.Docs {
 		if !doc.Found {
 			s.logger.Debug(doc.Index, doc.Id, " not found")
@@ -99,7 +104,9 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 		if err != nil {
 			return nil, err
 		}
+		bytesRead += len(*doc.Source)
 	}
+	s.fetchBytesSummary.Observe(float64(bytesRead), s.labelValues...)
 	return res, nil
 }
 
@@ -111,6 +118,7 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 	}
 	bulk := s.client.Bulk()
 	i := 0
+	bytesWritten := 0
 	for _, tenant := range m.AllTenants() {
 		for key, value := range m.Tenant(tenant).(*Map).GetMap() {
 			bulk.Add(elastic.NewBulkIndexRequest().
@@ -120,6 +128,7 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 				Doc(string(value)),
 			)
 			i++
+			bytesWritten += len(value)
 		}
 	}
 	if i == 0 {
@@ -127,6 +136,7 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 	}
 	s.logger.Debugf("Multitenant MultiElasticsearch PutAll of %d keys", i)
 	s.pushSummary.Observe(float64(i), s.labelValues...)
+	s.pushBytesSummary.Observe(float64(bytesWritten), s.labelValues...)
 	response, err := bulk.Do(s.context)
 	if err != nil {
 		return err
