@@ -42,6 +42,7 @@ func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sara
 	if nextOffset > newestOffset {
 		nextOffset = sarama.OffsetNewest
 	}
+	tp.logger.Infof("Consuming topic partition %s-%d from offset '%s' (newest offset is '%s')", topic, partition, offsetToString(nextOffset), offsetToString(newestOffset))
 	c, err := consumer.ConsumePartition(topic, int32(partition), nextOffset)
 	if err != nil {
 		tp.logger.Panic(err)
@@ -108,7 +109,7 @@ func (pp *partitionProcessor) hasConsumedAllMessages() bool {
 		currentOffset, _ := offsetManager.NextOffset()
 		highWaterMark := highWaterMarks[topic][int32(pp.partition)]
 		if highWaterMark != currentOffset {
-			pp.logger.Debugf("Topic %s partition %d has messages remaining to consume (offset = %d, hight water mark = %d)", topic, pp.partition, currentOffset, highWaterMark)
+			pp.logger.Debugf("Topic %s partition %d has messages remaining to consume (offset = %s, high water mark = %d)", topic, pp.partition, currentOffset, highWaterMark)
 			return false
 		}
 	}
@@ -133,12 +134,13 @@ func (pp *partitionProcessor) markOffsets(messages []*sarama.ConsumerMessage) {
 
 func (pp *partitionProcessor) onClose() {
 	var err error
-	for _, pom := range pp.offsetManagers {
+	for topic, pom := range pp.offsetManagers {
+		offset, _ := pom.NextOffset()
+		pp.logger.Infof("Stopping consumption of topic partition %s-%d (last offset read was '%s')", topic, pp.partition, offsetToString(offset))
 		err = pom.Close()
 		if err != nil {
 			pp.logger.Panicf("Cannot close offset manager: %s", err)
 		}
-
 	}
 	for _, pc := range pp.partitionConsumers {
 		err = pc.Close()
@@ -149,5 +151,16 @@ func (pp *partitionProcessor) onClose() {
 	err = pp.consumer.Close()
 	if err != nil {
 		pp.logger.Panic(err)
+	}
+}
+
+func offsetToString(offset int64) string {
+	switch offset {
+	case sarama.OffsetOldest:
+		return "oldest"
+	case sarama.OffsetNewest:
+		return "newest"
+	default:
+		return strconv.Itoa(int(offset))
 	}
 }
