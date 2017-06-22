@@ -3,20 +3,21 @@ package kasper
 import (
 	"sort"
 
+	"fmt"
 	"golang.org/x/net/context"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 // MultiElasticsearch is an implementation of MultiStore that uses Elasticsearch.
-// Each instance provides key-value access to a given document type, and
-// assumes a one-to-one mapping between index and tenant.
+// Each instance provides key-value access to a subset of the Elasticsearch documents
+// defined by a tenancy instance (see ElasticsearchTenancy).
 // This implementation supports Elasticsearch 5.x
 type MultiElasticsearch struct {
-	config   *Config
-	client   *elastic.Client
-	context  context.Context
-	stores   map[string]Store
-	typeName string
+	config  *Config
+	client  *elastic.Client
+	context context.Context
+	stores  map[string]Store
+	tenancy ElasticsearchTenancy
 
 	logger            Logger
 	labelValues       []string
@@ -26,19 +27,33 @@ type MultiElasticsearch struct {
 	fetchBytesSummary Summary
 }
 
+// ElasticsearchTenancy defines how tenanted keys are mapped to an index and type.
+// Here is a simple example:
+//	 type CustomerTenancy struct{}
+//	 func (CustomerTenancy) TenantIndexAndType(tenant string) (indexName, typeName string) {
+//	 	indexName = fmt.Sprintf("sales-service~%s", tenant)
+//	 	typeName = "customer"
+//	 	return
+//	 }
+type ElasticsearchTenancy interface {
+	TenantIndexAndType(tenant string) (indexName, typeName string)
+}
+
 // NewMultiElasticsearch creates MultiElasticsearch instances.
 // All documents read and written will correspond to the URL:
-//	 https://{cluster}:9092/{tenant}/{typeName}/{key}
-func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName string) *MultiElasticsearch {
+//	 https://{cluster}:9092/{indexName}/{typeName}/{key}
+// where indexName and typeName depend on the tenant and the tenancy instance.
+func NewMultiElasticsearch(config *Config, client *elastic.Client, tenancy ElasticsearchTenancy) *MultiElasticsearch {
+	indexName, typeName := tenancy.TenantIndexAndType("tenant")
 	metrics := config.MetricsProvider
-	labelNames := []string{"topicProcessor", "type"}
-	labelValues := []string{config.TopicProcessorName, typeName}
+	labelNames := []string{"topicProcessor", "index/type"}
+	labelValues := []string{config.TopicProcessorName, fmt.Sprintf("%s/%s", indexName, typeName)}
 	s := &MultiElasticsearch{
 		config,
 		client,
 		context.Background(),
 		make(map[string]Store),
-		typeName,
+		tenancy,
 		config.Logger,
 		labelValues,
 		metrics.NewSummary("MultiElasticsearch_Push", "Summary of Push() calls", labelNames...),
@@ -54,7 +69,8 @@ func NewMultiElasticsearch(config *Config, client *elastic.Client, typeName stri
 func (s *MultiElasticsearch) Tenant(tenant string) Store {
 	kv, found := s.stores[tenant]
 	if !found {
-		kv = NewElasticsearch(s.config, s.client, tenant, s.typeName)
+		indexName, typeName := s.indexAndType(tenant)
+		kv = NewElasticsearch(s.config, s.client, indexName, typeName)
 		s.stores[tenant] = kv
 	}
 	return kv
@@ -82,9 +98,10 @@ func (s *MultiElasticsearch) Fetch(keys []TenantKey) (*MultiMap, error) {
 	s.logger.Debugf("Multitenant MultiElasticsearch GetAll: %#v", keys)
 	multiGet := s.client.MultiGet()
 	for _, key := range keys {
+		indexName, typeName := s.indexAndType(key.Tenant)
 		item := elastic.NewMultiGetItem().
-			Index(key.Tenant).
-			Type(s.typeName).
+			Index(indexName).
+			Type(typeName).
 			Id(key.Key)
 
 		multiGet.Add(item)
@@ -120,10 +137,11 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 	i := 0
 	bytesWritten := 0
 	for _, tenant := range m.AllTenants() {
+		indexName, typeName := s.indexAndType(tenant)
 		for key, value := range m.Tenant(tenant).(*Map).GetMap() {
 			bulk.Add(elastic.NewBulkIndexRequest().
-				Index(tenant).
-				Type(s.typeName).
+				Index(indexName).
+				Type(typeName).
 				Id(key).
 				Doc(string(value)),
 			)
@@ -145,4 +163,8 @@ func (s *MultiElasticsearch) Push(m *MultiMap) error {
 		return createBulkError(response)
 	}
 	return nil
+}
+
+func (s *MultiElasticsearch) indexAndType(tenant string) (indexName, indexType string) {
+	return s.tenancy.TenantIndexAndType(tenant)
 }
