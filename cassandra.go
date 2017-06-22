@@ -2,20 +2,29 @@ package kasper
 
 import (
 	cassandra "github.com/gocql/gocql"
+	"sync"
 )
 
+const CassandraBatchSize = 100
+
+type CassandraQuery struct {
+	Statement string
+	Bindings  []interface{}
+}
+
 type CassandraQueries interface {
-	Select(keys []string) (string, []interface{})
-	Insert(key string, value []byte) (string, []interface{})
-	Delete(key string) (string, []interface{})
+	Select(keys []string) CassandraQuery
+	Insert(key string, value []byte) CassandraQuery
+	Delete(key string) CassandraQuery
 }
 
 // Cassandra is an implementation of Store that uses Cassandra.
 // FIXME: add doc
 type Cassandra struct {
-	session       *cassandra.Session
-	queries       CassandraQueries
-	logger        Logger
+	session *cassandra.Session
+	queries CassandraQueries
+	logger  Logger
+
 	labelValues   []string
 	getCounter    Counter
 	getAllSummary Summary
@@ -27,12 +36,12 @@ type Cassandra struct {
 
 // NewCassandra creates Cassandra instances. All keys read and written in Cassandra are of the form:
 // FIXME: add doc
-func NewCassandra(config *Config, session *cassandra.Session, mapping CassandraQueries) *Cassandra {
+func NewCassandra(config *Config, session *cassandra.Session, queries CassandraQueries) *Cassandra {
 	metrics := config.MetricsProvider
 	labelNames := []string{"topicProcessor"}
 	return &Cassandra{
 		session,
-		mapping,
+		queries,
 		config.Logger,
 		[]string{config.TopicProcessorName},
 		metrics.NewCounter("Cassandra_Get", "Number of Get() calls", labelNames...),
@@ -45,9 +54,9 @@ func NewCassandra(config *Config, session *cassandra.Session, mapping CassandraQ
 }
 
 func (c *Cassandra) Get(key string) ([]byte, error) {
-	statement, bindings := c.queries.Select([]string{key})
+	query := c.queries.Select([]string{key})
 	var value []byte
-	iter := c.session.Query(statement, bindings...).Iter()
+	iter := c.session.Query(query.Statement, query.Bindings...).Iter()
 	if iter.NumRows() == 0 {
 		return nil, iter.Close()
 	}
@@ -59,8 +68,8 @@ func (c *Cassandra) Get(key string) ([]byte, error) {
 }
 
 func (c *Cassandra) GetAll(keys []string) (map[string][]byte, error) {
-	statement, bindings := c.queries.Select(keys)
-	iter := c.session.Query(statement, bindings...).Iter()
+	query := c.queries.Select(keys)
+	iter := c.session.Query(query.Statement, query.Bindings...).Iter()
 	result := make(map[string][]byte, len(keys))
 	var key string
 	var value []byte
@@ -75,26 +84,46 @@ func (c *Cassandra) GetAll(keys []string) (map[string][]byte, error) {
 }
 
 func (c *Cassandra) Put(key string, value []byte) error {
-	statement, bindings := c.queries.Insert(key, value)
-	query := c.session.Query(statement, bindings...)
-	return query.Exec()
+	query := c.queries.Insert(key, value)
+	return c.session.Query(query.Statement, query.Bindings...).Exec()
 }
 
 func (c *Cassandra) PutAll(entries map[string][]byte) error {
-	batch := c.session.NewBatch(cassandra.LoggedBatch)
+	batch := make(map[string][]byte, CassandraBatchSize)
+	var err error
+	var wg sync.WaitGroup
+	i := 0
 	for key, value := range entries {
-		statement, bindings := c.queries.Insert(key, value)
-		batch.Query(statement, bindings...)
+		i += 1
+		batch[key] = value
+		if i%CassandraBatchSize == 0 || i == len(entries) {
+			wg.Add(1)
+			go c.putAllSync(batch, &wg, &err)
+			batch = make(map[string][]byte, CassandraBatchSize)
+		}
 	}
-	return c.session.ExecuteBatch(batch)
+	wg.Wait()
+	return err
 }
 
 func (c *Cassandra) Delete(key string) error {
-	statement, bindings := c.queries.Delete(key)
-	query := c.session.Query(statement, bindings...)
-	return query.Exec()
+	query := c.queries.Delete(key)
+	return c.session.Query(query.Statement, query.Bindings...).Exec()
 }
 
 func (c *Cassandra) Flush() error {
 	panic("Cassandra.Flush() is not supported.")
+}
+
+func (c *Cassandra) putAllSync(entries map[string][]byte, wg *sync.WaitGroup, err *error) {
+	batch := c.session.NewBatch(cassandra.LoggedBatch)
+	for key, value := range entries {
+		query := c.queries.Insert(key, value)
+		batch.Query(query.Statement, query.Bindings...)
+	}
+	batchErr := c.session.ExecuteBatch(batch)
+	if batchErr != nil {
+		*err = batchErr
+	}
+	wg.Done()
 }
