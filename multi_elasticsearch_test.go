@@ -8,6 +8,14 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+type HeroTenancy struct{}
+
+func (HeroTenancy) TenantIndexAndType(tenant string) (indexName, typeName string) {
+	indexName = tenant
+	typeName = "hero"
+	return
+}
+
 func TestMultiElasticsearch(t *testing.T) {
 	config := &Config{
 		TopicProcessorName: "test",
@@ -22,7 +30,7 @@ func TestMultiElasticsearch(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	store := NewMultiElasticsearch(config, client, "hero")
+	store := NewMultiElasticsearch(config, client, HeroTenancy{})
 	testMultiStore(t, store)
 }
 
@@ -40,7 +48,7 @@ func TestMultiElasticsearch_PutAll_GetAll(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	store := NewMultiElasticsearch(config, client, "hero")
+	store := NewMultiElasticsearch(config, client, HeroTenancy{})
 
 	spiderman := []byte(`{"name":"Spiderman","power":"webs"}`)
 	ironman := []byte(`{"name":"Ironman","power":"a kickass powered armor"}`)
