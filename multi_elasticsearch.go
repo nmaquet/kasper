@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"fmt"
+
 	"golang.org/x/net/context"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -46,7 +47,7 @@ type ElasticsearchTenancy interface {
 func NewMultiElasticsearch(config *Config, client *elastic.Client, tenancy ElasticsearchTenancy) *MultiElasticsearch {
 	indexName, typeName := tenancy.TenantIndexAndType("tenant")
 	metrics := config.MetricsProvider
-	labelNames := []string{"topicProcessor", "index/type"}
+	labelNames := []string{"topicProcessor", "indexAndType"}
 	labelValues := []string{config.TopicProcessorName, fmt.Sprintf("%s/%s", indexName, typeName)}
 	s := &MultiElasticsearch{
 		config,
