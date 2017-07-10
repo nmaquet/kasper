@@ -38,15 +38,19 @@ func getPartitionConsumer(tp *TopicProcessor, consumer sarama.Consumer, pom sara
 	if err != nil {
 		tp.logger.Panic(err)
 	}
-	// nextOffset, _ := pom.NextOffset()
-	// if nextOffset > newestOffset {
-	// 	nextOffset = sarama.OffsetNewest
-	// }
-	tp.logger.Info("===TEST===")
-	tp.logger.Infof("Consuming topic partition %s-%d from offset '%s' (newest offset is '%s')", topic, partition, offsetToString(newestOffset), offsetToString(newestOffset))
+	nextOffset, _ := pom.NextOffset()
+	if nextOffset > newestOffset {
+		nextOffset = sarama.OffsetNewest
+	}
+	tp.logger.Infof("Consuming topic partition %s-%d from offset '%s' (newest offset is '%s')", topic, partition, offsetToString(nextOffset), offsetToString(newestOffset))
 	c, err := consumer.ConsumePartition(topic, int32(partition), newestOffset)
 	if err != nil {
-		tp.logger.Panic(err)
+		tp.logger.Infof("Error on consuming next offset: %s", err)
+		tp.logger.Infof("Consuming topic partition %s-%d from newest offset '%s'", topic, partition, offsetToString(newestOffset))
+		c, err = consumer.ConsumePartition(topic, int32(partition), newestOffset)
+		if err != nil {
+			tp.logger.Panic(err)
+		}
 	}
 	return c
 }
