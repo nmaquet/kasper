@@ -20,7 +20,7 @@ func TestMultiElasticsearch(t *testing.T) {
 	config := &Config{
 		TopicProcessorName: "test",
 		Logger:             &noopLogger{},
-		MetricsProvider:    &noopMetricsProvider{},
+		MetricsProvider:    &NoopMetricsProvider{},
 	}
 	url := fmt.Sprintf("http://%s:9200", getCIHost())
 	client, err := elastic.NewClient(
@@ -38,7 +38,7 @@ func TestMultiElasticsearch_PutAll_GetAll(t *testing.T) {
 	config := &Config{
 		TopicProcessorName: "test",
 		Logger:             &noopLogger{},
-		MetricsProvider:    &noopMetricsProvider{},
+		MetricsProvider:    &NoopMetricsProvider{},
 	}
 	url := fmt.Sprintf("http://%s:9200", getCIHost())
 	client, err := elastic.NewClient(

@@ -158,7 +158,7 @@ func init() {
 	config := &Config{
 		TopicProcessorName: "test",
 		Logger:             &noopLogger{},
-		MetricsProvider:    &noopMetricsProvider{},
+		MetricsProvider:    &NoopMetricsProvider{},
 	}
 	url := fmt.Sprintf("http://%s:9200", getCIHost())
 	client, err := elastic.NewClient(

@@ -118,7 +118,7 @@ func init() {
 	config := &Config{
 		TopicProcessorName: "test",
 		Logger:             &noopLogger{},
-		MetricsProvider:    &noopMetricsProvider{},
+		MetricsProvider:    &NoopMetricsProvider{},
 	}
 	url := fmt.Sprintf("redis://%s:6379", getCIHost())
 	conn, err := redis.DialURL(url)
