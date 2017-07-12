@@ -47,7 +47,7 @@ func (config *Config) setDefaults() {
 		config.Logger = NewBasicLogger(false)
 	}
 	if config.MetricsProvider == nil {
-		config.MetricsProvider = &noopMetricsProvider{}
+		config.MetricsProvider = &NoopMetricsProvider{}
 	}
 	if config.MetricsUpdateInterval == 0 {
 		config.MetricsUpdateInterval = 15 * time.Second
