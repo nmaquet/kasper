@@ -10,7 +10,12 @@ import (
 // When all messages have been successfully produced, Kasper updates the consumer offsets of the input partitions
 // and resumes processing.
 type Sender interface {
+
+	// Send adds a message to an batch that is send when Process returns or when Flush is called
 	Send(msg *sarama.ProducerMessage)
+
+	// Flush immediately sends the currently batched messages and empties the batch
+	Flush() error
 }
 
 type sender struct {
@@ -27,4 +32,19 @@ func newSender(pp *partitionProcessor) *sender {
 
 func (sender *sender) Send(msg *sarama.ProducerMessage) {
 	sender.producerMessages = append(sender.producerMessages, msg)
+}
+
+func (sender *sender) Flush() error {
+	if len(sender.producerMessages) == 0 {
+		return nil
+	}
+
+	err := sender.pp.topicProcessor.producer.SendMessages(sender.producerMessages)
+	if err != nil {
+		sender.pp.logger.Errorf("Message Sender returned error: %s", err)
+		return err
+	}
+	sender.producerMessages = []*sarama.ProducerMessage{}
+
+	return nil
 }

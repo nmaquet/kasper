@@ -1,6 +1,7 @@
 package kasper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -83,6 +84,56 @@ func TestSender_Send_TwoMessages(t *testing.T) {
 	}
 	actual := sender.producerMessages
 	assert.Equal(t, expected, actual)
+}
+
+func TestSender_Flush_No_Messages(t *testing.T) {
+	f := newFixture()
+
+	sender := newSender(f.pp)
+
+	err := sender.Flush()
+	assert.NoError(t, err)
+
+	assert.Empty(t, sender.producerMessages)
+}
+
+func TestSender_Flush_Messages(t *testing.T) {
+	saramaConfig := sarama.NewConfig()
+	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	saramaConfig.Producer.Return.Successes = true
+	host := fmt.Sprintf("%s:9092", getCIHost())
+	client, err := sarama.NewClient([]string{host}, saramaConfig)
+	if err != nil {
+		t.Fatal("Could not connect to Kafka", err)
+	}
+	producer, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		t.Fatal("Could not create Kafka producer", err)
+	}
+
+	f := newFixture()
+	f.pp.topicProcessor.producer = producer
+
+	sender := newSender(f.pp)
+	sender.producerMessages = []*sarama.ProducerMessage{
+		{
+			Topic:     "hello",
+			Partition: 6,
+			Key:       sarama.ByteEncoder([]byte("AAA")),
+			Value:     sarama.ByteEncoder([]byte("BBB")),
+		},
+		{
+			Topic:     "hello",
+			Partition: 7,
+			Key:       sarama.ByteEncoder([]byte("CCC")),
+			Value:     sarama.ByteEncoder([]byte("DDD")),
+		},
+	}
+
+	err = sender.Flush()
+	assert.NoError(t, err)
+
+	assert.Empty(t, sender.producerMessages)
 }
 
 func BenchmarkSender_Send(b *testing.B) {
