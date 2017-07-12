@@ -11,10 +11,11 @@ import (
 // and resumes processing.
 type Sender interface {
 
-	// Send adds a message to an batch that is send when Process returns or when Flush is called
+	// Send appends a message to a slice held by the sender instance.
+	// These messages are sent in bulk when Process() returns or when Flush() is called.
 	Send(msg *sarama.ProducerMessage)
 
-	// Flush immediately sends the currently batched messages and empties the batch
+	// Flush immediately sends all messages held in the sender slice in bulk, and empties the slice. See Send() above.
 	Flush() error
 }
 
