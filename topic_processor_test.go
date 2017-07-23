@@ -384,6 +384,7 @@ func populateFictionAndCharactersTopic() int {
 		}
 	}
 	topicProcessor.Close()
+	topicProcessor.Close() // ensure we can close twice
 	return sendCount
 }
 
