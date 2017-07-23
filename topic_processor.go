@@ -155,7 +155,9 @@ func mustSetupOffsetManager(config *Config) sarama.OffsetManager {
 // Close safely shuts down the TopicProcessor, which makes RunLoop() return.
 func (tp *TopicProcessor) Close() {
 	tp.logger.Info("Received close request")
-	close(tp.close)
+	if !tp.isClosed() {
+		close(tp.close)
+	}
 	tp.waitGroup.Wait()
 }
 
@@ -275,6 +277,15 @@ func (tp *TopicProcessor) onClose(tickers ...*time.Ticker) {
 		tp.logger.Panic(err)
 	}
 	tp.logger.Info("Close complete")
+}
+
+func (tp *TopicProcessor) isClosed() bool {
+	select {
+	case _, ok := <-tp.close:
+		return !ok
+	default:
+		return false
+	}
 }
 
 func (tp *TopicProcessor) getConsumerMessagesChan() <-chan *sarama.ConsumerMessage {
