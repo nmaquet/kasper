@@ -6,7 +6,7 @@ kasper
 [![Go Report Card](https://goreportcard.com/badge/github.com/movio/kasper)](https://goreportcard.com/report/github.com/movio/kasper)
 [![Coverage Status](https://coveralls.io/repos/github/movio/kasper/badge.svg?branch=master)](https://coveralls.io/github/movio/kasper?branch=master)
 
-*This project is currently in Beta. The API is ~95% stable so you can expect only minor breaking changes.*
+*This project is no longer in active development.*
 
 For an introduction to Kasper and the motivation behind it, you can [read our introductory blog post](https://movio.co/blog/Kasper-process-library/).
 
